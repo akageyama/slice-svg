@@ -1,0 +1,28 @@
+module turtle_svglib_m
+  use const_base_m
+  implicit none
+  private
+  public :: turtle_svglib__test
+
+  type, public :: turtle_svglib_fig_t
+  contains
+    procedure :: print_header => turtle_svglib__print_header
+    procedure :: print_footer => turtle_svglib__print_footer    
+  end type turtle_svglib_fig_t
+
+contains
+
+  subroutine turtle_svglib__test( this )
+    class(turtle_svglib_fig_t) <in> :: this
+    call this.
+  end subroutine turtle_svglib__test
+
+  subroutine turtle_svglib__print_footer
+    print *, "Hello. this is footer"
+  end subroutine turtle_svglib__print_footer
+
+  subroutine turtle_svglib__print_header
+    print *, "Hello. this is header"
+  end subroutine turtle_svglib__print_header
+
+end module turtle_svglib_m

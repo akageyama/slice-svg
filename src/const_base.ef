@@ -1,0 +1,59 @@
+module const_base_m
+  use iso_fortran_env
+  implicit none
+  private
+  public :: SI, DI, SR, DR, NIL, PI, TWOPI
+  public :: const_base__check
+
+  !<< Fortran constants >>!
+  integer <const> :: SI = int32
+  integer <const> :: DI = int64
+  integer <const> :: SR = real32
+  integer <const> :: DR = real64
+  integer <const> :: NIL = -huge(1)
+
+  !<< Mathematical constants >>!
+  real(DR) <const> :: PI = atan(1.0_DR)*4
+  real(DR) <const> :: TWOPI = PI*2
+
+
+contains
+
+
+  subroutine print_DR_or_SI( string, val_real, val_int )
+    char(len=*) <in> :: string
+    real(DR) <optin> :: val_real
+    integer(SI) <optin> :: val_int
+
+    integer(SI) <const> :: LENGTH = 60
+    char(len=22) :: string_for_val
+    char(len=LENGTH) :: line
+    integer(SI) :: len_str_for_val
+
+    line = repeat('_',LENGTH)
+    line(1:len_trim(string)) = trim(string)
+
+    if ( present(val_real) ) then
+      write(string_for_val,'(1pe22.15)') val_real
+    else if ( present(val_int) ) then
+      write(string_for_val,'(a1,i0)') ' ', val_int ! put a space in front of i
+    end if
+
+    len_str_for_val = len_trim(string_for_val)
+    line(LENGTH-len_str_for_val:LENGTH) = trim(string_for_val)
+
+    print *, line
+  end subroutine print_DR_or_SI
+
+
+  subroutine const_base__check
+    call print_DR_or_SI( '__MODULE__: SI', val_int=SI )
+    call print_DR_or_SI( '__MODULE__: DI', val_int=DI )
+    call print_DR_or_SI( '__MODULE__: SR', val_int=SR )
+    call print_DR_or_SI( '__MODULE__: DR', val_int=DR )
+    call print_DR_or_SI( '__MODULE__: PI', val_real=PI )
+    call print_DR_or_SI( '__MODULE__: TWOPI', val_real=TWOPI )
+    call print_DR_or_SI( '__MODULE__: NIL', val_int=NIL )
+  end subroutine const_base__check   
+
+end module const_base_m
