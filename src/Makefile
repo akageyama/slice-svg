@@ -100,6 +100,9 @@ endif
 
 # default target
 
+rumme: test
+	./test
+
 test: $(objlist)
 	$(FC) $(FFLAGS) -o test $(objlist)
 
