@@ -3,7 +3,10 @@ program main
   use turtle_svglib_m
   implicit none
 
+  type(turtle_svglib_fig_t) :: fig01
+
   call const_base__check
 
-  call turtle_svglib__test
+  call fig01.open( "test.svg", width=300, height=400 )
+  call fig01.close
 end program main
