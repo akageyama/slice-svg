@@ -8,9 +8,10 @@
 #    revised on 2018.07.13, for general eFortran codes.
 #
 #  Reference:
-#     S. Hosoyamada and A. Kageyama, A Dialect of
-#     Modern Fortran for Simulations, manuscript
-#     in preparation for AsiaSim2018, 2018.
+#     S. Hosoyamada and A. Kageyama,
+#     "A Dialect of Modern Fortran for Simulations" '
+#     in Communications in Computer and Information Science,
+#     vol 946, pages 439-448, 2018 (Proceedings of AsiaSim2018)
 #
 #  Home page:
 #     https://github.com/akageyama/efpp
@@ -25,59 +26,46 @@ def block_comment(lines_in):
       sample input:
       --------------------------
                 abc def ghijklmn opq
-                =======
+                !!>
                 abc def ghijklmn opq
-                  ======
+                  !!>
                   abc def ghijklmn opq
                   abc def ghijklmn opq
-                  ======
+                  !!<
                 abc def ghijklmn opq
-                =======
+                !!<
                 abc def ghijklmn opq
 
       sample output
       --------------------------
                 abc def ghijklmn opq
-                !=======
+                !!>
                 !abc def ghijklmn opq
-                !!  ======
+                !   !!>
                 !!  abc def ghijklmn opq
                 !!  abc def ghijklmn opq
-                !!  ======
+                !   !!<
                 !abc def ghijklmn opq
-                !=======
+                !!<
                 abc def ghijklmn opq
       --------------------------
     """
 
     output = list()
 
-    comment_span_list = list()
     comment_depth = 0
-    comment_block_exit_flag = False
 
     for line in lines_in:
-        match_obj = re.search(r'^ *===+\s+$', line)
-        comment_block_exit_flag = False
-        if match_obj:
-            span = match_obj.span()
-            if comment_depth == 0:  # Entered the 1st comment block.
-                comment_span_list.append(span)
-                comment_depth = 1
-            else:
-                if span==comment_span_list[-1]:
-                    # End of the present comment block.
-                    del comment_span_list[-1]
-                    comment_block_exit_flag = True
-                else: # Entered new (deeper) comment block.
-                    comment_span_list.append(span)
-                    comment_depth += 1
+        match_obj_in = re.search(r'^\s*!!>', line)
+        match_obj_out = re.search(r'^\s*!!<', line)
+        if match_obj_out:
+            comment_depth -= 1
 
         if comment_depth>0:
             line = re.sub(r'^', '!'*comment_depth, line)
 
-        if comment_block_exit_flag:
-            comment_depth -= 1
+        if match_obj_in:
+            comment_depth += 1
 
         output.append(line)
 
@@ -181,8 +169,9 @@ def replace_period_in_member_accessor(string_in):
     string_work3 = remove_characters_in_comment(string_work2)
 
     # Regexp for the period letter '.' used as a member access operator.
-    pattern = r'[a-zA-Z][a-zA-Z_0-9]*?\)?\.[a-zA-Z][a-zA-Z_0-9]*?'
-    #  array(3).a02.mem01 ==> array(3)%a03%mem01
+    # pattern = r'[a-zA-Z][a-zA-Z_0-9]*?\)?\.[a-zA-Z][a-zA-Z_0-9]*?'  # before 2022.08.11
+    pattern = r'[a-zA-Z][a-zA-Z_0-9]*?(\([a-zA-Z_0-9]*\))?\.[a-zA-Z][a-zA-Z_0-9]*?'  # revised on 2022.08.11
+    #  array(3).a02.mem01 ==> array(3)%a02%mem01
     m = re.search(pattern, string_work3)
     ans = string_in
     if m:
@@ -729,6 +718,8 @@ def debugp_decode(lines_in):
                 line += ';'
             line += 'print *, '
             line += '\"\\\\__MODULE__(__LINE__): \", '
+            countParenthesis = 0
+            temp = ''
             for arg in args:
                 a = arg.strip() # put off blanks
                 if a[0]=='\'' or a[0]=='\"':  # string (e.g., 'message')
@@ -738,6 +729,21 @@ def debugp_decode(lines_in):
                         line += a + ', ' + a[0] + ', '
                 elif a[-1]=='\'' or a[-1]=='\"':# string (e.g., '..., smthng')
                     line +=  a[-1] + a + ', '
+                elif '(' in a or countParenthesis!=0:
+                    if '(' in a:
+                        countParenthesis += a.count('(') - a.count(')')
+                        temp += a + ', '
+                        if countParenthesis == 0:
+                            temp = temp[:-2]  # put of the last "comma + space"
+                            line += "\" " + temp + " = \", " + temp + ', '
+                    elif ')' in a:
+                        countParenthesis += a.count('(') - a.count(')')
+                        temp += a + ', '
+                        if countParenthesis == 0:
+                            temp = temp[:-2]  # put of the last "comma + space"
+                            line += "\" " + temp + " = \", " + temp + ', '
+                    else:
+                        temp += a + ', '
                 else:
                     line += "\" " + a + " = \", " + a + ', '
             line = line[:-2]  # put of the last "comma + space"
