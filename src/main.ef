@@ -1,9 +1,9 @@
 program main
   use const_base_m
-  use turtle_svglib_m
+  use svglib_m
   implicit none
 
-  type(turtle_svglib_fig_t) :: fig01, fig02, fig03
+  type(svglib_fig_t) :: fig01, fig02, fig03
 
   call const_base__check
 

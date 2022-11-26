@@ -1,18 +1,18 @@
-module turtle_svglib_m
+module svglib_m
   use const_base_m
   use fileut_m
   use ut_m
   implicit none
   private
 
-  type, public :: turtle_svglib_fig_t
+  type, public :: svglib_fig_t
     char(len=300) :: file_name
     integer :: width, height
     integer :: file_unit
   contains
-    procedure :: open => turtle_svglib__open
-    procedure :: close => turtle_svglib__close
-  end type turtle_svglib_fig_t
+    procedure :: open => svglib__open
+    procedure :: close => svglib__close
+  end type svglib_fig_t
 
 contains
 
@@ -44,17 +44,17 @@ contains
 
 
 
-  subroutine turtle_svglib__close( this )
-    class(turtle_svglib_fig_t) <in> :: this
+  subroutine svglib__close( this )
+    class(svglib_fig_t) <in> :: this
 
     call print_footer( this.file_unit )
     call fileut__close( this.file_unit )
 
-  end subroutine turtle_svglib__close
+  end subroutine svglib__close
 
 
-  subroutine turtle_svglib__open( this, file_name, width, height )
-    class(turtle_svglib_fig_t) <io> :: this
+  subroutine svglib__open( this, file_name, width, height )
+    class(svglib_fig_t) <io> :: this
     char(len=*) <in> :: file_name
     integer <optin> :: width, height
 
@@ -82,6 +82,6 @@ contains
       end if
     end subroutine iSet_width_and_height
 
-  end subroutine turtle_svglib__open
+  end subroutine svglib__open
 
-end module turtle_svglib_m
+end module svglib_m
