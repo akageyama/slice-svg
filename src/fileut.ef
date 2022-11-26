@@ -1,0 +1,74 @@
+module fileut_m
+!!>
+     This module is a substitute of "open(newunit" feature
+     introduced in Fortran2008. I find some compilers do not 
+     implement this fature yet.
+!!<
+  implicit none
+  private
+  public :: fileut__close,  &
+            fileut__open
+
+  integer, parameter :: UNIT_MIN = 100
+  integer, parameter :: UNIT_MAX = 999
+
+  char(len=4), dimension(UNIT_MIN:UNIT_MAX) :: List = 'open' 
+                                                 ! or 'used'
+
+contains
+
+  subroutine assert( condition, lastwill )
+    logical <in> :: condition
+    char(len=*) <in> :: lastwill
+    if ( .not. condition ) then
+      print *, "__MODFUNC__: "//trim(lastwill)
+      stop
+    end if
+  end subroutine assert
+
+  function get_a_new_unit() result(unit)
+    integer :: unit
+
+    integer :: u
+    do u = UNIT_MIN, UNIT_MAX
+!debugp u
+      if ( List(u) == 'open' ) then
+        unit = u
+        List(u) = 'used'
+!debugp List(unit)        
+        return
+      end if
+    end do
+
+    print *, '__MODFUNC__: Out of file_unit number.'
+    stop
+  end function get_a_new_unit
+
+
+  subroutine turn_to_open( unit )
+    integer <in> :: unit
+
+    call assert( List(unit) == "used",  &
+                 "Trying to close non-open unit?" )
+
+    List(unit) = 'open'
+  end subroutine turn_to_open
+
+
+  subroutine fileut__close( unit )
+    integer <in> :: unit
+    call turn_to_open( unit )
+    close(unit)
+  end subroutine fileut__close
+
+
+  subroutine fileut__open( unit, file_name )
+    integer <out> :: unit
+    char(len=*) <in> :: file_name
+!debugp file_name    
+    unit = get_a_new_unit()
+    open(unit, file=trim(file_name), action="readwrite", status="unknown")
+!debugp unit    
+  end subroutine fileut__open
+
+end module fileut_m

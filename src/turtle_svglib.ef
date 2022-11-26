@@ -1,14 +1,9 @@
 module turtle_svglib_m
   use const_base_m
+  use fileut_m
   use ut_m
   implicit none
   private
-
-  integer, parameter :: FILE_UNIT_RESERVED_FOR_THIS_LIB_MIN = 9000
-  integer, parameter :: FILE_UNIT_RESERVED_FOR_THIS_LIB_MAX = 9999
-
-  char(len=7), dimension(FILE_UNIT_RESERVED_FOR_THIS_LIB_MIN:  &
-                         FILE_UNIT_RESERVED_FOR_THIS_LIB_MAX) :: File_unit_used_list = 'nonused'
 
   type, public :: turtle_svglib_fig_t
     char(len=300) :: file_name
@@ -20,55 +15,6 @@ module turtle_svglib_m
   end type turtle_svglib_fig_t
 
 contains
-
-  function file_unit_used_list_get_new_unit() result(unit)
-    integer :: unit
-
-    integer :: u
-    do u = FILE_UNIT_RESERVED_FOR_THIS_LIB_MIN, FILE_UNIT_RESERVED_FOR_THIS_LIB_MAX
-!debugp u
-      if ( File_unit_used_list(u) == 'nonused' ) then
-        unit = u
-        File_unit_used_list(u) = 'used'
-!debugp File_unit_used_list(unit)        
-        return
-      end if
-    end do
-
-    print *, '__MODFUNC__: Out of file_unit number.'
-    stop
-  end function file_unit_used_list_get_new_unit
-
-
-  subroutine file_unit_used_list_turn_to_nonused( unit )
-    integer <in> :: unit
-
-    if ( File_unit_used_list(unit) == "nonused" ) then
-!unit unit
-!debugp File_unit_used_list(unit)
-      print *, '__MODFUNC__: Trying to close non-open unit?'
-      stop
-    end if
-
-    File_unit_used_list(unit) = 'nonused'
-  end subroutine file_unit_used_list_turn_to_nonused
-
-
-  subroutine file_close( unit )
-    integer <in> :: unit
-    call file_unit_used_list_turn_to_nonused( unit )
-    close(unit)
-  end subroutine file_close
-
-
-  subroutine file_open( unit, file_name )
-    integer <out> :: unit
-    char(len=*) <in> :: file_name
-!debugp file_name    
-    unit = file_unit_used_list_get_new_unit()
-    open(unit=unit, file=trim(file_name), action="readwrite", status="unknown")
-!debugp unit    
-  end subroutine file_open
 
 
   subroutine print_footer( unit )
@@ -103,7 +49,7 @@ contains
 
 !debugp this.file_unit
     call print_footer( this.file_unit )
-    call file_close( this.file_unit )
+    call fileut__close( this.file_unit )
 
   end subroutine turtle_svglib__close
 
@@ -115,11 +61,9 @@ contains
 
     this.file_name = trim(file_name)
 
-    call file_open( this.file_unit, trim(file_name) ) 
+    call fileut__open( this.file_unit, trim(file_name) ) 
     call iSet_width_and_height
     call print_header( this.file_unit, this.width, this.height )
-    call print_footer( this.file_unit )
-    call file_close( this.file_unit )
 
   contains
 
