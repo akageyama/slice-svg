@@ -1,6 +1,7 @@
 module svglib_m
   use const_base_m
   use fileut_m
+  use iso_fortran_env
   use ut_m
   implicit none
   private
@@ -12,6 +13,7 @@ module svglib_m
   contains
     procedure :: open => svglib__open
     procedure :: close => svglib__close
+    procedure :: line => svglib__line
   end type svglib_fig_t
 
 contains
@@ -51,6 +53,40 @@ contains
     call fileut__close( this.file_unit )
 
   end subroutine svglib__close
+
+
+  function r2s( val ) result(str)
+    char(len=100) :: str
+
+    write(str,("f0.3")) val
+  end function r2s
+
+  subroutine svglib__line( unit, x1, y1, x2, y2, stroke, stroke_width )
+    integer <in> :: unit
+    real(real32) <in> :: x1, y1, x2, y2
+    char(len=*) <optin> :: stroke
+    char(len=*) <optin> :: stroke_width
+
+    char(len=100) :: str_x1, str_y1, str_x2, str_y2
+    char(len=100) :: str_stroke, str_stroke_width
+
+    if ( present(stroke) ) then
+      str_stroke = "none"
+    else
+      str_stroke = trim(r2s(stroke))
+    end if
+
+    if ( present(stroke_width) ) then
+      str_stroke_width = "1
+    write(unit,*) '<line '//trim(r2s(x1))  &
+                     //' '//trim(r2s(y1))  &
+                     //' '//trim(r2s(x2))  &
+                     //' '//trim(r2s(y2))
+                     //' />'
+
+! <line x1="40" y1="220" x2="41" y2="219.9" stroke="none" stroke-width="1" marker-end="url(#arrow-blue)" />  
+  end subroutine svglib__line
+
 
 
   subroutine svglib__open( this, file_name, width, height )
