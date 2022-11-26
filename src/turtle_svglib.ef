@@ -32,7 +32,7 @@ contains
 
     write(str_width, "(a, i0, a)") 'width="', width, '"'
     write(str_height, "(a, i0, a)") 'height="', height, '"'
-    write(str_viewbox, "(a, i0, 1x, i0, 1x, i0, 1x, i0, a)") 'viewBox="', 0, 0, width, height, '"'
+    write(str_viewbox, "(a, i0, 1x, i0, 1x, i0, 1x, i0, a)") 'viewBox="', 0, 0, width, height, '">'
 
     write(unit, *) '<svg '//STR_XMLNS//' '//trim(str_width)//' '//trim(str_height)//' '//trim(str_viewbox)
     write(unit, *) '<!--'
@@ -47,7 +47,6 @@ contains
   subroutine turtle_svglib__close( this )
     class(turtle_svglib_fig_t) <in> :: this
 
-!debugp this.file_unit
     call print_footer( this.file_unit )
     call fileut__close( this.file_unit )
 
@@ -61,7 +60,9 @@ contains
 
     this.file_name = trim(file_name)
 
-    call fileut__open( this.file_unit, trim(file_name) ) 
+    this.file_unit = fileut__open( file=trim(file_name),  &
+                                   action="readwrite",    &
+                                   status="unknown" ) 
     call iSet_width_and_height
     call print_header( this.file_unit, this.width, this.height )
 

@@ -21,7 +21,7 @@ contains
     logical <in> :: condition
     char(len=*) <in> :: lastwill
     if ( .not. condition ) then
-      print *, "__MODFUNC__: "//trim(lastwill)
+      print *, "__MODULE__: "//trim(lastwill)
       stop
     end if
   end subroutine assert
@@ -62,13 +62,31 @@ contains
   end subroutine fileut__close
 
 
-  subroutine fileut__open( unit, file_name )
-    integer <out> :: unit
-    char(len=*) <in> :: file_name
-!debugp file_name    
+  function fileut__open( file, action, status ) result( unit )
+    char(len=*) <optin> :: file
+    char(len=*) <optin> :: action
+    char(len=*) <optin> :: status
+    integer :: unit
+
+    !!>
+        "file" is a dummy option. You need to specify this
+        argument. It is made optional just because one can 
+        write in the following way:
+            call fileut__open( file="sample.dat", ... )
+    !!<
+    call assert( present(file), "You need filename to open." )
+
     unit = get_a_new_unit()
-    open(unit, file=trim(file_name), action="readwrite", status="unknown")
-!debugp unit    
-  end subroutine fileut__open
+    if ( present(action) .and. present(status) ) then
+      ! Case of full-potion.
+      open(unit, file=trim(file), action=action, status=status )
+    else if ( present(action) ) then
+      open(unit, file=trim(file), action=action )
+    else if ( present(status) ) then
+      open(unit, file=trim(file), status=status )
+    else 
+      open(unit, file=trim(file) )
+    end if
+  end function fileut__open
 
 end module fileut_m
