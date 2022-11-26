@@ -1,7 +1,6 @@
 module svglib_m
   use const_base_m
   use fileut_m
-  use iso_fortran_env
   implicit none
   private
 
@@ -13,6 +12,7 @@ module svglib_m
     procedure :: open => svglib__open
     procedure :: close => svglib__close
     procedure :: line => svglib__line
+    procedure :: arrow => svglib__arrow
   end type svglib_fig_t
 
 contains
@@ -39,10 +39,9 @@ contains
 
     year_month_day     = year // '.' // month // '.' // day
     hour_minute_second = hour // ':' // minute // ':' // second
-
     string = year_month_day // '/' // hour_minute_second
-
   end function get_date_and_time
+
 
   subroutine print_footer( unit )
     integer <in> :: unit
@@ -72,11 +71,46 @@ contains
 
   function r2s( val ) result(str)
     ! real to string
-    real(real32) <in> :: val
+    real <in> :: val
     char(len=100) :: str
 
     write(str,"(f0.3)") val
   end function r2s
+
+
+  subroutine svglib__arrow( this, x, y, vx, vy )
+    class(svglib_fig_t) <in> :: this
+    real <in> :: x, y, vx, vy
+
+    real <const> :: VERY_SHORT = 10.0 ! 1.e-10
+    real :: vector_amp, vx_norm, vy_norm
+    real :: slightly_shifted_x
+    real :: slightly_shifted_y
+
+    vector_amp = sqrt(vx**2+vy**2)
+    if ( vector_amp < VERY_SHORT ) return
+
+    !!>
+          1
+         /     0: (x,y)
+        /      1: (slightly...x,slightly...y)
+       0
+    !!<
+
+    vx_norm = vx / vector_amp
+    vy_norm = vy / vector_amp
+
+    slightly_shifted_x = x + VERY_SHORT*vx_norm
+    slightly_shifted_y = y + VERY_SHORT*vy_norm
+
+    ! this.line( x, y,                &
+    !            slightly_shifted_x,  &
+    !            slightly_shifted_y,  &
+    !            'blue',              &
+    !            stroke_width=1.0 )
+
+    call svglib__line( this, x, y, slightly_shifted_x, slightly_shifted_y, 'blue', 1.0 )    
+  end subroutine svglib__arrow
 
 
   subroutine svglib__close( this )
@@ -88,13 +122,12 @@ contains
   end subroutine svglib__close
 
 
-
   subroutine svglib__line( this, x1, y1, x2, y2, stroke, stroke_width )
     class(svglib_fig_t) <in> :: this
 
-    real(real32) <in> :: x1, y1, x2, y2
+    real <in> :: x1, y1, x2, y2
     char(len=*) <in> :: stroke
-    real(real32) <in> :: stroke_width
+    real <in> :: stroke_width
 
     integer :: unit
 
@@ -116,7 +149,6 @@ contains
                 //' />'
 
   end subroutine svglib__line
-
 
 
   subroutine svglib__open( this, file_name, width, height )
