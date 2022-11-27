@@ -7,8 +7,10 @@ program main
 
   call const_base__check
 
-  call fig01.open( "test.svg", width=300, height=400 )
+  call fig01.open( 'test.svg', width=300, height=400 )
+  call fig01.group_begin( 'color="red"' )
   call fig01.line( 10.0, 10.0, 100.0, 100.0, stroke="black", stroke_width=1.0 )
   call fig01.arrow( 300*0.5, 400*0.5, 100.0, 0.0 )
+  call fig01.group_end()
   call fig01.close
 end program main
