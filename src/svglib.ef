@@ -134,15 +134,17 @@ contains
 
     call write_out( this, '<marker'//' viewBox="'  &
                         //trim(str_xp)//' '//trim(str_ys)//' '  &
-                        //trim(str_xr)//' '//trim(str_yt)//'"'  &
+                        //trim(str_width)//' '//trim(str_height)//'"'  &
                         //' markerWidth="'//trim(str_width)//'"' &
                         //' markerHeight="'//trim(str_height)//'"' &
+                        //' refX="'//trim("0.0")//'"'  &
+                        //' refY="'//trim("0.0")//'"'  &
                         //' stroke="currentcolor"' &
                         //' fill="currentcolor"' &
                         //' id="arrow"' &
                         //' orient="auto">' )
     call write_out( this, '  <line x1="'//trim(str_xp)//'" y1="'//trim(str_yp)  &
-                              //'" x2="'//trim(str_xr)//'" y2="'//trim(str_yr)  &
+                              //'" x2="'//trim(str_xq)//'" y2="'//trim(str_yq)  &
                               //'" stroke-width="2" />' )
     call write_out( this, '  <polygon points="'//trim(str_xr)  &
                                           //','//trim(str_yr)  &
@@ -310,7 +312,7 @@ contains
   subroutine svglib__open( this, file_name, width, height )
     class(svglib_fig_t) <io> :: this
     char(len=*) <in> :: file_name
-    integer <optin> :: width, height
+    integer <in> :: width, height
 
     this.file_name = trim(file_name)
     this.indent_level = 0
@@ -318,24 +320,9 @@ contains
     this.file_unit = fileut__open( file=trim(file_name),  &
                                    action="readwrite",    &
                                    status="unknown" ) 
-    call iSet_width_and_height
+    this.width = width
+    this.height = height
     call print_header( this, this.width, this.height )
-
-  contains
-
-    subroutine iSet_width_and_height
-      if ( present(width) ) then
-        this.width = width
-      else
-        this.width = 480 ! default value
-      end if
-  
-      if ( present(height) ) then
-        this.height = height
-      else
-        this.height = 640 ! default value
-      end if
-    end subroutine iSet_width_and_height
 
   end subroutine svglib__open
 
