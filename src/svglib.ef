@@ -4,6 +4,14 @@ module svglib_m
   implicit none
   private
 
+  type color_rgb_t
+    real :: r, g, b
+  end type color_rgb_t
+
+  type color_hsv_t
+    real :: hue, sat, val
+  end type color_hsv_t
+
   type, public :: svglib_fig_t
     char(len=300) :: file_name
     integer :: width, height
@@ -22,7 +30,99 @@ module svglib_m
 
 contains
 
+  subroutine assert( condition, lastwill )
+    logical <in> :: condition
+    char(len=*) <in> :: lastwill
+    if ( .not. condition ) then
+      print *, "__MODULE__: "//trim(lastwill)
+      stop
+    end if
+  end subroutine assert
   
+
+  function normalized_value_to_rgb( value ) result(color_code)
+    real <in> :: value
+    type(color_rgb_t) :: rgb
+    type(color_hsv_t) :: hsv
+    char(len=7) :: color_code ! '#FFFFFF' for white
+
+    call assert( value >= 0.0 .and. value <= 1.0,  &
+                 'Normalized value out of range.' )
+
+    hsv.hue = 0.7 * value
+    hsv.sat = 1.0
+    hsv.val = 1.0
+
+    rgb = iConvert_hsv_to_rgb( hsv )
+    color_code = iConvert_rgb_to_code( rgb )
+
+  contains
+
+    function iConvert_hsv_to_rgb( hsv ) result (rgb)
+      type(color_hsv_t) <in> :: hsv
+      type(color_rgb_t) :: rgb
+      !!>
+          Copied from VFIVE.
+      !!<
+      integer :: hue_
+      real :: local_, diff_, m, n, k;
+  
+      local_ = hsv.hue * 360.0;
+  
+      do while ( local_ >= 360.0 )
+        local_ = local_ - 360.0;
+        local_ = local_ / 60.0;
+        hue_ = int(local_);
+        diff_ = local_ - hue_;
+        m = hsv.val * (1.0 - hsv.sat);
+        n = hsv.val * (1.0 - hsv.sat * diff_);
+        k = hsv.val * (1.0 - hsv.sat * (1.0 - diff_));
+  
+        select case (hue_) 
+          case (0)
+  	        rgb.r = hsv.val
+  	        rgb.g = k
+  	        rgb.b = m
+          case (1)
+            rgb.r = n
+            rgb.g = hsv.val
+            rgb.b = m
+          case (2)
+            rgb.r = m
+            rgb.g = hsv.val
+            rgb.b = k
+          case (3)
+            rgb.r = m
+            rgb.g = n
+            rgb.b = hsv.val
+          case (4)
+            rgb.r = k
+            rgb.g = m
+            rgb.b = hsv.val
+          case (5)
+            rgb.r = hsv.val
+            rgb.g = m
+            rgb.b = n
+        end select
+      end do
+    end function iConvert_hsv_to_rgb
+
+    function iConvert_rgb_to_code( rgb ) result(code) 
+      type(color_rgb_t) <in> :: rgb
+      char(len=7) :: code
+
+      integer :: r, g, b
+
+      r = nint(255*rgb.r)
+      g = nint(255*rgb.g)
+      b = nint(255*rgb.b)
+
+      write(code,"('#'3(Z2.2))") r, g, b
+    end function iConvert_rgb_to_code
+
+  end function normalized_value_to_rgb
+  
+
   function get_date_and_time() result(string)
     ! copied from ut.ef
     char(len=8)  :: date   ! e.g., "20221126"
