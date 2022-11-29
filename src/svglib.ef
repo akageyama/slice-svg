@@ -55,6 +55,7 @@ contains
 print *,' value = ', value
 
    rgb = iConvert_hsv_to_rgb( hsv )
+!debugp rgb
    color_code = iConvert_rgb_to_code( rgb )
 
   contains
@@ -67,9 +68,10 @@ print *,' value = ', value
       !!<
       integer :: hue_
       real :: local_, diff_, m, n, k;
-  
+
+!debugp hsv  
       local_ = hsv.hue * 360.0;
-  
+!debugp local_  
       do while ( local_ >= 360.0 )
         local_ = local_ - 360.0;
         local_ = local_ / 60.0;
