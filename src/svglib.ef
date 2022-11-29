@@ -16,6 +16,7 @@ module svglib_m
     procedure :: close => svglib__close
     procedure :: line => svglib__line
     procedure :: arrow => svglib__arrow
+    procedure :: text => svglib__text
   end type svglib_fig_t
 
 
@@ -351,5 +352,24 @@ contains
     call print_header( this, this.width, this.height )
 
   end subroutine svglib__open
+
+
+  subroutine svglib__text( this, x, y, string, font_size,  &
+                           color, text_anchor, stroke_width )
+    class(svglib_fig_t) <in> :: this
+    real <in> :: x, y
+    char(len=*) <in> :: string
+    real <in> :: font_size
+    char(len=*) <optin> :: color
+    char(len=*) <optin> :: text_anchor
+    real <optin> :: stroke_width
+
+    call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'  &
+                                     //' font-size="'//trim(r2s(font_size))//'"'  &
+                                     //' fill="'//trim(color)//'">' )
+    call write_out( this, trim(string) )
+    call write_out( this, '</text>' )
+
+  end subroutine svglib__text
 
 end module svglib_m

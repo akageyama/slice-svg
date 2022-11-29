@@ -38,6 +38,7 @@ program main
     x = window_width/10.0 * i
     y = window_height/10.0 * j
     call fig01.arrow( x, y, 10*cos(theta), 10*sin(theta) )
+    call fig01.text( x, y, "test", 40.0, color="red" )
   end do
   end do
   call fig01.group_end()
