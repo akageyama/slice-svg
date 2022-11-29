@@ -147,5 +147,5 @@ clean:
 	rm -rf list.ps list.pdf
 	rm -rf depend_list.mk
 	rm -rf *.o *.lst *.F90 *.mod *.L
-	rm -rf yyz_relax
+	rm -rf test
 
