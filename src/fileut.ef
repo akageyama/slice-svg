@@ -63,18 +63,10 @@ contains
 
 
   function fileut__open( file, action, status ) result( unit )
-    char(len=*) <optin> :: file
+    char(len=*) <in> :: file
     char(len=*) <optin> :: action
     char(len=*) <optin> :: status
     integer :: unit
-
-    !!>
-        "file" is a dummy option. You need to specify this
-        argument. It is made optional just because one can 
-        write in the following way:
-            call fileut__open( file="sample.dat", ... )
-    !!<
-    call assert( present(file), "You need filename to open." )
 
     unit = get_a_new_unit()
     if ( present(action) .and. present(status) ) then
