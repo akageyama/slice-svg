@@ -52,10 +52,8 @@ contains
     hsv.hue = 0.7 * value
     hsv.sat = 1.0
     hsv.val = 1.0
-print *,' value = ', value
 
    rgb = iConvert_hsv_to_rgb( hsv )
-!debugp rgb
    color_code = iConvert_rgb_to_code( rgb )
 
   contains
@@ -69,45 +67,42 @@ print *,' value = ', value
       integer :: hue_
       real :: local_, diff_, m, n, k;
 
-!debugp hsv  
       local_ = hsv.hue * 360.0;
-!debugp local_  
-      do while ( local_ >= 360.0 )
-        local_ = local_ - 360.0;
-        local_ = local_ / 60.0;
-        hue_ = int(local_);
-        diff_ = local_ - hue_;
-        m = hsv.val * (1.0 - hsv.sat);
-        n = hsv.val * (1.0 - hsv.sat * diff_);
-        k = hsv.val * (1.0 - hsv.sat * (1.0 - diff_));
-  
-        select case (hue_) 
-          case (0)
-  	        rgb.r = hsv.val
-  	        rgb.g = k
-  	        rgb.b = m
-          case (1)
-            rgb.r = n
-            rgb.g = hsv.val
-            rgb.b = m
-          case (2)
-            rgb.r = m
-            rgb.g = hsv.val
-            rgb.b = k
-          case (3)
-            rgb.r = m
-            rgb.g = n
-            rgb.b = hsv.val
-          case (4)
-            rgb.r = k
-            rgb.g = m
-            rgb.b = hsv.val
-          case (5)
-            rgb.r = hsv.val
-            rgb.g = m
-            rgb.b = n
-        end select
-      end do
+      local_ = mod(local_,360.0)
+      local_ = local_ - 360.0;
+      local_ = local_ / 60.0;
+      hue_ = int(local_);
+      diff_ = local_ - hue_;
+      m = hsv.val * (1.0 - hsv.sat);
+      n = hsv.val * (1.0 - hsv.sat * diff_);
+      k = hsv.val * (1.0 - hsv.sat * (1.0 - diff_));
+
+      select case (hue_) 
+        case (0)
+	        rgb.r = hsv.val
+	        rgb.g = k
+	        rgb.b = m
+        case (1)
+          rgb.r = n
+          rgb.g = hsv.val
+          rgb.b = m
+        case (2)
+          rgb.r = m
+          rgb.g = hsv.val
+          rgb.b = k
+        case (3)
+          rgb.r = m
+          rgb.g = n
+          rgb.b = hsv.val
+        case (4)
+          rgb.r = k
+          rgb.g = m
+          rgb.b = hsv.val
+        case (5)
+          rgb.r = hsv.val
+          rgb.g = m
+          rgb.b = n
+      end select
     end function iConvert_hsv_to_rgb
 
     function iConvert_rgb_to_code( rgb ) result(code) 
@@ -166,7 +161,6 @@ print *,' value = ', value
     type(svglib_fig_t) <io> :: this
 
     this.indent_level += 1
-!debugp this.indent_level
   end subroutine indent_push
 
 
@@ -361,9 +355,7 @@ print *,' value = ', value
 
     write(this.file_unit, *) ''
     write(this.file_unit, *) '<g '//trim(attribute)//'>'
-!debugp 'calling indent_push'
     call indent_push( this )
-!debugp 'called indent_push'    
   end subroutine svglib__group_begin
 
 
