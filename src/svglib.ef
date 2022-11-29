@@ -40,7 +40,7 @@ contains
   end subroutine assert
   
 
-  function normalized_value_to_rgb( value ) result(color_code)
+  function normalized_value_to_color_code( value ) result(color_code)
     real <in> :: value
     type(color_rgb_t) :: rgb
     type(color_hsv_t) :: hsv
@@ -52,9 +52,10 @@ contains
     hsv.hue = 0.7 * value
     hsv.sat = 1.0
     hsv.val = 1.0
+print *,' value = ', value
 
-    rgb = iConvert_hsv_to_rgb( hsv )
-    color_code = iConvert_rgb_to_code( rgb )
+   rgb = iConvert_hsv_to_rgb( hsv )
+   color_code = iConvert_rgb_to_code( rgb )
 
   contains
 
@@ -120,7 +121,7 @@ contains
       write(code,"('#'3(Z2.2))") r, g, b
     end function iConvert_rgb_to_code
 
-  end function normalized_value_to_rgb
+  end function normalized_value_to_color_code
   
 
   function get_date_and_time() result(string)
@@ -441,6 +442,10 @@ contains
     char(len=*) <in> :: file_name
     integer <in> :: width, height
 
+real :: v
+integer :: i
+ char(len=7) :: sgks
+
     this.file_name = trim(file_name)
     this.indent_level = 0
 
@@ -450,6 +455,12 @@ contains
     this.width = width
     this.height = height
     call print_header( this, this.width, this.height )
+
+    do i = 0, 100
+      v = 0.01*i
+      sgks(1:7) = normalized_value_to_color_code( v )
+      print *, sgks
+    end do
 
   end subroutine svglib__open
 
