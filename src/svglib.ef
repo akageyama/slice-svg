@@ -27,6 +27,23 @@ module svglib_m
     procedure :: text => svglib__text
   end type svglib_fig_t
 
+  type, public :: svglib_mesh_t
+    integer :: cell_nx, cell_ny
+    integer :: edge_nx, edge_ny
+      !!>
+               edge_x             1   2   3   4
+         e +------------+ e     1 +---+---+---+
+         d |            | d       | 1 | 2 | 3 |
+         g |            | g     2 +---+---+---+
+         e |    cell    | e       | 2 |   |   |
+         / |            | /     3 +---+---+---+
+         y +------------+ y       | 3 |   |   |
+               edge_x           4 +---+---+---+
+      !!<
+    real, dimension(:,:), allocatable :: cell
+    real, dimension(:,:), allocatable :: edge_x, edge_y
+  end type svglib_mesh_t
+
 
 contains
 
