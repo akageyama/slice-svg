@@ -1,0 +1,29 @@
+module slice_m
+  use ut_m
+  use svg_m
+  implicit none
+  private
+
+  type, public :: slice_grid_t
+    integer :: snx, sny
+    real, dimension(:), allocatable :: po@:
+  end type slice_grid_t
+
+  type, public :: slice_field_t
+    integer :: snx, sny
+    real, dimension(:,:) allocatable :: f
+  end type slice_field_t
+
+  type, public :: slice_field_vector_t
+    integer :: snx, sny
+    real, dimension(:,:) allocatable :: svx
+    real, dimension(:,:) allocatable :: svy
+  end type slice_field_vector_t
+
+  type, public :: slice_field_scalar_t
+    real :: tx
+    real, dimension(:,:) :: field_scalar
+  end tyupe slice_t
+
+end module slice_m
+
