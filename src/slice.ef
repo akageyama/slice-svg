@@ -1,29 +1,230 @@
+  !!>
+      In physical coordinate system.
+  !!< 
 module slice_m
   use ut_m
-  use svg_m
+  use svglib_m
   implicit none
   private
 
-  type, public :: slice_grid_t
-    integer :: snx, sny
-    real, dimension(:), allocatable :: po@:
+  type :: slice_grid_t
+    integer :: nu, nv
+    real, dimension(:), allocatable :: coord_u
+    real, dimension(:), allocatable :: coord_v
+    real :: coord_u_min, coord_u_max
+    real :: coord_v_min, coord_v_max
+  contains
+    procedure :: initialize => slice_grid_initialize
+    procedure :: finalize => slice_grid_finalize
   end type slice_grid_t
 
-  type, public :: slice_field_t
-    integer :: snx, sny
-    real, dimension(:,:) allocatable :: f
-  end type slice_field_t
+  type, public :: slice__scalar_t
+    type(slice_grid_t) :: grid
+    real, dimension(:,:), allocatable :: val
+    real :: val_max, val_min
+  contains
+    procedure :: initialize => slice__scalar_initialize
+    procedure :: finalize => slice__scalar_finalize
+    procedure :: draw_contour => slice__scalar_draw_contour
+  end type slice__scalar_t
 
-  type, public :: slice_field_vector_t
-    integer :: snx, sny
-    real, dimension(:,:) allocatable :: svx
-    real, dimension(:,:) allocatable :: svy
-  end type slice_field_vector_t
+  type, public :: slice__vector_t
+    type(slice_grid_t) :: grid
+    real, dimension(:,:), allocatable :: x
+    real, dimension(:,:), allocatable :: y
+    real :: amp_max, amp_min
+  contains
+    procedure :: initialize => slice__vector_initialize
+    procedure :: finalize => slice__vector_finalize    
+  end type slice__vector_t
 
-  type, public :: slice_field_scalar_t
-    real :: tx
-    real, dimension(:,:) :: field_scalar
-  end tyupe slice_t
+
+
+contains
+
+
+  subroutine slice_grid_initialize( this, nu, nv,  &
+                                     coord_u_min, coord_u_max,  &
+                                     coord_v_min, coord_v_max )
+    class(slice_grid_t) <out> :: this
+    integer <in> :: nu, nv
+    real <in> :: coord_u_min, coord_u_max
+    real <in> :: coord_v_min, coord_v_max
+
+    real :: du, dv
+    integer :: i, j
+
+    call ut__assert( (nu > 1) .and.  &
+                     (nv > 1) .and.  &
+                     (coord_u_max > coord_u_min) .and.  &
+                     (coord_v_max > coord_v_min),  &
+                    'Invalid coord-related arguments.' )
+    this.nu = nu
+    this.nv = nv
+    this.coord_u_min = coord_u_min
+    this.coord_v_min = coord_v_min
+
+    allocate(this.coord_u(nu))
+    allocate(this.coord_v(nv))
+
+    du = ( coord_u_max - coord_u_min ) / (nu-1)
+    dv = ( coord_v_max - coord_v_min ) / (nv-1)
+
+    do i = 1, nu
+      this.coord_u(i) = coord_u_min + du*(i-1)
+    end do
+
+    do j = 1, nv
+      this.coord_v(j) = coord_v_min + dv*(j-1)
+    end do
+
+  end subroutine slice_grid_initialize
+
+
+  subroutine slice_grid_finalize( this )
+    class(slice_grid_t) <io> :: this
+
+    deallocate(this.coord_u)
+    deallocate(this.coord_v)
+  end subroutine slice_grid_finalize
+
+
+  subroutine slice__scalar_initialize( this, nu, nv, &
+                                       coord_u_min,  &
+                                       coord_u_max,  &
+                                       coord_v_min,  &
+                                       coord_v_max,  &
+                                       val  )
+    class(slice__scalar_t) <out> :: this
+    integer <in> :: nu, nv
+    real <in> :: coord_u_min, coord_u_max
+    real <in> :: coord_v_min, coord_v_max
+    real, dimension(nu,nv) :: val
+
+    call this.grid.initialize( nu, nv,       &
+                               coord_u_min,  &
+                               coord_u_max,  &
+                               coord_v_min,  &
+                               coord_v_max )
+    allocate(this.val(nu,nv))
+    this.val = val
+
+    this.val_max = maxval(val)
+    this.val_min = minval(val)
+
+  end subroutine slice__scalar_initialize
+
+  
+  subroutine slice__scalar_finalize( this )
+    class(slice__scalar_t) <io> :: this
+    call this.grid.finalize
+    deallocate(this.val)
+  end subroutine slice__scalar_finalize
+
+
+  subroutine slice__scalar_draw_contour( this, level )
+    class(slice__scalar_t) <in> :: this
+    real <in> :: level
+
+    !!>
+        In the followings, "e" stands for "edge",
+        and "c" stands for "cell". "i" is index
+        in the u-direction and "j" is in v-direction.
+        So, "ei" is edge-index in u and "cj" is 
+        cell-index in v.
+
+                    north              ei=1  2   3   4 
+               edge_x(ei=1,ej=3)    ej=1 +---+---+---+
+                +------------+ .         | 1 | 2 | 3 |
+              w | cell(ci,cj)|e  .     2 +---+---+---+
+              e |    with    |a    .     | 2 |   |   |
+              s |  ci=1,cj=3 |s\     . 3 +---+---+---+
+              t/|            |t \        | 3 |   |   |
+              / +------------+ ..\.... 4 +---+---+---+
+             / edge_x(ei=1,ej=4)  \            
+            /       south          \
+       edge_y(ei=1,ej=3)          edge_y(ei=2,ej=3)
+
+
+       Stokes thereom
+
+                <---               <---             
+             +--------+	       +--------+   
+           | |cell at | ^     | |cell at | ^  
+           | |   ci=1 | |  +  | |   ci=2 | |  
+           v |   cj=3 | |     v |   cj=3 | |  
+             +--------+	       +--------+   
+                --->	          --->            
+
+                                 . . . "cancel out"
+                               .
+                         <---  .  <---
+                      +--------+--------+
+                    | |cell at |cell at | ^ 
+                =>  | |   ci=1 |   ci=2 | | 
+                    v |   cj=3 |   cj=3 | | 
+                      +--------+--------+
+                         --->     --->
+
+    !!<
+
+    integer :: i, j  ! cell and edge indices
+
+    do j = 1, this.cell.nv
+      do i = 1, this.cell.nu
+        if ( this.cell.val(i,j) >= level ) then
+          this.cell.edge_x(i  , j+1) = +1  ! south
+          this.cell.edge_y(i+1, j  ) = +1  ! east
+          this.cell.edge_x(i  , j  ) = -1  ! north
+          this.cell.edge_y(i  , j  ) = -1  ! west
+        end if
+      end do
+    end do
+        
+  end subroutine slice__scalar_draw_contour
+
+
+  subroutine slice__vector_initialize( this, nu, nv, &
+                                       coord_u_min,  &
+                                       coord_u_max,  &
+                                       coord_v_min,  &
+                                       coord_v_max,  &
+                                       x,     &
+                                       y )
+    class(slice__vector_t) <out> :: this
+    integer <in> :: nu, nv
+    real <in> :: coord_u_min, coord_u_max
+    real <in> :: coord_v_min, coord_v_max
+    real, dimension(nu,nv) <in> :: x, y
+
+    real, dimension(nu,nv) :: amp_of_the_vector
+
+    call this.grid.initialize( nu, nv,       &
+                               coord_u_min,  &
+                               coord_u_max,  &
+                               coord_v_min,  &
+                               coord_v_max )
+    allocate(this.x(nu,nv))
+    allocate(this.y(nu,nv))
+
+    this.x = x
+    this.y = y
+
+    amp_of_the_vector = sqrt(x**2+y**2)
+
+    this.amp_max = maxval(amp_of_the_vector)
+    this.amp_min = minval(amp_of_the_vector)
+
+  end subroutine slice__vector_initialize
+
+  
+  subroutine slice__vector_finalize( this )
+    class(slice__vector_t) <out> :: this
+
+    call this.grid.finalize
+    deallocate(this.x)
+    deallocate(this.y)
+  end subroutine slice__vector_finalize
 
 end module slice_m
 

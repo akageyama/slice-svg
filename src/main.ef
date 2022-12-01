@@ -1,6 +1,7 @@
 program main
   use const_base_m
   use svglib_m
+  use slice_m
   implicit none
 
   type(svglib_fig_t) :: fig01, fig02, fig03
@@ -10,8 +11,34 @@ program main
   integer :: i, j
   real :: x, y, xmin, ymin, xmax, ymax
 
+  integer <const> :: NU = 101, NV = 51
+  real :: umin = -2*PI
+  real :: umax = +2*PI
+  real :: vmin = -PI
+  real :: vmax = +PI
+
+  real :: du, dv, u, v
+
+  real, dimension(NU,NV) :: pressure
+
+  type(slice__scalar_t) :: pres
+
   real :: theta = 0.0
 
+  du = (umax-umin)/(NU-1)
+  dv = (vmax-vmin)/(NV-1)
+
+  do j = 1, NV
+    do i = 1, NU
+      u = umin + du*(i-1)
+      v = vmin + dv*(j-1)
+      pressure(i,j) = u**2+v**2
+    end do
+  end do
+
+  call pres.initialize( NU, NV, umin, umax, vmin, vmax, pressure )
+  call pres.finalize
+  
   xmin = 0.0
   ymin = 0.0
   xmax = window_width
