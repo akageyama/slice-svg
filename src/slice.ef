@@ -7,7 +7,16 @@ module slice_m
   implicit none
   private
 
-  type :: slice_grid_t
+  type path_vert_t
+    integer :: num ! vertex number
+    integer, dimension(:), allocatable :: i, j
+  contains
+    procedure :: initialize => path_vert_initialize
+    procedure :: add => path_vert_add
+    procedure :: rest => path_vert_rest
+  end type path_vert_t
+
+  type slice_grid_t
     !!>  
         V: vertex, egy: edge_y
             .       .       .       .       . 
@@ -66,6 +75,36 @@ module slice_m
 
 
 contains
+
+  subroutine path_vert_reset( this )
+    class(path_vert_t) <io> :: this
+    this.num = 0
+    this.i(:) = 0
+    this.j(:) = 0
+  end subroutine path_vert_reset
+
+
+  subroutine path_vert_initialize( this, num_max )
+    class(path_vert_t) <out> :: this
+    integer <in> :: num_max
+
+    allocate(this.i(num_max),this.j(num_max))
+    call path_vert_reset( this )
+  end subroutine path_vert_initialize
+
+
+  subroutine path_vert_add( this, i, j )
+    class(path_vert_t) <io> :: this
+    integer <in> :: i, j
+
+    integer :: n
+    n = this.num + 1
+    call assert( n <= size(this.i,dim=1),  &
+                'Increase array size of path_vert.' )
+    this.num = n
+    this.i(n) = i
+    this.j(n) = j
+  end subroutine path_pvert_add
 
 
   subroutine slice_grid_initialize( this, vert_nu, vert_nv,  &
@@ -293,20 +332,58 @@ contains
 
     subroutine iExtract_boundary_curve
       integer :: i, j  ! edges indexes
+      integer :: path_vert_i, path_vert_j
+      integer :: path_vert_num
+
+      type(path_vert_t) :: path_vert
+      logical :: just_once = .true.
+
       !!>
-            Tring to find a "right-in-south" arrow.
+            Tring to find a "right-in-south" arrow AB.
                 +---+---+---+
                 |           |
-                +===+       +
+                A==>B       +
                  /  |       |
                 /   +---+---+
                /
              This.
       !!< 
-      do j = 1, edgex_nv
-        do i = 1, edgex_nu
-          if ( this.grid.edgex_ternary(i,j) == +1 ) then
-            ! Found.
+
+      ==<just_once>==
+        call path_vert.initialize( this)
+      ==</just_once>==
+
+      call this.contour.reset
+      ! Find a starting point of the path
+
+      call path_vert.reset
+
+      finding_loops : &
+        do j = 1, edgex_nv
+          do i = 1, edgex_nu
+            if ( this.grid.edgex_ternary(i,j) == +1 ) then
+              ! Found!
+              path_vert_num = 1
+              path_vert_i = i
+              path_vert_j = j
+              exit finding_loops
+            end if
+          end do
+        end do &
+      finding_loops
+
+      if ( path_vert_num == 0 ) return  ! No contour
+
+      i = path_vert_i + 1   !   B of A===>B
+      j = path_vert_j       !       
+      do while ( i /= path_vert_i .and.  &
+                 j /= path_vert_j )
+        call path.vert_add( i, j )
+        path_vert_num += 1
+        path_vert_i(path_vert_num) = i
+        patH-vert_j(path_vert_num) = j
+
+
             
 
     end subroutine iExtract_boundary_curve
