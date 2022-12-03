@@ -77,6 +77,101 @@ module slice_m
 
 contains
 
+
+  function neibhbor_edges_pattern( n, w, s, e ) result(pattern)
+    integer <in> :: n, w, s, e  ! north, west, south, east
+    char(len=4) :: pattern
+
+    pattern(1:1) = iNorth(n)
+    pattern(2:2) = iWest(w)
+    pattern(3:3) = iSouth(s)
+    pattern(4:4) = iEast(e)
+
+  contains
+
+    function iNorth(n) result(char)
+      integer <in> :: n
+      char(len=1) :: char
+      !!>
+           plus                  north
+          v-direction              | 
+            |                  ----*----
+            +--- plus              |  
+                u-direction    
+      !!<
+      if ( n==-1 ) then
+        char = 'i' ! inward 
+      else if ( n==+1 ) then
+        char = 'o' ! outward
+      else if ( n==NULL ) then
+        char = 'b' ! boundary
+      else if ( n==0 ) then
+        char = ' '
+      else
+        call ut__assert( 'Something is wrong.' )
+      end if
+    end function iNorth
+
+    function iWest(w) result(char)
+      integer <in> :: w
+      char(len=1) :: char
+      !!>
+           plus                  
+          v-direction                 | 
+            |                west ----*----
+            +--- plus                 |  
+                u-direction    
+      !!<
+      if ( w==+1 ) then
+        char = 'i' ! inward
+      else if ( w==-1 ) then
+        char = 'o' ! outward
+      else if ( w==NULL ) then
+        char = 'b' ! boundary
+      else if ( w==0 ) then
+        char = ' '
+      else
+        call ut__assert( 'Something is wrong.' )
+      end if
+    end function iWest
+
+    function iSouth(s) result(char)
+      integer <in> :: s
+      char(len=1) :: char
+
+      if ( s==+1 ) then
+        char = 'i'
+      else if ( s==-1 ) then
+        char = 'o' ! out
+      else if ( s==NULL ) then
+        char = 'b' ! boundary
+      else if ( s==0 ) then
+        char = ' '
+      else
+        call ut__assert( 'Something is wrong.' )
+      end if
+    end function iSouth
+
+    function iEast(e) result(char)
+      integer <in> :: e
+      char(len=1) :: char
+      
+      if ( e==+1 ) then
+        char = 'o'
+      else if ( e==-1 ) then
+        char = 'i' ! out
+      else if ( e==NULL ) then
+        char = 'b' ! boundary
+      else if ( e==0 ) then
+        char = ' '
+      else
+        call ut__assert( 'Something is wrong.' )
+      end if
+    end function iEast          
+
+  end function neibhbor_edges_pattern
+
+
   subroutine path_vert_reset( this )
     class(path_vert_t) <io> :: this
     this.num = 0
@@ -354,6 +449,7 @@ contains
     !!<
 
     call iSet_edges
+    call iCalc_path_turns_from_edges
     call iExtract_boundary_curve
 
   contains
@@ -394,6 +490,89 @@ contains
         end do
       end do
     end subroutine iSet_edges
+
+    subroutine iCalc_path_turns_from_edges
+  !!>
+        P: positive edge (eastward for edgex and
+                          northward for edgey)
+        M: negative edge (westward for edgex and
+                          southward for edgey) 
+        1: vertex on which paths run straight forward.
+        2: vertex on which paths turn left.
+        3: vertex on which paths turn right.
+
+       +---+---+---+---+---2=M=1=M=2
+       |   |   |   |   |   M       P
+       +---+---+---2=M=1=M=3=P=1=P=2
+       |   |   |   M       P   |   |
+       2=M=1=M=2---2=P=1=P=2---+---+
+       M       P   |   |   |   |   |
+       2=P=1=P=2=M=1=M=1=M=1=M=2---+
+       |   |   M               P
+       +---+---1           3=P=2
+       |   |   M           P   |
+       +---+---2=P=1=P=1=P=2---+
+  !!<    
+      integer :: i, j
+      do j = 1, this.vert_nv
+        do i = 1, this.vert_nu
+          if ( i == this.vert_nu ) then
+            east_edge = NULL
+          else 
+            east_edge = this.edgex_ternary(i,j)
+          end if
+          if ( i == 1 ) then
+            west_edge = NULL
+          else 
+            west_edge = this.edgex_ternary(i-1,j)
+          end if
+          if ( j == vert_nv ) then
+            north_edge = NULL
+          else 
+            north_edge = this.edgey_ternary(i,j)
+          end if 
+          if ( j == 1 ) then
+            south_edge = NULL
+          else
+            south_edge = this.edgey_ternary(i,j-1)
+          end if
+
+          pattern = neighbor_edges_pattern( north_edge, &
+                                            west_edge,  &
+                                            south_edge, &
+                                            east_edge )
+
+
+            pattern(1:4) = iChar(n)//iChar(w)//iChar(s)//iChar(e)
+
+          contains 
+
+            function iChar(i)
+              integer <in> :: i
+
+              select case(i)
+                case ('+1')
+                  iChar = 'i' ! inward
+
+          end function neibhbor_edges_pattern
+
+           lect case (west_edge)
+            case (+1) ! coming from west
+              if ( north_edge == +1 ) then
+                this.vert_turn(i,j) = 'L'
+              else if ( south_edge == -1 ) then
+                this.vert_turn(i,j) = 'R'
+              else if ( east_edge == +1 ) then
+                this.vert_vect(i,j) = 'S'
+              else
+                call ut__assert( 'Something is wrong.' )
+              end if
+            case (-1) ! coming from east
+              if ( north_edge == +1 ) then
+                this.vert_turn(i,j) = 'R'
+              else 
+          
+    end subroutine iCalc_path_turns_from_edges
 
     subroutine iExtract_boundary_curve
       integer :: i, j  ! edges indexes
@@ -443,7 +622,7 @@ contains
       vtip_i = vli + 1  ! vert of right-end of the edge
       vtip_j = vlj
 
-      call contour_path.
+      call path_vert.follow( )
 
       select case (vtip_direct)
         case '+x'

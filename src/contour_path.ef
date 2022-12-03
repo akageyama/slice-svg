@@ -1,7 +1,27 @@
 module contour_path_m
   use ut_m
   implicit none
+  !!>
+        P: positive edge (eastward for edgex and
+                          northward for edgey)
+        M: negative edge (westward for edgex and
+                          southward for edgey) 
+        1: vertex on which paths run straight forward.
+        2: vertex on which paths turn left.
+        3: vertex on which paths turn right.
 
+       +---+---+---+---+---2=M=1=M=2
+       |   |   |   |   |   M       P
+       +---+---+---2=M=1=M=3=P=1=P=2
+       |   |   |   M       P   |   |
+       2=M=1=M=2---2=P=1=P=2---+---+
+       M       P   |   |   |   |   |
+       2=P=1=P=2=M=1=M=1=M=1=M=2---+
+       |   |   M               P
+       +---+---1           3=P=2
+       |   |   M           P   |
+       +---+---2=P=1=P=1=P=2---+
+  !!<
 
   type contour_path_t
     integer :: num ! vertex number
@@ -123,40 +143,41 @@ contains
     ei_right_turn = vi
     ej_right_turn = vj-1
     ei_straight_move = vi
-    ej_straight_move =
+    ej_straight_move = vj
 
-
-      select case (direct)
-        case '+x'
-          !!>
-                          edgex(ei=3,ej=8)
-            vert(vi=3,vj=8)   .    vert(vi=4,vj=8)
-                         \    .   / 
-                          o------o  
-            edgey(3,7)....|      |....edgey(ei=4,ej=7)
-                          |      |
-                          o=====>X
-                         /|  .   | \ vert(vi=4,vj=7)
-           vert(vi=3,vj=7)|  .   |..............edgey(ei=4,ej=6)   
-                             .   o 
-               edgex(ei=3,ej=7)   \
-                                   vert(vi=4,vj=6)
-          !!<
-          if ( edgey(ei_left_turn,ej_left_turn) == +1 ) then
-            ! turn to "up"
-            call path_vert.register( vi, vj )
-            direct = '+y'
-            call trace_edge( edgex, edgey, direct, vi, vj, vert_path )
-          else if ( edgey(ei+1,ej-1) == -1 ) then
-            ! turn ton "down"
-            call path_vert.register( i, j )
-            vtip_direct = '-y'
-            return
-          else 
-            call ut__assert( edgex(ei+1,ej) == +1,  &
-                            'Something is strange.' )
-            direct = '+x'                
-          end if
+    select case (direct)
+      case '+x'
+        !!>
+                            edgex(ei=3,ej=8)
+          vert(vi=3,vj=8)   .    vert(vi=4,vj=8)
+                       \    .   / 
+                        o------o  
+          edgey(3,7)....|      |....edgey(ei=4,ej=7)
+                        |      |
+                        o=====>V
+                       /|  .   | \ vert(vi=4,vj=7)
+         vert(vi=3,vj=7)|  .   |..............edgey(ei=4,ej=6)   
+                           .   o 
+            edgex(ei=3,ej=7)    \
+                                 vert(vi=4,vj=6)
+        !!<
+        if ( edgey(ei_left_turn,ej_left_turn) == +1 ) then
+          ! turn to "up"
+          call path_vert.register( vi, vj )
+          direct = '+y'
+          call trace_edge( edgex, edgey, direct, vi, vj, vert_path )
+        else if ( edgey(ei_right_turn,ej_right_turn) == -1 ) then
+          ! turn to "down"
+          call path_vert.register( ei_straight_move,  &
+                                   ej_straight_move )
+          vtip_direct = '+x'
+          return
+        else 
+          call ut__assert( edgex(ei+1,ej) == +1,  &
+                          'Something is strange.' )
+          direct = '+x'  
+          call trace_edge( edgex, edgey, direct, vi, vj, vert_path )              
+        end if
 
 
 
