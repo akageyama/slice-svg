@@ -1,0 +1,163 @@
+module contour_path_m
+  use ut_m
+  implicit none
+
+
+  type contour_path_t
+    integer :: num ! vertex number
+    integer, dimension(:), allocatable :: i, j
+  contains
+    procedure :: initialize => path_vert__initialize
+    procedure :: register => path_vert__register
+    procedure :: reset => path_vert__reset
+    procedure :: explore => path_vert__explore
+  end type contour_path_t
+
+
+contains
+
+
+  subroutine path_vert__reset( this )
+    class(contour_path_t) <io> :: this
+    this.num = 0
+    this.i(:) = 0
+    this.j(:) = 0
+  end subroutine path_vert__reset
+
+
+  subroutine path_vert__initialize( this, num_max )
+    class(contour_path_t) <out> :: this
+    integer <in> :: num_max
+
+    allocate(this.i(num_max),this.j(num_max))
+    call path_vert_reset( this )
+  end subroutine path_vert__initialize
+
+
+  subroutine path_vert__register( this, i, j )
+    class(contour_path_t) <io> :: this
+    integer <in> :: i, j
+
+    integer :: n
+    n = this.num + 1
+    call assert( n <= size(this.i,dim=1),  &
+                'Increase array size of path_vert.' )
+    this.num = n
+    this.i(n) = i
+    this.j(n) = j
+  end subroutine path_vert__register
+
+
+  subroutine path_vert__explore( this )
+    class(contour_path_t) <io> :: this
+
+    integer :: head_i, head_j
+    integer :: step_forward_i, step_forward_j
+    integer :: step_turn_left_i, step_turn_left_j
+    integer :: step_turn_right_i, step_turn_right_j
+
+    !!>
+        edge direction from foot-vert to head-vert
+                            .
+           f-->h   (1,0)    .     f
+       ......................     |  (0,-1)
+                            .     h   
+             h              ...................  
+             |     (0,1)    .   
+             f              .  h<--f (-1,0)
+    !!<
+
+    head_i = this.i(this.num)
+    head_j = this.j(this.num)
+    foot_i = this.i(this.num-1)
+    foot_j = this.j(this.num-1)
+    step_forward_i = head_i - foot_i
+    step_forward_j = head_j - foot_j
+    step_turn_left_i =  -step_forward_j ! Vector
+    step_turn_left_j =  +step_forward_i !  outer
+    step_turn_right_i = +step_forward_j !   product
+    step_turn_right_j = -step_forward_i !    with unit-z.
+
+    if ( step_forward_i==1 ) then
+      direct = 'E'
+    else if ( step_foward_j==1 ) then
+      direct = 'N'
+    else if ( step_foward_i==-1) then
+      direct = 'W'
+    else if ( step_foward_j=-1 )
+      direct = 'S'
+    else 
+      call ut__fatal( 'Something is strange.' )
+    end if
+
+    select case (direct)
+      case ('E')
+        !!>
+                             i=hi
+                     -o-------o-------o j=hj-1
+                      |       |       |
+                      |       |<--edgey(hi,hj-1)
+                      |       |       |
+                     -f======>h-------o j=hj
+                              |       |
+                              |<--edgey(hi,hj)
+
+        !!<
+         
+        if ( this.edgey_ternary(head_i,head_j-1) == 1 ) then
+          ! turn left
+
+
+        
+  end subroutine path_vert__explore
+
+
+  recursive subroutine trace_edge( edgex, edgey, direct, vi, vj, vert_path )
+    char(len=2) <io> :: direct
+    integer <io> :: vi, vj
+
+    integer :: ei, ej
+
+    ei_left_turn = vi
+    ej_left_turn = vj
+    ei_right_turn = vi
+    ej_right_turn = vj-1
+    ei_straight_move = vi
+    ej_straight_move =
+
+
+      select case (direct)
+        case '+x'
+          !!>
+                          edgex(ei=3,ej=8)
+            vert(vi=3,vj=8)   .    vert(vi=4,vj=8)
+                         \    .   / 
+                          o------o  
+            edgey(3,7)....|      |....edgey(ei=4,ej=7)
+                          |      |
+                          o=====>X
+                         /|  .   | \ vert(vi=4,vj=7)
+           vert(vi=3,vj=7)|  .   |..............edgey(ei=4,ej=6)   
+                             .   o 
+               edgex(ei=3,ej=7)   \
+                                   vert(vi=4,vj=6)
+          !!<
+          if ( edgey(ei_left_turn,ej_left_turn) == +1 ) then
+            ! turn to "up"
+            call path_vert.register( vi, vj )
+            direct = '+y'
+            call trace_edge( edgex, edgey, direct, vi, vj, vert_path )
+          else if ( edgey(ei+1,ej-1) == -1 ) then
+            ! turn ton "down"
+            call path_vert.register( i, j )
+            vtip_direct = '-y'
+            return
+          else 
+            call ut__assert( edgex(ei+1,ej) == +1,  &
+                            'Something is strange.' )
+            direct = '+x'                
+          end if
+
+
+
+end module contour_path_m

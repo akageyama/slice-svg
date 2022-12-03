@@ -12,8 +12,9 @@ module slice_m
     integer, dimension(:), allocatable :: i, j
   contains
     procedure :: initialize => path_vert_initialize
-    procedure :: add => path_vert_add
+    procedure :: register => path_vert_register
     procedure :: rest => path_vert_rest
+    procedure :: explore => path_vert_explore
   end type path_vert_t
 
   type slice_grid_t
@@ -93,7 +94,7 @@ contains
   end subroutine path_vert_initialize
 
 
-  subroutine path_vert_add( this, i, j )
+  subroutine path_vert_register( this, i, j )
     class(path_vert_t) <io> :: this
     integer <in> :: i, j
 
@@ -104,7 +105,71 @@ contains
     this.num = n
     this.i(n) = i
     this.j(n) = j
-  end subroutine path_pvert_add
+  end subroutine path_vert_register
+
+
+  subroutine path_vert_explore( this )
+    class(path_vert_t) <io> :: this
+
+    integer :: head_i, head_j
+    integer :: step_forward_i, step_forward_j
+    integer :: step_turn_left_i, step_turn_left_j
+    integer :: step_turn_right_i, step_turn_right_j
+
+    !!>
+        edge direction from foot-vert to head-vert
+                            .
+           f-->h   (1,0)    .     f
+       ......................     |  (0,-1)
+                            .     h   
+             h              ...................  
+             |     (0,1)    .   
+             f              .  h<--f (-1,0)
+    !!<
+
+    head_i = this.i(this.num)
+    head_j = this.j(this.num)
+    foot_i = this.i(this.num-1)
+    foot_j = this.j(this.num-1)
+    step_forward_i = head_i - foot_i
+    step_forward_j = head_j - foot_j
+    step_turn_left_i =  -step_forward_j ! Vector
+    step_turn_left_j =  +step_forward_i !  outer
+    step_turn_right_i = +step_forward_j !   product
+    step_turn_right_j = -step_forward_i !    with unit-z.
+
+    if ( step_forward_i==1 ) then
+      direct = 'E'
+    else if ( step_foward_j==1 ) then
+      direct = 'N'
+    else if ( step_foward_i==-1) then
+      direct = 'W'
+    else if ( step_foward_j=-1 )
+      direct = 'S'
+    else 
+      call ut__fatal( 'Something is strange.' )
+    end if
+
+    select case (direct)
+      case ('E')
+        !!>
+                             i=hi
+                     -o-------o-------o j=hj-1
+                      |       |       |
+                      |       |<--edgey(hi,hj-1)
+                      |       |       |
+                     -f======>h-------o j=hj
+                              |       |
+                              |<--edgey(hi,hj)
+
+        !!<
+         
+        if ( this.edgey_ternary(head_i,head_j-1) == 1 ) then
+          ! turn left
+
+
+        
+  end subroutine path_vert_explore
 
 
   subroutine slice_grid_initialize( this, vert_nu, vert_nv,  &
@@ -273,18 +338,18 @@ contains
         So, "ei" is edge-index in u and "cj" is 
         cell-index in v.
 
-                    north              ei=1  2   3   4 
-               edge_x(ei=1,ej=3)    ej=1 +---+---+---+
-                +------------+ .         | 1 | 2 | 3 |
-              w | cell(ci,cj)|e  .     2 +---+---+---+
-              e |    with    |a    .     | 2 |   |   |
-              s |  ci=1,cj=3 |s\     . 3 +---+---+---+
-              t/|            |t \        | 3 |   |   |
-              / +------------+ ..\.... 4 +---+---+---+
-             / edge_x(ei=1,ej=4)  \            
-            /       south          \
+                    north               
+               edge_x(ei=1,ej=4)       +---+---+---+ ej=4
+                +------------+ .       | 3 |   |   |
+              w | cell(ci,cj)|e  .     +---+---+---+ ej=3
+              e |    with    |a    .   | 2 |   |   |
+              s |  ci=1,cj=3 |s\     . +---+---+---+ ej=2
+              t/|            |t \      | 1 | 2 | 3 |
+              / +------------+ ..\.... +---+---+---+ ej=1
+             /      / south       \   ei=1 2   3   4 
+            / edge_x(ei=1,ej=3)    \            
+           /                        \
        edge_y(ei=1,ej=3)          edge_y(ei=2,ej=3)
-
 
     !!<
 
@@ -321,10 +386,10 @@ contains
       do j = 1, this.cell.vert_nv
         do i = 1, this.cell.vert_nu
           if ( this.val_cell(i,j) >= level ) then
-            this.grid.edgex_ternary(i  , j+1) = +1  ! right-in-south
-            this.grid.edgey_ternary(i+1, j  ) = +1  !    up-in-east
-            this.grid.edgex_ternary(i  , j  ) = -1  !  left-in-north
-            this.grid.edgey_ternary(i  , j  ) = -1  !  down-in-west
+            this.grid.edgex_ternary(i  , j+1) += 1  ! right-in-south
+            this.grid.edgey_ternary(i+1, j  ) += 1  !    up-in-east
+            this.grid.edgex_ternary(i  , j  ) -= 1  !  left-in-north
+            this.grid.edgey_ternary(i  , j  ) -= 1  !  down-in-west
           end if
         end do
       end do
@@ -350,7 +415,7 @@ contains
       !!< 
 
       ==<just_once>==
-        call path_vert.initialize( this)
+        call path_vert.initialize( this )
       ==</just_once>==
 
       call this.contour.reset
@@ -359,22 +424,78 @@ contains
       call path_vert.reset
 
       finding_loops : &
-        do j = 1, edgex_nv
-          do i = 1, edgex_nu
-            if ( this.grid.edgex_ternary(i,j) == +1 ) then
-              ! Found!
-              path_vert_num = 1
-              path_vert_i = i
-              path_vert_j = j
+        do ej = 1, edgex_nv
+          do ei = 1, edgex_nu
+            if ( this.grid.edgex_ternary(ei,ej) == +1 ) then
+              ! Found a boundary curve.
+              vli = ei ! vert of left-end of the edge
+              vlj = ej 
+              call path_vert.register( vli, vlj )
               exit finding_loops
             end if
           end do
         end do &
       finding_loops
 
-      if ( path_vert_num == 0 ) return  ! No contour
+      if ( path_vert.num == 0 ) return  ! No contour
 
-      i = path_vert_i + 1   !   B of A===>B
+      vtip_direct = '+x'
+      vtip_i = vli + 1  ! vert of right-end of the edge
+      vtip_j = vlj
+
+      call contour_path.
+
+      select case (vtip_direct)
+        case '+x'
+          !!>
+                          edgex(ei=3,ej=8)
+            vert(vi=3,vj=8)   .
+                         \    .      
+                          o------o  
+            edgey(3,7)....|      |....edgey(4,7)
+                          |      |
+                          o------o
+                         /   .    \
+            vert(vi=3,vj=7)  .     vert(vi=4,vj=7)
+                           edgex(ei=3,ej=7)
+          !!<
+          if ( this.grid_edgey_tenary(ei+1,ej) == +1 ) then
+            ! turn to "up"
+            call path_vert.register( vtip_i, vtip_j )
+            vtip_direct = '+y'
+            exit
+          else if ( this.grid_edgey_tenary(ei+1,ej-1) == -1 ) then
+            ! turn ton "down"
+            call path_vert.register( vtip_i, vtip_j )
+            vtip_direct = '-y'
+            exit
+          else 
+            call ut__assert( this.grid_edgex_ternary(ei+1,ej) == +1,  &
+                            'Something is strange.' )
+            
+          end if
+          
+          next_ej = ej - 1
+          next_left_i = vtip_i
+          next_left_j = vtip_j-1
+          if ( this.grid.edgey_ternary( 'vtip_i,vtip_j))
+          
+
+      if ( step_forward_i==1 ) then
+        direct = 'E'
+      else if ( step_foward_j==1 ) then
+        direct = 'N'
+      else if ( step_foward_i==-1) then
+        direct = 'W'
+      else if ( step_foward_j=-1 )
+        direct = 'S'
+      else 
+        call ut__fatal( 'Something is strange.' )
+      end if
+
+
+
+      call path_vert.set_tip( 'x', )  !   B of A===>B
       j = path_vert_j       !       
       do while ( i /= path_vert_i .and.  &
                  j /= path_vert_j )
