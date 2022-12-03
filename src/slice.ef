@@ -514,6 +514,8 @@ contains
        +---+---2=P=1=P=1=P=2---+
   !!<    
       integer :: i, j
+      char(len=4) :: pattern
+
       do j = 1, this.vert_nv
         do i = 1, this.vert_nu
           if ( i == this.vert_nu ) then
@@ -537,11 +539,24 @@ contains
             south_edge = this.edgey_ternary(i,j-1)
           end if
 
-          pattern = neighbor_edges_pattern( north_edge, &
+          pattern = neibhbor_edges_pattern( north_edge, &
                                             west_edge,  &
                                             south_edge, &
                                             east_edge )
-
+          select case ( pattern )
+                  !'NWSE'
+            case ( 'io  ' )
+              this.vert_turn(i,j) = 'R'
+            case ( ' io ' )
+              this.vert_turn(i,j) = 'R'
+            case ( '  io' )
+              this.vert_turn(i,j) = 'R'
+            case ( 'o  i' )
+              this.vert_turn(i,j) = 'R'
+            case ( 'ioio' )
+              this.vert_turn(i,j) = 'R'
+            case ( 'ioio' )
+              this.vert_turn(i,j) = 'R'
 
             pattern(1:4) = iChar(n)//iChar(w)//iChar(s)//iChar(e)
 
