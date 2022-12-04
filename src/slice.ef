@@ -7,16 +7,6 @@ module slice_m
   implicit none
   private
 
-  type path_vert_t
-    integer :: num ! vertex number
-    integer, dimension(:), allocatable :: i, j
-  contains
-    procedure :: initialize => path_vert_initialize
-    procedure :: register => path_vert_register
-    procedure :: rest => path_vert_rest
-    procedure :: explore => path_vert_explore
-  end type path_vert_t
-
   type slice_grid_t
     !!>  
         V: vertex, egy: edge_y
@@ -78,129 +68,98 @@ module slice_m
 contains
 
 
-  function neibhbor_edges_pattern( n, w, s, e ) result(pattern)
-    integer <in> :: n, w, s, e  ! north, west, south, east
-    char(len=4) :: pattern
+  ! function neibhbor_edges_pattern( n, w, s, e ) result(pattern)
+  !   integer <in> :: n, w, s, e  ! north, west, south, east
+  !   char(len=4) :: pattern
 
-    pattern(1:1) = iNorth(n)
-    pattern(2:2) = iWest(w)
-    pattern(3:3) = iSouth(s)
-    pattern(4:4) = iEast(e)
+  !   pattern(1:1) = iNorth(n)
+  !   pattern(2:2) = iWest(w)
+  !   pattern(3:3) = iSouth(s)
+  !   pattern(4:4) = iEast(e)
 
-  contains
+  ! contains
 
-    function iNorth(n) result(char)
-      integer <in> :: n
-      char(len=1) :: char
-      !!>
-           plus                  north
-          v-direction              | 
-            |                  ----*----
-            +--- plus              |  
-                u-direction    
-      !!<
-      if ( n==-1 ) then
-        char = 'i' ! inward 
-      else if ( n==+1 ) then
-        char = 'o' ! outward
-      else if ( n==NULL ) then
-        char = 'b' ! boundary
-      else if ( n==0 ) then
-        char = ' '
-      else
-        call ut__assert( 'Something is wrong.' )
-      end if
-    end function iNorth
+  !   function iNorth(n) result(char)
+  !     integer <in> :: n
+  !     char(len=1) :: char
+  !     !!>
+  !          plus                  north
+  !         v-direction              | 
+  !           |                  ----*----
+  !           +--- plus              |  
+  !               u-direction    
+  !     !!<
+  !     if ( n==-1 ) then
+  !       char = 'i' ! inward 
+  !     else if ( n==+1 ) then
+  !       char = 'o' ! outward
+  !     else if ( n==NULL ) then
+  !       char = 'b' ! boundary
+  !     else if ( n==0 ) then
+  !       char = ' '
+  !     else
+  !       call ut__assert( 'Something is wrong.' )
+  !     end if
+  !   end function iNorth
 
-    function iWest(w) result(char)
-      integer <in> :: w
-      char(len=1) :: char
-      !!>
-           plus                  
-          v-direction                 | 
-            |                west ----*----
-            +--- plus                 |  
-                u-direction    
-      !!<
-      if ( w==+1 ) then
-        char = 'i' ! inward
-      else if ( w==-1 ) then
-        char = 'o' ! outward
-      else if ( w==NULL ) then
-        char = 'b' ! boundary
-      else if ( w==0 ) then
-        char = ' '
-      else
-        call ut__assert( 'Something is wrong.' )
-      end if
-    end function iWest
+  !   function iWest(w) result(char)
+  !     integer <in> :: w
+  !     char(len=1) :: char
+  !     !!>
+  !          plus                  
+  !         v-direction                 | 
+  !           |                west ----*----
+  !           +--- plus                 |  
+  !               u-direction    
+  !     !!<
+  !     if ( w==+1 ) then
+  !       char = 'i' ! inward
+  !     else if ( w==-1 ) then
+  !       char = 'o' ! outward
+  !     else if ( w==NULL ) then
+  !       char = 'b' ! boundary
+  !     else if ( w==0 ) then
+  !       char = ' '
+  !     else
+  !       call ut__assert( 'Something is wrong.' )
+  !     end if
+  !   end function iWest
 
-    function iSouth(s) result(char)
-      integer <in> :: s
-      char(len=1) :: char
+  !   function iSouth(s) result(char)
+  !     integer <in> :: s
+  !     char(len=1) :: char
 
-      if ( s==+1 ) then
-        char = 'i'
-      else if ( s==-1 ) then
-        char = 'o' ! out
-      else if ( s==NULL ) then
-        char = 'b' ! boundary
-      else if ( s==0 ) then
-        char = ' '
-      else
-        call ut__assert( 'Something is wrong.' )
-      end if
-    end function iSouth
+  !     if ( s==+1 ) then
+  !       char = 'i'
+  !     else if ( s==-1 ) then
+  !       char = 'o' ! out
+  !     else if ( s==NULL ) then
+  !       char = 'b' ! boundary
+  !     else if ( s==0 ) then
+  !       char = ' '
+  !     else
+  !       call ut__assert( 'Something is wrong.' )
+  !     end if
+  !   end function iSouth
 
-    function iEast(e) result(char)
-      integer <in> :: e
-      char(len=1) :: char
+  !   function iEast(e) result(char)
+  !     integer <in> :: e
+  !     char(len=1) :: char
       
-      if ( e==+1 ) then
-        char = 'o'
-      else if ( e==-1 ) then
-        char = 'i' ! out
-      else if ( e==NULL ) then
-        char = 'b' ! boundary
-      else if ( e==0 ) then
-        char = ' '
-      else
-        call ut__assert( 'Something is wrong.' )
-      end if
-    end function iEast          
+  !     if ( e==+1 ) then
+  !       char = 'o'
+  !     else if ( e==-1 ) then
+  !       char = 'i' ! out
+  !     else if ( e==NULL ) then
+  !       char = 'b' ! boundary
+  !     else if ( e==0 ) then
+  !       char = ' '
+  !     else
+  !       call ut__assert( 'Something is wrong.' )
+  !     end if
+  !   end function iEast          
 
-  end function neibhbor_edges_pattern
-
-
-  subroutine path_vert_reset( this )
-    class(path_vert_t) <io> :: this
-    this.num = 0
-    this.i(:) = 0
-    this.j(:) = 0
-  end subroutine path_vert_reset
-
-
-  subroutine path_vert_initialize( this, num_max )
-    class(path_vert_t) <out> :: this
-    integer <in> :: num_max
-
-    allocate(this.i(num_max),this.j(num_max))
-    call path_vert_reset( this )
-  end subroutine path_vert_initialize
-
-
-  subroutine path_vert_register( this, i, j )
-    class(path_vert_t) <io> :: this
-    integer <in> :: i, j
-
-    integer :: n
-    n = this.num + 1
-    call assert( n <= size(this.i,dim=1),  &
-                'Increase array size of path_vert.' )
-    this.num = n
-    this.i(n) = i
-    this.j(n) = j
-  end subroutine path_vert_register
+  ! end function neibhbor_edges_pattern
 
 
   subroutine path_vert_explore( this )
@@ -449,7 +408,7 @@ contains
     !!<
 
     call iSet_edges
-    call iCalc_path_turns_from_edges
+!    call iCalc_path_turns_from_edges
     call iExtract_boundary_curve
 
   contains
@@ -594,7 +553,8 @@ contains
       integer :: path_vert_i, path_vert_j
       integer :: path_vert_num
 
-      type(path_vert_t) :: path_vert
+      type(contour_path_t) :: contour_path
+      integer :: max_path_segment_num_overestimate
       logical :: just_once = .true.
 
       !!>
@@ -609,33 +569,53 @@ contains
       !!< 
 
       ==<just_once>==
-        call path_vert.initialize( this )
+        max_path_segment_num_overestimate = this.edge_nu*edge_nv
+        call contour_path.initialize( max_path_segment_num_overestimate, &
+                                      this.vert_nu,  &
+                                      this.vert_nv )
       ==</just_once>==
 
-      call this.contour.reset
-      ! Find a starting point of the path
+      call contour_path.reset
 
-      call path_vert.reset
+integer :: ei, ej, v0i, v0j, v1i, v1j
 
-      finding_loops : &
-        do ej = 1, edgex_nv
-          do ei = 1, edgex_nu
+      finding_starting_point_of_a_path : &
+        do ej = 1, this.grid.edgex_nv
+          do ei = 1, this.grid.edgex_nu
             if ( this.grid.edgex_ternary(ei,ej) == +1 ) then
-              ! Found a boundary curve.
-              vli = ei ! vert of left-end of the edge
-              vlj = ej 
-              call path_vert.register( vli, vlj )
+              ! Found a boundary curve of 'E(astward)' direction.
+              v0i = ei ! Vertex indexes of an left-end of
+              v0j = ej ! an edge is the same as the edge indexes.
+              v1i = v0i + 1
+              v1j = v0j
+              call contour_path.set_start_position( v0i, v0j )
+              call path_vert.register( v1i, v1j ) ! Other end of edge.
               exit finding_loops
             end if
           end do
         end do &
-      finding_loops
+      finding_starting_point_of_a_path
 
-      if ( path_vert.num == 0 ) return  ! No contour
+      if ( contour_path.num == 0 ) return  ! No contour
 
-      vtip_direct = '+x'
-      vtip_i = vli + 1  ! vert of right-end of the edge
-      vtip_j = vlj
+  integer :: p 
+
+      direct = 'E'
+
+      do p = 1, contour_path.num_max-2 ! segment count of the path.
+        if ( contour_path.turn_left_check( direct, v1i, v1j ) ) then
+          call path_vert.register( v1i, v1j )
+
+          call path_vert.turn_left( vtip_direct, vtip_i, vtip_j )
+          vtip_direct -= 1 ! Turn left.
+          if ( vtip_direct < 0 ) vtip_direct += 4
+          vtip_shift_from_start_j += 1
+        else if ( can_turn_right( vtip_direct, vtip_i, vtip_j ) ) then
+          call path_vert.register( vtip_i, vtip_j )
+          vtip_direct += 1 ! Turn right.
+          if ( vtip_direct > 4 ) vtip_direct -= 4 
+          vtip_shift_from_start_j += 1
+
 
       call path_vert.follow( )
 
