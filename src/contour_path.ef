@@ -2,10 +2,10 @@ module contour_path_m
   use ut_m
   implicit none
   !!>
-        P: positive edge (eastward for edgex and
-                          northward for edgey)
-        M: negative edge (westward for edgex and
-                          southward for edgey) 
+        P: positive edge: eastward for edgex and
+                          northward for edgey
+        M: negative edge: westward for edgex and
+                          southward for edgey 
         1: vertex on which paths run straight forward.
         2: vertex on which paths turn left.
         3: vertex on which paths turn right.
@@ -41,9 +41,12 @@ module contour_path_m
 contains
 
  
-  subroutine turn_left( switch, path, direct_now, i_now, j_now, ans  )
+  subroutine turn_left( switch, path,  &
+                        edgex_ternary, edgey_ternary,  &
+                        direct_now, i_now, j_now, ans  )
     char(len=*) <in> :: switch  ! 'just_check' or 'do_it'
     type(path_vert_t) <io> :: path
+    integer, dimension(:,:) <in> :: edgex_ternary, edgey_ternary
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
     logical <optout> :: ans
@@ -51,8 +54,19 @@ contains
     if ( switch == 'just_check' ) then 
       call ut__assert( present(ans),  &
                       'You forgot to pass check result variable.' )
+      ans = .false.  ! default value.
     end if
 
+    call ut__assert( size(edgex_ternary,dim=1) == path.irange_max-1 &
+                                              .and.                 &
+                     size(edgex_termary,dim=2) == path.jrange_max   &
+                                              .and.                 &
+                     size(edgey_ternary,dim=1) == path.irange_max   &
+                                              .and.                 &
+                     size(edgey_termary,dim=2) == path.jrange_max-1 )
+
+
+    
     select case (direct_now)
       case ('E')
         !!>
@@ -63,15 +77,13 @@ contains
         !!<
         call assert( j <= path.jrange_max-1,  &
                     'Impossible! You are going easthward on j=jmax?!' )
-        if ( path.edgey_ternary(i_now,j_now) == +1 ) then
+        if ( edgey_ternary(i_now,j_now) == +1 ) then
           if ( switch == 'just_check' ) then
             ans = .true.
           else
             j_now += 1
-            direct = 'N'
+            direct_now = 'N'
           end if
-        else if ( switch == 'just_check' ) then
-          ans = .false.
         end if
       case ('N')
         !!>
@@ -83,14 +95,13 @@ contains
         !!<
         call assert( i >= 2,  &
                     'Impossible!? You are going northward on i=1?!' )
-        if ( path.edgex_ternary(i_now-1,j_now) == -1 ) then
+        if ( edgex_ternary(i_now-1,j_now) == -1 ) then
           if ( switch == 'just_check' ) then
             ans = .true.
           else 
             i_now -= 1
+            direct_now = 'W'
           end if
-        else if ( switch == 'just_check' ) then
-          ans = .false.
         end if
       case ('W')
         !!>
@@ -101,14 +112,13 @@ contains
         !!<
         call assert( j >= 2,  &
                     'Impossible!? You are going westward on j=1?!' )
-        if ( path.edgey_ternary(i_now,j_now-1) == -1 ) then
+        if ( edgey_ternary(i_now,j_now-1) == -1 ) then
           if ( switch == 'just_check' ) then
             ans = .true.
           else 
             j_now -= 1
+            direct_now = 'S'
           end if
-        else if ( switch == 'just_check' ) then
-          ans = .false.
         end if
       case ('S')
         !!>
@@ -120,14 +130,13 @@ contains
         !!<
         call assert( i <= path.irange_max-1,  &
                     'Impossible!? You are going southward on i=imax?!' )
-        if ( path.edgex_ternary(i_now,j_now) == +1 ) then
+        if ( edgex_ternary(i_now,j_now) == +1 ) then
           if ( switch == 'just_check' ) then
             ans = .true.
           else
             i_now += 1
+            direct_now = 'E'
           end if
-        else if ( switch == 'just_check' ) then
-          ans = .false.
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
@@ -136,16 +145,20 @@ contains
   end subroutine turn_left_check
 
  
-  subroutine turn_right_check( switch, path, direct_now, i_now, j_now, ans )
+  subroutine turn_right( switch, path,  &
+                         edgex_ternary, edgey_ternary,  &
+                         direct_now, i_now, j_now, ans )
     char(len=*) <in> :: switch  ! 'just_check' or 'do_it'
     type(path_vert_t) <in> :: path
+    integer, dimension(:,:) <in> :: edgex_ternary, edgey_ternary
     char(len=1) <in> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <in> :: i_now, j_now
     logical <optout> :: ans
 
     if ( switch == 'just_check' ) then 
-      call ut__assert( present(check_result),  &
+      call ut__assert( present(ans),  &
                       'You forgot to pass check result variable.' )
+      ans = .false.  ! default value.
     end if
 
     select case (direct_now)
@@ -159,10 +172,12 @@ contains
         !!<
         call assert( j >= 2,  &
                     'Impossible! You are going easthward on j=1?!' )
-        if ( path.edgey_ternary(i_now,j_now-1) == -1 ) then
+        if ( edgey_ternary(i_now,j_now-1) == -1 ) then
+          if ( switch == 'just_check' ) then
           ans = .true.
         else
-          ans = .false.
+          j_now -= 1
+          direct_now = 'S'
         end if
       case ('N')
         !!>
@@ -174,14 +189,13 @@ contains
         !!<
         call assert( i <= path.irange_max-1,  &
                     'Impossible!? You are going northward on i=imax?!' )
-        if ( path.edgex_ternary(i_now,j_now) == +1 ) then
+        if ( edgex_ternary(i_now,j_now) == +1 ) then
           if ( switch == 'just_check' ) then 
             ans = .true.
           else
             i_now += 1
+            direct_now = 'E'
           end if
-        else if ( switch == 'just_check' ) then
-          ans = .false.
         end if
       case ('W')
         !!>
@@ -192,13 +206,12 @@ contains
         !!<
         call assert( j <= path.jrange_max-1,  &
                     'Impossible!? You are going westward on j=jmax?!' )
-        if ( path.edgey_ternary(i_now,j_now) == +1 ) then
+        if ( edgey_ternary(i_now,j_now) == +1 ) then
           if ( switch == 'just_check' ) then 
             ans = .true.
           else 
             j_now += 1
-        else if ( switch == 'just_check' ) then
-          ans = .false.
+            direct_now = 'S'
         end if
       case ('S')
         !!>
@@ -210,32 +223,35 @@ contains
         !!<
         call assert( i >= 2 ,  &
                     'Impossible!? You going southward on i=1?!' )
-        if ( path.edgex_ternary(i_now-1,j_now) == -1 ) then
+        if ( edgex_ternary(i_now-1,j_now) == -1 ) then
           if ( switch == 'just_check' ) then 
             ans = .true.
           else
             i_now -= 1
+            direct_now = 'W'
           end if
-        else if ( switch == 'just_check' ) then
-          ans = .false.
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
     end select
 
-  end subroutine turn_right_check  
+  end subroutine turn_right  
 
  
-  subroutine go_forward_check( switch, path, direct_now, i_now, j_now, ans )
+  subroutine go_forward( switch, path,  &
+                         edgex_ternary, edgey_ternary,  &
+                         direct_now, i_now, j_now, ans )
     char(len=*) <in> :: switch  ! 'just_check' or 'do_it'
     type(path_vert_t) <in> :: path
+    integer, dimension(:,:) <in> :: edgex_ternary, edgey_ternary
     char(len=1) <in> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <in> :: i_now, j_now
     logical <optout> :: ans
 
     if ( switch == 'just_check' ) then 
-      call ut__assert( present(check_result),  &
+      call ut__assert( present(ans),  &
                       'You forgot to pass check result variable.' )
+      ans = .false.  ! default value.
     end if
 
     select case (direct_now)
@@ -247,18 +263,13 @@ contains
                |      Checking if you can go straight or not.
 
         !!<
-        if ( i == path.irange_max ) then
-          if ( switch == 'just_check' ) then 
-            ans = .false.  ! You hit the east wall.
-          end if
-        else if ( path.edgex_ternary(i_now,j_now) == +1 ) then
+        if ( i_now == irange_max ) return  ! You cannot go forward.
+        if ( edgex_ternary(i_now,j_now) == +1 ) then 
           if ( switch == 'just_check' ) then 
             ans = .true.
           else
             i_now += 1
           end if
-        else if ( switch == 'just_check' ) then
-          ans = .false.
         end if
       case ('N')
         !!>
@@ -269,18 +280,13 @@ contains
                | 
                N
         !!<
-        if ( j == path.jrange_max ) then
-          if ( switch == 'just_check' ) then 
-            ans = .false.  ! You hit the north wall.
-          end if
-        else if ( path.edgey_ternary(i_now,j_now) == +1 ) then
+        if ( j_now == jrange_max ) return  ! You cannot go forward.
+        if ( edgey_ternary(i_now,j_now) == +1 ) then
           if ( switch == 'just_check' ) then 
             ans = .true.
           else
             j_now += 1
           end if
-        else if ( switch == 'just_check' ) then
-          ans = .false.
         end if
       case ('W')
         !!>
@@ -288,18 +294,13 @@ contains
             <-- + <---W
                 |  
         !!<
-        if ( i == path.irange_min ) then
-          if ( switch == 'just_check' ) then
-            ans = .false.  ! You hit the west wall.
-          end if
-        else if ( path.edgex_ternary(i_now-1,j_now) == -1 ) then
+        if ( i_now == 1 ) return  ! You cannot go forward.
+        if ( edgex_ternary(i_now-1,j_now) == -1 ) then
           if ( switch == 'just_check' ) then
             ans = .true.
           else
             i_now -= 1
           end if
-        else if ( switch == 'just_check' ) then
-          ans = .false.
         end if
       case ('S')
         !!>
@@ -310,23 +311,19 @@ contains
                 |
                 v
         !!<
-        if ( j == path.jrange_min ) then
-          if ( switch == 'just_check' ) then
-            ans = .false.  ! You hit the south wall.
-          end if
-        else if ( path.edgey_ternary(i_now,j_now-1) == -1 ) then
+        if ( j_now == 1 ) return  ! You cannot go forward.
+        if ( edgey_ternary(i_now,j_now-1) == -1 ) then
           if ( switch == 'just_check' ) then
             ans = .true.
           else
             j_now -= 1
-        else if ( switch == 'just_check' ) then
-          ans = .false.
+          end if
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
     end select
 
-  end subroutine go_forward_check    
+  end subroutine go_forward
 
 
   subroutine contour_path__reset( this )
