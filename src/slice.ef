@@ -579,7 +579,7 @@ contains
 
 integer :: ei, ej, v0i, v0j, v1i, v1j
 
-      finding_starting_point_of_a_path : &
+      loops_to_find_the_starting_point_of_a_path : &
         do ej = 1, this.grid.edgex_nv
           do ei = 1, this.grid.edgex_nu
             if ( this.grid.edgex_ternary(ei,ej) == +1 ) then
@@ -594,16 +594,40 @@ integer :: ei, ej, v0i, v0j, v1i, v1j
             end if
           end do
         end do &
-      finding_starting_point_of_a_path
+      loops_to_find_the_starting_point_of_a_path
 
-      if ( contour_path.num == 0 ) return  ! No contour
+!      if ( contour_path.num == 0 ) return  ! No contour
+
+      loops_to_folow_the_path : &
+        direct_now = 'E'
+        
+        do ej = 1, this.grid.edgex_nv
+          do ei = 1, this.grid.edgex_nu
+            if ( this.grid.edgex_ternary(ei,ej) == +1 ) then
+              ! Found a boundary curve of 'E(astward)' direction.
+              v0i = ei ! Vertex indexes of an left-end of
+              v0j = ej ! an edge is the same as the edge indexes.
+              v1i = v0i + 1
+              v1j = v0j
+              call contour_path.set_start_position( v0i, v0j )
+              call path_vert.register( v1i, v1j ) ! Other end of edge.
+              exit finding_loops
+            end if
+          end do
+        end do &
+      loops_to_folow_the_path
+      
 
   integer :: p 
 
       direct = 'E'
 
       do p = 1, contour_path.num_max-2 ! segment count of the path.
-        if ( contour_path.turn_left_check( direct, v1i, v1j ) ) then
+        call turn_left( 'just_check', path,  &
+                        edgex_ternary, edgey_ternary,  &
+                        direct_now, i_now, j_now, ans  )
+          
+        if ( contour_path.turn_left( direct, v1i, v1j ) ) then
           call path_vert.register( v1i, v1j )
 
           call path_vert.turn_left( vtip_direct, vtip_i, vtip_j )
