@@ -44,12 +44,12 @@ module contour_path_m
 contains
 
  
-  subroutine contour_path__turn_left( switch, path,  &
-                        edgex_ternary, edgey_ternary,  &
-                        direct_now, i_now, j_now, ans  )
+  subroutine contour_path__turn_left( switch, edge,       &
+                                      vert_nu, vert_nv,   &
+                                      direct_now, i_now, j_now, ans  )
     char(len=*) <in> :: switch  ! 'just_check' or 'do_it'
-    type(path_vert_t) <io> :: path
-    integer, dimension(:,:) <in> :: edgex_ternary, edgey_ternary
+    type(grid_mesh_edge_t) <io> :: edge
+    integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
     logical <optout> :: ans
@@ -59,16 +59,6 @@ contains
                       'You forgot to pass check result variable.' )
       ans = .false.  ! default value.
     end if
-
-    call ut__assert( size(edgex_ternary,dim=1) == path.irange_max-1 &
-                                              .and.                 &
-                     size(edgex_termary,dim=2) == path.jrange_max   &
-                                              .and.                 &
-                     size(edgey_ternary,dim=1) == path.irange_max   &
-                                              .and.                 &
-                     size(edgey_termary,dim=2) == path.jrange_max-1 )
-
-
     
     select case (direct_now)
       case ('E')
@@ -78,14 +68,15 @@ contains
           E--> + --   at '+' point, and moving eastward.
                |      Checking if you can turn left (northward) or not.
         !!<
-        call assert( j <= path.jrange_max-1,  &
+        call assert( j <= vert_nv-1,,  &
                     'Impossible! You are going easthward on j=jmax?!' )
-        if ( edgey_ternary(i_now,j_now) == +1 ) then
+        if ( edge.v_ternary(i_now,j_now) == +1 ) then
           if ( switch == 'just_check' ) then
             ans = .true.
           else
-            j_now += 1
-            direct_now = 'N'
+            j_now += 1                         ! Move the head point
+            direct_now = 'N'                   ! Turn 90 degree
+            edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
           end if
         end if
       case ('N')
@@ -98,12 +89,13 @@ contains
         !!<
         call assert( i >= 2,  &
                     'Impossible!? You are going northward on i=1?!' )
-        if ( edgex_ternary(i_now-1,j_now) == -1 ) then
+        if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
           if ( switch == 'just_check' ) then
             ans = .true.
           else 
-            i_now -= 1
-            direct_now = 'W'
+            i_now -= 1                         ! Move the head point
+            direct_now = 'W'                   ! Turn 90 degree
+            edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
           end if
         end if
       case ('W')
@@ -115,12 +107,13 @@ contains
         !!<
         call assert( j >= 2,  &
                     'Impossible!? You are going westward on j=1?!' )
-        if ( edgey_ternary(i_now,j_now-1) == -1 ) then
+        if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
           if ( switch == 'just_check' ) then
             ans = .true.
           else 
-            j_now -= 1
-            direct_now = 'S'
+            j_now -= 1                       ! Move the head point
+            direct_now = 'S'                 ! Turn 90 degree
+            edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
           end if
         end if
       case ('S')
@@ -131,14 +124,15 @@ contains
            -- + -->
               |
         !!<
-        call assert( i <= path.irange_max-1,  &
+        call assert( i <= vert_nu-1,  &
                     'Impossible!? You are going southward on i=imax?!' )
-        if ( edgex_ternary(i_now,j_now) == +1 ) then
+        if ( edge.u_ternary(i_now,j_now) == +1 ) then
           if ( switch == 'just_check' ) then
             ans = .true.
           else
-            i_now += 1
-            direct_now = 'E'
+            i_now += 1                       ! Move the head point
+            direct_now = 'E'                 ! Turn 90 degree
+            edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
           end if
         end if
       case default
@@ -148,14 +142,14 @@ contains
   end subroutine contour_path__turn_left_check
 
  
-  subroutine contour_path__turn_right( switch, path,  &
-                         edgex_ternary, edgey_ternary,  &
-                         direct_now, i_now, j_now, ans )
+  subroutine contour_path__turn_right( switch, edge,       &
+                                       vert_nu, vert_nv,   &
+                                       direct_now, i_now, j_now, ans  )
     char(len=*) <in> :: switch  ! 'just_check' or 'do_it'
-    type(path_vert_t) <in> :: path
-    integer, dimension(:,:) <in> :: edgex_ternary, edgey_ternary
-    char(len=1) <in> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
-    integer <in> :: i_now, j_now
+    type(grid_mesh_edge_t) <io> :: edge
+    integer <in> :: vert_nu, vert_nv
+    char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
+    integer <io> :: i_now, j_now
     logical <optout> :: ans
 
     if ( switch == 'just_check' ) then 
@@ -175,12 +169,14 @@ contains
         !!<
         call assert( j >= 2,  &
                     'Impossible! You are going easthward on j=1?!' )
-        if ( edgey_ternary(i_now,j_now-1) == -1 ) then
+        if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
           if ( switch == 'just_check' ) then
-          ans = .true.
-        else
-          j_now -= 1
-          direct_now = 'S'
+            ans = .true.
+          else
+            j_now -= 1                         ! Move the head point
+            direct_now = 'S'                   ! Turn 90 degree
+            edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
+          end if
         end if
       case ('N')
         !!>
@@ -190,14 +186,15 @@ contains
               | 
               N
         !!<
-        call assert( i <= path.irange_max-1,  &
+        call assert( i <= vert_nu-1,  &
                     'Impossible!? You are going northward on i=imax?!' )
-        if ( edgex_ternary(i_now,j_now) == +1 ) then
+        if ( edge.u_ternary(i_now,j_now) == +1 ) then
           if ( switch == 'just_check' ) then 
             ans = .true.
           else
-            i_now += 1
-            direct_now = 'E'
+            i_now += 1                         ! Move the head point
+            direct_now = 'E'                   ! Turn 90 degree
+            edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
           end if
         end if
       case ('W')
@@ -207,14 +204,15 @@ contains
            -- + <---W
               |  
         !!<
-        call assert( j <= path.jrange_max-1,  &
+        call assert( j <= vert_nv-1,  &
                     'Impossible!? You are going westward on j=jmax?!' )
-        if ( edgey_ternary(i_now,j_now) == +1 ) then
+        if ( edge.v_ternary(i_now,j_now) == +1 ) then
           if ( switch == 'just_check' ) then 
             ans = .true.
           else 
-            j_now += 1
-            direct_now = 'S'
+            j_now += 1                       ! Move the head point
+            direct_now = 'S'                 ! Turn 90 degree
+            edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
         end if
       case ('S')
         !!>
@@ -226,12 +224,13 @@ contains
         !!<
         call assert( i >= 2 ,  &
                     'Impossible!? You going southward on i=1?!' )
-        if ( edgex_ternary(i_now-1,j_now) == -1 ) then
+        if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
           if ( switch == 'just_check' ) then 
             ans = .true.
           else
-            i_now -= 1
-            direct_now = 'W'
+            i_now -= 1                       ! Move the head point
+            direct_now = 'W'                 ! Turn 90 degree
+            edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
           end if
         end if
       case default
@@ -241,18 +240,14 @@ contains
   end subroutine contour_path__turn_right  
 
  
-  subroutine contour_path__go_forward( this, switch,   &
-                                       edgex_ternary,  &
-                                       edgey_ternary,  &
-                                       direct_now,     &
-                                       i_now,          &
-                                       j_now,          &
-                                       ans )
-    class(path_vert_t) <in> :: this
+  subroutine contour_path__go_forward( switch, edge,       &
+                                       vert_nu, vert_nv,   &
+                                       direct_now, i_now, j_now, ans  )
     char(len=*) <in> :: switch  ! 'just_check' or 'do_it'
-    integer, dimension(:,:) <in> :: edgex_ternary, edgey_ternary
-    char(len=1) <in> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
-    integer <in> :: i_now, j_now
+    type(grid_mesh_edge_t) <io> :: edge
+    integer <in> :: vert_nu, vert_nv
+    char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
+    integer <io> :: i_now, j_now
     logical <optout> :: ans
 
     if ( switch == 'just_check' ) then 

@@ -21,8 +21,8 @@ module slice_mesh_m
     real :: u_min, u_max
     real :: v_min, v_max
   contains
-    procedure :: initialize => slice_grid__initialize
-    procedure :: finalize => slice_grid__finalize
+    procedure :: initialize => slice_mesh_vert__initialize
+    procedure :: finalize => slice_mesh_vert__finalize
   end type slice_mesh_vert_t  
 
   type slice_mesh_cell_t
@@ -42,20 +42,20 @@ module slice_mesh_m
             |       |       |       |       |
     !!< 
     integer :: nu, nv
-    real, dimension(:,:), allocatable :: val
-    real :: val_max, val_min
+    real, dimension(:,:), allocatable :: mean_val
+    real :: mean_val_max, mean_val_min
   contains
     procedure :: initialize => slice_mesh_cell__initialize
     procedure :: finalize => slice_mesh_cell__finalize
-    procedure :: set_val_cell => slice_mesh_cell__set_val
+    procedure :: set_val_cell => slice_mesh_cell__set_mean_val
   end type slice_mesh_cell_t  
 
-  type slice_mesh_edges_t
+  type slice_mesh_edge_t
     !!>                            
                                  edge_v                                    
         v: vertex                   |
         c: cell                     |
-        e: edgeu or edgev           +---- edge_u
+        e: edge_u or edge_v         +---- edge_u
                                     
             e       e       e       e       e
         c   e   c   e   c   e   c   e   c   e   c
@@ -75,9 +75,9 @@ module slice_mesh_m
     integer, dimension(:,:), allocatable :: v_ternary
                                             ! {+1, 0, -1}
   contains
-    procedure :: initialize => slice_mesh_edges__initialize
-    procedure :: finalize => slice_mesh_edges__finalize
-  end type slice_mesh_edges_t    
+    procedure :: initialize => slice_mesh_edge__initialize
+    procedure :: finalize => slice_mesh_edge__finalize
+  end type slice_mesh_edge_t    
 
 
 contains
@@ -134,37 +134,34 @@ contains
 
 
   subroutine slice_mesh_cell__initialize( this, mesh_vert )
-    class(slice_mesh_vert_t) <out> :: this
-    class(slice_mesh_vert_t) <in> :: this
+    class(slice_mesh_cell_t) <out> :: this
+    class(slice_mesh_vert_t) <in> :: mesh_vert
     !!>
-                                 edgev                                    
-        v: vertex                   |
-        c: cell                     |
-        e: edgeu or edgev           +---- edgeu
+            v: vertex          
+            c: cell            
+        - & |: edgeu or edgev  
 
-        mesh_vert.nu = 5
-        mesh_vert.nv = 4
-        edgex                                    
-             v e e e v e e e v e e e v e e e v
-             e       e       e       e       e
-             e   c   e   c   e   c   e   c   e
-             e       e       e       e       e
-             v e e e v e e e v e e e v e e e v
-             e       e       e       e       e
-             e   c   e   c   e   c   e   c   e
-             e       e       e       e       e
-             v e e e v e e e v e e e v e e e v
-             e       e       e       e       e
-             e   c   e   c   e   c   e   c   e
-             e       e       e       e       e
-             v e e e v e e e v e e e v e e e v
+        When mesh_vert.nu = 5, and mesh_vert.nv = 4
 
+               v - - - v - - - v - - - v - - - v
+               |       |       |       |       |
+               |   c   |   c   |   c   |   c   |
+               |       |       |       |       |
+               v - - - v - - - v - - - v - - - v
+               |       |       |       |       |
+               |   c   |   c   |   c   |   c   |
+               |       |       |       |       |
+               v - - - v - - - v - - - v - - - v
+               |       |       |       |       |
+               |   c   |   c   |   c   |   c   |
+               |       |       |       |       |
+               v - - - v - - - v - - - v - - - v
     !!<
 
     this.nu = mesh_vert.nu - 1
     this.nv = mesh_vert.nv - 1
 
-    allocate(this.cell(this.nu,this.nv))
+    allocate(this.mean_val(this.nu,this.nv))
 
   end subroutine slice_mesh_cell__initialize
 
@@ -172,57 +169,77 @@ contains
   subroutine slice_mesh_cell__finalize( this )
     class(slice_grid_t) <io> :: this
 
-    deallocate(this.cell)
+    deallocate(this.mean_val)
   end subroutine slice_mesh_cell__finalize
 
 
-  subroutine slice_mesh_edges__initialize( this, mesh_vert )
-    class(slice_mesh_edges_t) <out> :: this
+  subroutine slice_mesh_edge__initialize( this, mesh_vert )
+    class(slice_mesh_edge_t) <out> :: this
     class(slice_mesh_vert_t) <in> :: mesh_vert
+    !!>
+                            edgev                                    
+                              |
+          +: vertex           |
+                              +---- edgeu
 
+        When mesh_vert.nu = 5, and mesh_vert.nv = 4
+
+             + edgeu + edgeu + edgeu + edgeu +
+             e       e       e       e       e
+             |   c   |   c   |   c   |   c   |
+             v       v       v       v       v
+             + edgeu + edgeu + edgeu + edgeu +
+             e       e       e       e       e
+             |   c   |   c   |   c   |   c   |
+             v       v       v       v       v
+             + edgeu + edgeu + edgeu + edgeu +
+             e       e       e       e       e
+             |   c   |   c   |   c   |   c   |
+             v       v       v       v       v
+             + edgeu + edgeu + edgeu + edgeu +
+    !!<
       this.u_nu = mesh_vert.nu - 1
       this.u_nv = this.vert_nv
       this.v_nu = this.vert_nu
       this.v_nv = this.vert_nv - 1
-      allocate(this.edgeu_ternary(this.edgeu_nu,  &
-                                  this.edgeu_nv))
-      allocate(this.edgev_ternary(this.edgev_nu,  &
-                                  this.edgev_nv))
+      allocate(this.u_ternary(this.u_nu,  &
+                              this.u_nv))
+      allocate(this.v_ternary(this.v_nu,  &
+                              this.v_nv))
 
-  end subroutine slice_mesh_edges__initialize
+  end subroutine slice_mesh_edge__initialize
 
 
-  subroutine slice_mesh_edges__finalize( this )
+  subroutine slice_mesh_edge__finalize( this )
     class(slice_grid_t) <io> :: this
 
-    deallocate(this.vert_pos_u)
-    deallocate(this.vert_pos_v)
-    deallocate(this.edgeu_ternary)
-    deallocate(this.edgev_ternary)
-  end subroutine slice_mesh_edges__finalize  
+    deallocate(this.u_ternary)
+    deallocate(this.v_ternary)
+  end subroutine slice_mesh_edge__finalize  
 
 
-  subroutine slice_grid__set_val_cell( this, scal_val_vert )
-    class(slice_grid_t) <io> :: this
-    real, dimension(:,:) <in> :: scal_val_vert
+  subroutine slice_mesh_cell__set_meanval( this, vert, val_on_vert )
+    class(slice_mesh_cell_t) <io> :: this
+    type(slice_mesh_vert_t) <in> :: vert
+    real, dimension(:,:) <in> :: val_on_vert
 
     integer :: i, j
 
-    call ut__assert( size(scal_val_vert,dim=1) == this.vert_nu, .and.  &
-                     size(scal_val_vert,dim=2) == this.vert_nv, &
+    call ut__assert( size(val_on_vert,dim=1) == vert.nu, .and.  &
+                     size(val_on_vert,dim=2) == vert.nv, &
                     'Inconsistent size of input scal_val_vert.' )
     ! Take average
-    do j = 1, this.cell_nv
-      do i = 1, this.cell_nu
-        this.val_cell(i,j) = (  scal_val_vert(i,    j)   &
-                              + scal_val_vert(i+1,  j)   &
-                              + scal_val_vert(i,  j+1)   &
-                              + scal_val_vert(i+1,j+1) ) / 4
+    do j = 1, this.nv
+      do i = 1, this.nu
+        this.mean_val(i,j) = (  val_on_vert(i,    j)   &
+                              + val_on_vert(i+1,  j)   &
+                              + val_on_vert(i,  j+1)   &
+                              + val_on_vert(i+1,j+1) ) / 4
       end do
     end do
-    this.cell_val_max = maxval(scal_val_cell)
-    this.cell_val_min = minval(scal_val_cell)
-  end subroutine slice_grid__set_val_cell
+    this.mean_val_max = maxval(val_on_vert)
+    this.mean_val_min = minval(val_on_vert)
+  end subroutine slice_mesh_cell__set_meanval
 
 
 end module slice_mesh_m
