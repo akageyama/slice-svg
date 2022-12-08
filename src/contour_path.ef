@@ -43,22 +43,30 @@ module contour_path_m
 
 contains
 
+
+  function contour_path_closed( this, i_now, j_now ) result(ans)
+    type(contour_path_t) <in> :: this
+    integer <in> :: i_now, j_now
+    logical :: ans
+
+    ans = ( i_now == this.start_position_i .and. &
+            j_now == this.start_position_j )
+
+  end function contour_path_closed
+
  
-  subroutine contour_path__turn_left( switch, edge,       &
-                                      vert_nu, vert_nv,   &
+  subroutine contour_path__turn_left( this, switch, edge,       &
+                                      vert_nu, vert_nv,         &
                                       direct_now, i_now, j_now, ans  )
+    class(contour_path_t) <io> :: this
     char(len=*) <in> :: switch  ! 'just_check' or 'do_it'
     type(grid_mesh_edge_t) <io> :: edge
     integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
-    logical <optout> :: ans
+    logical <out> :: ans
 
-    if ( switch == 'just_check' ) then 
-      call ut__assert( present(ans),  &
-                      'You forgot to pass check result variable.' )
-      ans = .false.  ! default value.
-    end if
+    ans = .false.  ! default value.
     
     select case (direct_now)
       case ('E')
@@ -71,13 +79,19 @@ contains
         call assert( j <= vert_nv-1,,  &
                     'Impossible! You are going easthward on j=jmax?!' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
-          if ( switch == 'just_check' ) then
-            ans = .true.
-          else
-            j_now += 1                         ! Move the head point
-            direct_now = 'N'                   ! Turn 90 degree
-            edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              j_now += 1                         ! Move the head point
+              direct_now = 'N'                   ! Turn 90 degree
+              edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case ('N')
         !!>
@@ -90,13 +104,19 @@ contains
         call assert( i >= 2,  &
                     'Impossible!? You are going northward on i=1?!' )
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
-          if ( switch == 'just_check' ) then
-            ans = .true.
-          else 
-            i_now -= 1                         ! Move the head point
-            direct_now = 'W'                   ! Turn 90 degree
-            edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              i_now -= 1                         ! Move the head point
+              direct_now = 'W'                   ! Turn 90 degree
+              edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case ('W')
         !!>
@@ -108,13 +128,19 @@ contains
         call assert( j >= 2,  &
                     'Impossible!? You are going westward on j=1?!' )
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
-          if ( switch == 'just_check' ) then
-            ans = .true.
-          else 
-            j_now -= 1                       ! Move the head point
-            direct_now = 'S'                 ! Turn 90 degree
-            edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              j_now -= 1                       ! Move the head point
+              direct_now = 'S'                 ! Turn 90 degree
+              edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case ('S')
         !!>
@@ -127,13 +153,19 @@ contains
         call assert( i <= vert_nu-1,  &
                     'Impossible!? You are going southward on i=imax?!' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
-          if ( switch == 'just_check' ) then
-            ans = .true.
-          else
-            i_now += 1                       ! Move the head point
-            direct_now = 'E'                 ! Turn 90 degree
-            edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              i_now += 1                       ! Move the head point
+              direct_now = 'E'                 ! Turn 90 degree
+              edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
@@ -150,13 +182,9 @@ contains
     integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
-    logical <optout> :: ans
+    logical <out> :: ans
 
-    if ( switch == 'just_check' ) then 
-      call ut__assert( present(ans),  &
-                      'You forgot to pass check result variable.' )
-      ans = .false.  ! default value.
-    end if
+    ans = .false.  ! default value.
 
     select case (direct_now)
       case ('E')
@@ -170,13 +198,19 @@ contains
         call assert( j >= 2,  &
                     'Impossible! You are going easthward on j=1?!' )
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
-          if ( switch == 'just_check' ) then
-            ans = .true.
-          else
-            j_now -= 1                         ! Move the head point
-            direct_now = 'S'                   ! Turn 90 degree
-            edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              j_now -= 1                         ! Move the head point
+              direct_now = 'S'                   ! Turn 90 degree
+              edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case ('N')
         !!>
@@ -189,13 +223,19 @@ contains
         call assert( i <= vert_nu-1,  &
                     'Impossible!? You are going northward on i=imax?!' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
-          if ( switch == 'just_check' ) then 
-            ans = .true.
-          else
-            i_now += 1                         ! Move the head point
-            direct_now = 'E'                   ! Turn 90 degree
-            edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              i_now += 1                         ! Move the head point
+              direct_now = 'E'                   ! Turn 90 degree
+              edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case ('W')
         !!>
@@ -207,12 +247,19 @@ contains
         call assert( j <= vert_nv-1,  &
                     'Impossible!? You are going westward on j=jmax?!' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
-          if ( switch == 'just_check' ) then 
-            ans = .true.
-          else 
-            j_now += 1                       ! Move the head point
-            direct_now = 'S'                 ! Turn 90 degree
-            edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              j_now += 1                       ! Move the head point
+              direct_now = 'S'                 ! Turn 90 degree
+              edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case ('S')
         !!>
@@ -225,13 +272,19 @@ contains
         call assert( i >= 2 ,  &
                     'Impossible!? You going southward on i=1?!' )
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
-          if ( switch == 'just_check' ) then 
-            ans = .true.
-          else
-            i_now -= 1                       ! Move the head point
-            direct_now = 'W'                 ! Turn 90 degree
-            edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              i_now -= 1                       ! Move the head point
+              direct_now = 'W'                 ! Turn 90 degree
+              edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
@@ -248,13 +301,9 @@ contains
     integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
-    logical <optout> :: ans
+    logical <out> :: ans
 
-    if ( switch == 'just_check' ) then 
-      call ut__assert( present(ans),  &
-                      'You forgot to pass check result variable.' )
-      ans = .false.  ! default value.
-    end if
+    ans = .false.  ! default value.
 
     select case (direct_now)
       case ('E')
@@ -267,11 +316,17 @@ contains
         !!<
         if ( i_now == irange_max ) return  ! You cannot go forward.
         if ( edgex_ternary(i_now,j_now) == +1 ) then 
-          if ( switch == 'just_check' ) then 
-            ans = .true.
-          else
-            i_now += 1
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              i_now += 1
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case ('N')
         !!>
@@ -284,11 +339,17 @@ contains
         !!<
         if ( j_now == jrange_max ) return  ! You cannot go forward.
         if ( edgey_ternary(i_now,j_now) == +1 ) then
-          if ( switch == 'just_check' ) then 
-            ans = .true.
-          else
-            j_now += 1
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              j_now += 1
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case ('W')
         !!>
@@ -298,11 +359,17 @@ contains
         !!<
         if ( i_now == 1 ) return  ! You cannot go forward.
         if ( edgex_ternary(i_now-1,j_now) == -1 ) then
-          if ( switch == 'just_check' ) then
-            ans = .true.
-          else
-            i_now -= 1
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              i_now -= 1
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case ('S')
         !!>
@@ -315,11 +382,17 @@ contains
         !!<
         if ( j_now == 1 ) return  ! You cannot go forward.
         if ( edgey_ternary(i_now,j_now-1) == -1 ) then
-          if ( switch == 'just_check' ) then
-            ans = .true.
-          else
-            j_now -= 1
-          end if
+          select case (switch)
+            case ('just check')
+              ans = .true.
+            case ('do it')
+              j_now -= 1
+              if ( contour_path_closed( this, i_now, j_now ) ) then
+                ans = .true.
+              end if
+            case default
+              call ut__fatal( 'Case value error.' )
+          end select
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
@@ -376,120 +449,6 @@ contains
     this.lis_j(n) = j
     this.num = n
   end subroutine contour_path__register
-
-
-
-  subroutine contour_path__explore( this )
-    class(contour_path_t) <io> :: this
-
-    integer :: head_i, head_j
-    integer :: step_forward_i, step_forward_j
-    integer :: step_turn_left_i, step_turn_left_j
-    integer :: step_turn_right_i, step_turn_right_j
-
-    !!>
-        edge direction from foot-vert to head-vert
-                            .
-           f-->h   (1,0)    .     f
-       ......................     |  (0,-1)
-                            .     h   
-             h              ...................  
-             |     (0,1)    .   
-             f              .  h<--f (-1,0)
-    !!<
-
-    head_i = this.i(this.num)
-    head_j = this.j(this.num)
-    foot_i = this.i(this.num-1)
-    foot_j = this.j(this.num-1)
-    step_forward_i = head_i - foot_i
-    step_forward_j = head_j - foot_j
-    step_turn_left_i =  -step_forward_j ! Vector
-    step_turn_left_j =  +step_forward_i !  outer
-    step_turn_right_i = +step_forward_j !   product
-    step_turn_right_j = -step_forward_i !    with unit-z.
-
-    if ( step_forward_i==1 ) then
-      direct = 'E'
-    else if ( step_foward_j==1 ) then
-      direct = 'N'
-    else if ( step_foward_i==-1) then
-      direct = 'W'
-    else if ( step_foward_j=-1 )
-      direct = 'S'
-    else 
-      call ut__fatal( 'Something is strange.' )
-    end if
-
-    select case (direct)
-      case ('E')
-        !!>
-                             i=hi
-                     -o-------o-------o j=hj-1
-                      |       |       |
-                      |       |<--edgey(hi,hj-1)
-                      |       |       |
-                     -f======>h-------o j=hj
-                              |       |
-                              |<--edgey(hi,hj)
-
-        !!<
-         
-        if ( this.edgey_ternary(head_i,head_j-1) == +1 ) then
-          ! turn left
-
-
-        
-  end subroutine contour_path__explore
-
-
-  ! recursive subroutine trace_edge( edgex, edgey, direct, vi, vj, vert_path )
-  !   char(len=2) <io> :: direct
-  !   integer <io> :: vi, vj
-
-  !   integer :: ei, ej
-
-  !   ei_left_turn = vi
-  !   ej_left_turn = vj
-  !   ei_right_turn = vi
-  !   ej_right_turn = vj-1
-  !   ei_straight_move = vi
-  !   ej_straight_move = vj
-
-  !   select case (direct)
-  !     case '+x'
-  !       !!>
-  !                           edgex(ei=3,ej=8)
-  !         vert(vi=3,vj=8)   .    vert(vi=4,vj=8)
-  !                      \    .   / 
-  !                       o------o  
-  !         edgey(3,7)....|      |....edgey(ei=4,ej=7)
-  !                       |      |
-  !                       o=====>V
-  !                      /|  .   | \ vert(vi=4,vj=7)
-  !        vert(vi=3,vj=7)|  .   |..............edgey(ei=4,ej=6)   
-  !                          .   o 
-  !           edgex(ei=3,ej=7)    \
-  !                                vert(vi=4,vj=6)
-  !       !!<
-  !       if ( edgey(ei_left_turn,ej_left_turn) == +1 ) then
-  !         ! turn to "up"
-  !         call path_vert.register( vi, vj )
-  !         direct = '+y'
-  !         call trace_edge( edgex, edgey, direct, vi, vj, vert_path )
-  !       else if ( edgey(ei_right_turn,ej_right_turn) == -1 ) then
-  !         ! turn to "down"
-  !         call path_vert.register( ei_straight_move,  &
-  !                                  ej_straight_move )
-  !         vtip_direct = '+x'
-  !         return
-  !       else 
-  !         call ut__assert( edgex(ei+1,ej) == +1,  &
-  !                         'Something is strange.' )
-  !         direct = '+x'  
-  !         call trace_edge( edgex, edgey, direct, vi, vj, vert_path )              
-  !       end if
-
 
 
 end module contour_path_m

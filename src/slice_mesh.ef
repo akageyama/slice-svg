@@ -47,7 +47,7 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh_cell__initialize
     procedure :: finalize => slice_mesh_cell__finalize
-    procedure :: set_val_cell => slice_mesh_cell__set_mean_val
+    procedure :: set_meanval => slice_mesh_cell__set_meanval
   end type slice_mesh_cell_t  
 
   type slice_mesh_edge_t
@@ -77,6 +77,8 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh_edge__initialize
     procedure :: finalize => slice_mesh_edge__finalize
+    procedure :: apply_stokes => slice_mesh_edge__apply_stokes
+    procedure :: contour_path_exist => slice_mesh_edge__contour_path_exist
   end type slice_mesh_edge_t    
 
 
@@ -237,9 +239,55 @@ contains
                               + val_on_vert(i+1,j+1) ) / 4
       end do
     end do
-    this.mean_val_max = maxval(val_on_vert)
-    this.mean_val_min = minval(val_on_vert)
+    this.mean_val_max = maxval(this.mean_val)
+    this.mean_val_min = minval(this.mean_val)
   end subroutine slice_mesh_cell__set_meanval
 
+  subroutine slice_mesh_edge__apply_stokes( this, mesh_cell, level )
+    class(slice_mesh_edge_t) <io> :: this
+    type(slice_mesh_cell_t) <in> :: mesh_cell
+    real <in> :: level
+    !!>
+        Applying Stokes thereom, we get the boundary curve 
+        of cells that has larger value than "level".
+
+              <---               <---             
+          +--------+	       +--------+   
+        | |cell at | ^     | |cell at | ^  
+        | |   ci=1 | |  +  | |   ci=2 | |  
+        v |   cj=3 | |     v |   cj=3 | |  
+          +--------+	       +--------+   
+              --->	          --->         "cancel out" 
+                                          /
+                                  <---   / <---
+                              +--------+--------+
+                            | |cell at |cell at | ^ 
+                         =  | |   ci=1 |   ci=2 | | 
+                            v |   cj=3 |   cj=3 | | 
+                              +--------+--------+
+                                  --->     --->
+    !!<
+    integer :: i, j  ! cell indexes
+
+    this.u_ternary(:,:) = 0  ! reset
+    this.v_ternary(:,:) = 0
+    do j = 1, mesh_cell.nv
+      do i = 1, mesh_cell.nu
+        if ( mesh_cell.meanval(i,j) >= level ) then
+          this.u_ternary(i  , j+1) += 1  ! right-in-south
+          this.v_ternary(i+1, j  ) += 1  !    up-in-east
+          this.u_ternary(i  , j  ) -= 1  !  left-in-north
+          this.v_ternary(i  , j  ) -= 1  !  down-in-west
+        end if
+      end do
+    end do
+  end subroutine slice_mesh_edge__apply_stokes
+
+
+  function slice_mesh_edge__has_nonzero_ternary( this ) result(ans)
+    class(slice_mesh_edge_t) <in> :: this
+
+    ans = maxval(this.u_ternary(:,:)) == 1
+  end function slice_mesh_edge__has_nonzero_ternary
 
 end module slice_mesh_m

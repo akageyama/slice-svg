@@ -3,13 +3,15 @@
   !!< 
 module slice_m
   use ut_m
-  use svglib_m
+  use slice_mesh_m
   implicit none
   private
 
 
   type, public :: slice__scalar_t
-    type(slice_grid_t) :: grid
+    type(slice_mesh_vert_t) :: mesh_vert
+    type(slice_mesh_cell_t) :: mesh_cell
+    type(slice_mesh_edge_t) :: mesh_edge
     real, dimension(:,:), allocatable :: val_vert
     real :: val_vert_max, val_vert_min
   contains
@@ -20,7 +22,7 @@ module slice_m
   end type slice__scalar_t
 
   type, public :: slice__vector_t
-    type(slice_grid_t) :: grid
+    type(slice_mesh_vert_t) :: mesh_vert
     real, dimension(:,:), allocatable :: vect_x
     real, dimension(:,:), allocatable :: vect_y
     real :: amp_max, amp_min
@@ -32,100 +34,6 @@ module slice_m
 
 
 contains
-
-
-  ! function neibhbor_edges_pattern( n, w, s, e ) result(pattern)
-  !   integer <in> :: n, w, s, e  ! north, west, south, east
-  !   char(len=4) :: pattern
-
-  !   pattern(1:1) = iNorth(n)
-  !   pattern(2:2) = iWest(w)
-  !   pattern(3:3) = iSouth(s)
-  !   pattern(4:4) = iEast(e)
-
-  ! contains
-
-  !   function iNorth(n) result(char)
-  !     integer <in> :: n
-  !     char(len=1) :: char
-  !     !!>
-  !          plus                  north
-  !         v-direction              | 
-  !           |                  ----*----
-  !           +--- plus              |  
-  !               u-direction    
-  !     !!<
-  !     if ( n==-1 ) then
-  !       char = 'i' ! inward 
-  !     else if ( n==+1 ) then
-  !       char = 'o' ! outward
-  !     else if ( n==NULL ) then
-  !       char = 'b' ! boundary
-  !     else if ( n==0 ) then
-  !       char = ' '
-  !     else
-  !       call ut__assert( 'Something is wrong.' )
-  !     end if
-  !   end function iNorth
-
-  !   function iWest(w) result(char)
-  !     integer <in> :: w
-  !     char(len=1) :: char
-  !     !!>
-  !          plus                  
-  !         v-direction                 | 
-  !           |                west ----*----
-  !           +--- plus                 |  
-  !               u-direction    
-  !     !!<
-  !     if ( w==+1 ) then
-  !       char = 'i' ! inward
-  !     else if ( w==-1 ) then
-  !       char = 'o' ! outward
-  !     else if ( w==NULL ) then
-  !       char = 'b' ! boundary
-  !     else if ( w==0 ) then
-  !       char = ' '
-  !     else
-  !       call ut__assert( 'Something is wrong.' )
-  !     end if
-  !   end function iWest
-
-  !   function iSouth(s) result(char)
-  !     integer <in> :: s
-  !     char(len=1) :: char
-
-  !     if ( s==+1 ) then
-  !       char = 'i'
-  !     else if ( s==-1 ) then
-  !       char = 'o' ! out
-  !     else if ( s==NULL ) then
-  !       char = 'b' ! boundary
-  !     else if ( s==0 ) then
-  !       char = ' '
-  !     else
-  !       call ut__assert( 'Something is wrong.' )
-  !     end if
-  !   end function iSouth
-
-  !   function iEast(e) result(char)
-  !     integer <in> :: e
-  !     char(len=1) :: char
-      
-  !     if ( e==+1 ) then
-  !       char = 'o'
-  !     else if ( e==-1 ) then
-  !       char = 'i' ! out
-  !     else if ( e==NULL ) then
-  !       char = 'b' ! boundary
-  !     else if ( e==0 ) then
-  !       char = ' '
-  !     else
-  !       call ut__assert( 'Something is wrong.' )
-  !     end if
-  !   end function iEast          
-
-  ! end function neibhbor_edges_pattern
 
 
   subroutine path_vert_explore( this )
@@ -192,31 +100,22 @@ contains
   end subroutine path_vert_explore
 
 
-  subroutine slice__scalar_initialize( this,        &
-                                       vert_nu,     &
-                                       vert_nv,     &
-                                       vert_u_min,  &
-                                       vert_u_max,  &
-                                       vert_v_min,  &
-                                       vert_v_max,  &
+  subroutine slice__scalar_initialize( this, nu, nv,  &
+                                       u_min, u_max,  &
+                                       v_min, v_max,  &
                                        val )
     class(slice__scalar_t) <out> :: this
-    integer <in> :: vert_nu, vert_nv
-    real <in> :: vert_u_min, vert_u_max
-    real <in> :: vert_v_min, vert_v_max
+    integer <in> :: nu, nv
+    real <in> :: u_min, u_max
+    real <in> :: v_min, v_max
     real, dimension(vert_nu,vert_nv) <optin> :: val
 
-    call this.grid.initialize( vert_nu,     &
-                               vert_nv,     &
-                               vert_u_min,  &
-                               vert_u_max,  &
-                               vert_v_min,  &
-                               vert_v_max )
+    call this.mesh_vert.initialize( nu, nv,        &
+                                    u_min, u_max,  &
+                                    v_min, v_max )
 
-    allocate(this.val_vert(this.grid.vert_nu,  &
-                           this.grid.vert_nv))
-    allocate(this.grid.cell_val(this.grid.cell_nu,  &
-                               this.grid.cell_nv))
+    call this.mesh_cell_initialize( this.mesh_vert )
+    call this.mesh_edge_initialize( this.mesh_vert )
 
     if ( present(val) ) then
       this.val_vert(:,:) = val(:,:)
@@ -224,22 +123,21 @@ contains
       this.val_vert(:,:) = 0.0
     end if
 
-    call this.grid.set_val_cell( this, val )
+    call this.mesh_cell.set_meanval( this.mesh_vert,  &
+                                     this.val_vert )
   end subroutine slice__scalar_initialize
 
 
-  subroutine slice__scalar_set_val( this, &
-                                    vert_nu, &
-                                    vert_nv, &
-                                    val )
+  subroutine slice__scalar_set_val( this, nu, nv, val )
     class(slice__scalar_t) <io> :: this
-    integer <in> :: vert_nu, vert_nv
-    real, dimension(vert_nu,vert_nv) <in> :: val
+    integer <in> :: nu, nv
+    real, dimension(nu,nv) <in> :: val
 
     this.val_vert(:,:) = val(:,:)
     this.val_vert_max = maxval(val)
     this.val_vert_min = minval(val)
-    call slice_scalar_val_vert_to_val_cell( this )
+    call this.mesh_cell.set_meanval( this.mesh_vert,  &
+                                     this.val_vert )
   end subroutine slice__scalar_set_val
 
 
@@ -247,15 +145,16 @@ contains
     class(slice__scalar_t) <io> :: this
 
     deallocate(this.val_vert)
-    deallocate(this.val_cell)
-    call this.grid.finalize
+    call this.mesh_vert.finalize
+    call this.mesh_cell.finalize
+    call this.mesh_edge.finalize
   end subroutine slice__scalar_finalize
 
 
   subroutine slice__scalar_vis_contour( this, level )
     class(slice__scalar_t) <in> :: this
     real <in> :: level
-
+    
     !!>
         In the followings, "e" stands for "edge",
         and "c" stands for "cell". "i" is index
@@ -264,7 +163,7 @@ contains
         cell-index in v.
 
                     north               
-               edge_x(ei=1,ej=4)       +---+---+---+ ej=4
+                edgeu(ei=1,ej=4)       +---+---+---+ ej=4
                 +------------+ .       | 3 |   |   |
               w | cell(ci,cj)|e  .     +---+---+---+ ej=3
               e |    with    |a    .   | 2 |   |   |
@@ -272,62 +171,25 @@ contains
               t/|            |t \      | 1 | 2 | 3 |
               / +------------+ ..\.... +---+---+---+ ej=1
              /      / south       \   ei=1 2   3   4 
-            / edge_x(ei=1,ej=3)    \            
+            /  edgeu(ei=1,ej=3)    \            
            /                        \
-       edge_y(ei=1,ej=3)          edge_y(ei=2,ej=3)
+        edgev(ei=1,ej=3)           edgev(ei=2,ej=3)
 
-    !!<
+                              edgeu(ei=3,ej=8)
+            vert(vi=3,vj=8)   .    vert(vi=4,vj=8)
+                         \    .   / 
+                          o------o  
+            edgev(3,7)....|      |....edgev(ei=4,ej=7)
+                          |      |
+                          o=====>V
+                         /|  .   | \ vert(vi=4,vj=7)
+           vert(vi=3,vj=7)|  .   |..............edgev(ei=4,ej=6)   
+                             .   o 
+              edgeu(ei=3,ej=7)    \
+                                   vert(vi=4,vj=6)
 
-    call slice_grid__set_val_cell
-    call slice_grid__set_edges( )
-!    call iCalc_path_turns_from_edges
-    call iExtract_boundary_curve
-
-  contains
-
-    subroutine iSet_edges
-      !!>
-          Applying Stokes thereom, we get the boundary curve 
-          of cells that has larger value than "level".
-
-               <---               <---             
-            +--------+	       +--------+   
-          | |cell at | ^     | |cell at | ^  
-          | |   ci=1 | |  +  | |   ci=2 | |  
-          v |   cj=3 | |     v |   cj=3 | |  
-            +--------+	       +--------+   
-               --->	          --->         "cancel out" 
-                                           /
-                                   <---   / <---
-                                +--------+--------+
-                              | |cell at |cell at | ^ 
-                           =  | |   ci=1 |   ci=2 | | 
-                              v |   cj=3 |   cj=3 | | 
-                                +--------+--------+
-                                   --->     --->
-      !!<
-      integer :: i, j  ! cell indexes
-  
-      this.grid.edgex_ternary(:,:) = 0  ! reset
-      this.grid.edgey_ternary(:,:) = 0
-      do j = 1, this.cell.vert_nv
-        do i = 1, this.cell.vert_nu
-          if ( this.val_cell(i,j) >= level ) then
-            this.grid.edgex_ternary(i  , j+1) += 1  ! right-in-south
-            this.grid.edgey_ternary(i+1, j  ) += 1  !    up-in-east
-            this.grid.edgex_ternary(i  , j  ) -= 1  !  left-in-north
-            this.grid.edgey_ternary(i  , j  ) -= 1  !  down-in-west
-          end if
-        end do
-      end do
-    end subroutine iSet_edges
-
-    subroutine iCalc_path_turns_from_edges
-  !!>
-        P: positive edge (eastward for edgex and
-                          northward for edgey)
-        M: negative edge (westward for edgex and
-                          southward for edgey) 
+        P: positive edge, eastward edgeu / northward edgev
+        M: negative edge, westward edgeu / southward edgev
         1: vertex on which paths run straight forward.
         2: vertex on which paths turn left.
         3: vertex on which paths turn right.
@@ -343,7 +205,166 @@ contains
        +---+---1           3=P=2
        |   |   M           P   |
        +---+---2=P=1=P=1=P=2---+
-  !!<    
+    !!<
+    logical :: just_once = .true.
+    type(contour_path_t), save :: contour_path
+    integer :: max_path_segment_num_overestimate
+
+    ==<just_once>==
+      max_path_segment_num_overestimate = this.mesh_edge_nu  &
+                                        * this.mesh_edge_nv
+      call contour_path.initialize( max_path_segment_num_overestimate, &
+                                    this.mesh_vert.nu,  &
+                                    this.mesh_vert.nv )
+    ==</just_once>==
+
+    call contour_path.reset
+    call this.mesh_edge.apply_stokes( this.mesh_cell, level )
+
+    do while ( this.mesh_edge.contour_path_exist() ) 
+      call iFind_start_edge( 'E', i_now, j_now )
+      call iTrace_path_and_erase_footprint( 'E', i_now, j_now, closed )
+
+
+    end do
+
+
+    call iExtract_boundary_curve
+
+  contains
+
+
+    subroutine iFind_start_edge( direct_now, i_now, j_now )
+      char(len=1) :: direct_now
+      integer <out> :: i_now, j_now
+      !!>
+            Tring to find a eastward arrow AB.
+                +---+---+---+
+                |           |
+                A==>B       +
+                 /  |       |
+                /   +---+---+
+               /
+             This.
+      !!< 
+      integer :: ei, ej, v0i, v0j
+
+      call ut__assert( direct_now=='E',  &
+                      'We assume start edge is E(astward).' )
+      do ej = 1, this.mesh_edge.u_nv
+        do ei = 1, this.mesh_edge.u_nu
+          if ( this.mesh_edge.u_ternary(ei,ej) == +1 ) then
+            ! Found a boundary curve of 'E(astward)' direction.
+            v0i = ei ! Vertex indexes of an left-end of
+            v0j = ej ! an edge is the same as the edge indexes.
+            i_now = v0i + 1
+            j_now = v0j
+            call contour_path.set_start_position( v0i, v0j )
+            call contour_path.register( i_now, j_now ) ! Other end of edge.
+            return
+          end if
+        end do
+      end do 
+      call ut__fatal( 'Cound not find a start edge.' )
+    end subroutine iFind_start_edge
+
+    subroutine iTrace_path_and_erase_footprint( direct_now,  &
+                                                i_now,       &
+                                                j_now,       &
+                                                path_closed )
+      char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
+      integer <io> :: i_now, j_now
+      logical <out> :: path_cloased
+      integer :: p 
+      logical :: can_turn, path_closed
+
+      path_closed = .false.
+
+      do 
+        ! left
+        call contour_path.turn_left( 'just check',       &
+                                     this.mesh_edge,     &
+                                     this.mesh_vert.nu,  &
+                                     this.mesh_vert.nv,  &
+                                     direct_now,         &
+                                     i_now, j_now,       &
+                                     ans=can_turn  )
+        if ( can_turn ) then
+          call contour_path.turn_left( 'do it',            &
+                                       this.mesh_edge,     &
+                                       this.mesh_vert.nu,  &
+                                       this.mesh_vert.nv,  &
+                                       direct_now,         &
+                                       i_now, j_now,       &
+                                       ans=path_closed )
+          if ( path_closed ) then
+            return
+          else
+            call contour_path.register( i_now, j_now )
+          end if
+        end if
+        ! right
+        call contour_path.turn_right( 'just check',       &
+                                      this.mesh_edge,     &
+                                      this.mesh_vert.nu,  &
+                                      this.mesh_vert.nv,  &
+                                      direct_now,         &
+                                      i_now, j_now,       &
+                                      ans=can_turn )
+        if ( can_turn ) then
+          call contour_path.turn_right( 'do it',            &
+                                        this.mesh_edge,     &
+                                        this.mesh_vert.nu,  &
+                                        this.mesh_vert.nv,  &
+                                        direct_now,         &
+                                        i_now, j_now,       &
+                                        ans=path_closed  )
+          if ( path_closed ) then
+            return
+          else
+            call contour_path.register( i_now, j_now )
+          end if
+        end if
+        ! straight
+        call contour_path.go_foward( 'just check',        &
+                                      this.mesh_edge,     &
+                                      this.mesh_vert.nu,  &
+                                      this.mesh_vert.nv,  &
+                                      direct_now,         &
+                                      i_now, j_now,       &
+                                      ans=can_turn )
+        if ( can_turn ) then
+          call contour_path.go_foward( 'do it',             &
+                                        this.mesh_edge,     &
+                                        this.mesh_vert.nu,  &
+                                        this.mesh_vert.nv,  &
+                                        direct_now,         &
+                                        i_now, j_now,       &
+                                        ans=path_closed  )
+          if ( path_closed ) then
+            return
+          else
+          !!>
+              We do not need to register the forward-stepped point,
+              because the path
+                       1---2---3
+                               |          
+                               4---5---6---7
+              is the same as the folowing:
+                       1-------2
+                               |          
+                               3-----------4
+          !!<
+            ! call contour_path.register( i_now, j_now )
+            ! So, we do nothing here.
+          end if
+        end if
+      end do
+
+    end subroutine iTrace_path_and_erase_footprint
+
+    subroutine iCalc_path_turns_from_edges
+  
       integer :: i, j
       char(len=4) :: pattern
 
@@ -429,16 +450,7 @@ contains
       integer :: max_path_segment_num_overestimate
       logical :: just_once = .true.
 
-      !!>
-            Tring to find a "right-in-south" arrow AB.
-                +---+---+---+
-                |           |
-                A==>B       +
-                 /  |       |
-                /   +---+---+
-               /
-             This.
-      !!< 
+
 
       ==<just_once>==
         max_path_segment_num_overestimate = this.edge_nu*edge_nv
@@ -449,24 +461,6 @@ contains
 
       call contour_path.reset
 
-integer :: ei, ej, v0i, v0j, v1i, v1j
-
-      loops_to_find_the_starting_point_of_a_path : &
-        do ej = 1, this.grid.edgex_nv
-          do ei = 1, this.grid.edgex_nu
-            if ( this.grid.edgex_ternary(ei,ej) == +1 ) then
-              ! Found a boundary curve of 'E(astward)' direction.
-              v0i = ei ! Vertex indexes of an left-end of
-              v0j = ej ! an edge is the same as the edge indexes.
-              v1i = v0i + 1
-              v1j = v0j
-              call contour_path.set_start_position( v0i, v0j )
-              call path_vert.register( v1i, v1j ) ! Other end of edge.
-              exit finding_loops
-            end if
-          end do
-        end do &
-      loops_to_find_the_starting_point_of_a_path
 
 !      if ( contour_path.num == 0 ) return  ! No contour
 
@@ -489,28 +483,6 @@ integer :: ei, ej, v0i, v0j, v1i, v1j
         end do &
       loops_to_folow_the_path
       
-
-  integer :: p 
-
-      direct = 'E'
-
-      do p = 1, contour_path.num_max-2 ! segment count of the path.
-        call turn_left( 'just_check', path,  &
-                        edgex_ternary, edgey_ternary,  &
-                        direct_now, i_now, j_now, ans  )
-          
-        if ( contour_path.turn_left( direct, v1i, v1j ) ) then
-          call path_vert.register( v1i, v1j )
-
-          call path_vert.turn_left( vtip_direct, vtip_i, vtip_j )
-          vtip_direct -= 1 ! Turn left.
-          if ( vtip_direct < 0 ) vtip_direct += 4
-          vtip_shift_from_start_j += 1
-        else if ( can_turn_right( vtip_direct, vtip_i, vtip_j ) ) then
-          call path_vert.register( vtip_i, vtip_j )
-          vtip_direct += 1 ! Turn right.
-          if ( vtip_direct > 4 ) vtip_direct -= 4 
-          vtip_shift_from_start_j += 1
 
 
       call path_vert.follow( )
