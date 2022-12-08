@@ -4,6 +4,7 @@
 module slice_m
   use ut_m
   use slice_mesh_m
+  use contour_path_m
   implicit none
   private
 
@@ -208,13 +209,9 @@ contains
     !!<
     logical :: just_once = .true.
     type(contour_path_t), save :: contour_path
-    integer :: max_path_segment_num_overestimate
 
     ==<just_once>==
-      max_path_segment_num_overestimate = this.mesh_edge_nu  &
-                                        * this.mesh_edge_nv
-      call contour_path.initialize( max_path_segment_num_overestimate, &
-                                    this.mesh_vert.nu,  &
+      call contour_path.initialize( this.mesh_vert.nu,  &
                                     this.mesh_vert.nv )
     ==</just_once>==
 

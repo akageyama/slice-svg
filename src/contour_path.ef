@@ -1,5 +1,6 @@
 module contour_path_m
   use ut_m
+  use slice_mesh_m
   implicit none
   !!>
         P: positive edge: eastward for edgex and
@@ -24,10 +25,8 @@ module contour_path_m
   !!<
 
   type contour_path_t
+    integer :: vert_nu, vert_nv
     integer :: num ! total number of vertex points of the path
-    integer :: num_max ! possible max num of vertex points.
-    integer :: irange_min, irange_max
-    integer :: jrange_min, jrange_max
     integer, dimension(:), allocatable :: list_i, list_j
     integer :: start_position_i, start_position_j
   contains
@@ -56,12 +55,10 @@ contains
 
  
   subroutine contour_path__turn_left( this, switch, edge,       &
-                                      vert_nu, vert_nv,         &
                                       direct_now, i_now, j_now, ans  )
     class(contour_path_t) <io> :: this
     char(len=*) <in> :: switch  ! 'just_check' or 'do_it'
     type(grid_mesh_edge_t) <io> :: edge
-    integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
     logical <out> :: ans
@@ -76,7 +73,7 @@ contains
           E--> + --   at '+' point, and moving eastward.
                |      Checking if you can turn left (northward) or not.
         !!<
-        call assert( j <= vert_nv-1,,  &
+        call assert( j <= this.vert_nv-1,  &
                     'Impossible! You are going easthward on j=jmax?!' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           select case (switch)
@@ -150,7 +147,7 @@ contains
            -- + -->
               |
         !!<
-        call assert( i <= vert_nu-1,  &
+        call assert( i <= this.vert_nu-1,  &
                     'Impossible!? You are going southward on i=imax?!' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
           select case (switch)
@@ -175,11 +172,9 @@ contains
 
  
   subroutine contour_path__turn_right( switch, edge,       &
-                                       vert_nu, vert_nv,   &
                                        direct_now, i_now, j_now, ans  )
     char(len=*) <in> :: switch  ! 'just_check' or 'do_it'
     type(grid_mesh_edge_t) <io> :: edge
-    integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
     logical <out> :: ans
@@ -220,7 +215,7 @@ contains
               | 
               N
         !!<
-        call assert( i <= vert_nu-1,  &
+        call assert( i <= this.vert_nu-1,  &
                     'Impossible!? You are going northward on i=imax?!' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
           select case (switch)
@@ -244,7 +239,7 @@ contains
            -- + <---W
               |  
         !!<
-        call assert( j <= vert_nv-1,  &
+        call assert( j <= this.vert_nv-1,  &
                     'Impossible!? You are going westward on j=jmax?!' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           select case (switch)
@@ -294,11 +289,9 @@ contains
 
  
   subroutine contour_path__go_forward( switch, edge,       &
-                                       vert_nu, vert_nv,   &
                                        direct_now, i_now, j_now, ans  )
     char(len=*) <in> :: switch  ! 'just_check' or 'do_it'
     type(grid_mesh_edge_t) <io> :: edge
-    integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
     logical <out> :: ans
@@ -314,7 +307,7 @@ contains
                |      Checking if you can go straight or not.
 
         !!<
-        if ( i_now == irange_max ) return  ! You cannot go forward.
+        if ( i_now == this.vert_nu ) return  ! You cannot go forward.
         if ( edgex_ternary(i_now,j_now) == +1 ) then 
           select case (switch)
             case ('just check')
@@ -337,7 +330,7 @@ contains
                | 
                N
         !!<
-        if ( j_now == jrange_max ) return  ! You cannot go forward.
+        if ( j_now == this.vert_nv ) return  ! You cannot go forward.
         if ( edgey_ternary(i_now,j_now) == +1 ) then
           select case (switch)
             case ('just check')
@@ -411,16 +404,19 @@ contains
   end subroutine contour_path__reset
 
 
-  subroutine contour_path__initialize( this, num_max, imax, jmax )
+  subroutine contour_path__initialize( this, vert_nu, vert_nv )
     class(contour_path_t) <out> :: this
-    integer <in> :: num_max, imax, jmax
+    integer <in> :: vert_nu, vert_nv
 
-    allocate(this.list_i(num_max),this.list_j(num_max))
-    this.num_max = num_max
-    this.irange_min = 1
-    this.irange_max = imax
-    this.jrange_min = 1
-    this.jrange_max = jmax
+    integer :: max_path_element_num
+
+    max_path_element_num = vert_nu * vert_nv
+
+    allocate(this.list_i(max_path_element_num))
+    allocate(this.list_j(max_path_element_num))
+
+    this.vert_nu = vert_nu
+    this.vert_nv = vert_nv
     call contour_path__reset( this )
   end subroutine contour_path__initialize
 

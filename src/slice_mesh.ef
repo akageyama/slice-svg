@@ -1,5 +1,6 @@
 module slice_mesh_m
   use ut_m
+  use contour_path
   implicit none
 
   type slice_mesh_vert_t
@@ -74,6 +75,7 @@ module slice_mesh_m
     integer, dimension(:,:), allocatable :: u_ternary
     integer, dimension(:,:), allocatable :: v_ternary
                                             ! {+1, 0, -1}
+    type(contour_path_t) :: contour_path
   contains
     procedure :: initialize => slice_mesh_edge__initialize
     procedure :: finalize => slice_mesh_edge__finalize
@@ -208,7 +210,6 @@ contains
                               this.u_nv))
       allocate(this.v_ternary(this.v_nu,  &
                               this.v_nv))
-
   end subroutine slice_mesh_edge__initialize
 
 
