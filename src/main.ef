@@ -5,6 +5,7 @@ program main
   implicit none
 
   type(svglib_fig_t) :: fig01, fig02, fig03
+  type(slice__scalar_t) :: prs
 
   integer :: window_width = 1200
   integer :: window_height = 1000
@@ -12,6 +13,7 @@ program main
   real :: x, y, xmin, ymin, xmax, ymax
 
   integer <const> :: NU = 101, NV = 51
+
   real :: umin = -2*PI
   real :: umax = +2*PI
   real :: vmin = -PI

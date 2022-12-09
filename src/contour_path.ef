@@ -58,7 +58,7 @@ contains
                                       direct_now, i_now, j_now, &
                                       path_closed  )
     class(contour_path_t) <io> :: this
-    type(grid_mesh_edge_t) <io> :: edge
+    type(slice_mesh_edge_t) <io> :: edge
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
     logical <out> :: path_closed
@@ -359,8 +359,8 @@ contains
     n = this.num + 1
     call assert( n <= size(this.list_i,dim=1),  &
                 'Increase array size of path_vert.' )
-    this.lis_i(n) = i
-    this.lis_j(n) = j
+    this.list_i(n) = i
+    this.list_j(n) = j
     this.num = n
   end subroutine contour_path__register
 
