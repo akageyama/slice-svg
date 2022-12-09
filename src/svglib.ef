@@ -178,7 +178,7 @@ contains
     type(svglib_fig_t) <in> :: this
     integer <in> :: width,  height
 
-    char(len=*), parameter :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
+    char(len=*) <const> :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
     char(len=100) :: str_width, str_height, str_viewbox
 
     write(str_width, "(a, i0, a)") 'width="', width, '"'

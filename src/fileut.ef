@@ -9,8 +9,8 @@ module fileut_m
   public :: fileut__close,  &
             fileut__open
 
-  integer, parameter :: UNIT_MIN = 100
-  integer, parameter :: UNIT_MAX = 999
+  integer <const> :: UNIT_MIN = 100
+  integer <const> :: UNIT_MAX = 999
 
   char(len=4), dimension(UNIT_MIN:UNIT_MAX) :: List = 'open' 
                                                  ! or 'used'
