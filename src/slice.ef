@@ -157,11 +157,7 @@ contains
     do while ( this.mesh_edge.contour_path_exist() ) 
       call iFind_start_edge( 'E', i_now, j_now )
       call iTrace_path_and_erase_footprint( 'E', i_now, j_now, closed )
-
-
     end do
-
-    call iExtract_boundary_curve
 
   contains
 
@@ -276,117 +272,6 @@ contains
       end do
 
     end subroutine iTrace_path_and_erase_footprint
-
-
-    subroutine iExtract_boundary_curve
-      integer :: i, j  ! edges indexes
-      integer :: path_vert_i, path_vert_j
-      integer :: path_vert_num
-
-      type(contour_path_t) :: contour_path
-      integer :: max_path_segment_num_overestimate
-      logical :: just_once = .true.
-
-
-
-      ==<just_once>==
-        max_path_segment_num_overestimate = this.edge_nu*edge_nv
-        call contour_path.initialize( max_path_segment_num_overestimate, &
-                                      this.vert_nu,  &
-                                      this.vert_nv )
-      ==</just_once>==
-
-      call contour_path.reset
-
-
-!      if ( contour_path.num == 0 ) return  ! No contour
-
-      loops_to_folow_the_path : &
-        direct_now = 'E'
-        
-        do ej = 1, this.grid.edgex_nv
-          do ei = 1, this.grid.edgex_nu
-            if ( this.grid.edgex_ternary(ei,ej) == +1 ) then
-              ! Found a boundary curve of 'E(astward)' direction.
-              v0i = ei ! Vertex indexes of an left-end of
-              v0j = ej ! an edge is the same as the edge indexes.
-              v1i = v0i + 1
-              v1j = v0j
-              call contour_path.set_start_position( v0i, v0j )
-              call path_vert.register( v1i, v1j ) ! Other end of edge.
-              exit finding_loops
-            end if
-          end do
-        end do &
-      loops_to_folow_the_path
-      
-
-
-      call path_vert.follow( )
-
-      select case (vtip_direct)
-        case '+x'
-          !!>
-                          edgex(ei=3,ej=8)
-            vert(vi=3,vj=8)   .
-                         \    .      
-                          o------o  
-            edgey(3,7)....|      |....edgey(4,7)
-                          |      |
-                          o------o
-                         /   .    \
-            vert(vi=3,vj=7)  .     vert(vi=4,vj=7)
-                           edgex(ei=3,ej=7)
-          !!<
-          if ( this.grid_edgey_tenary(ei+1,ej) == +1 ) then
-            ! turn to "up"
-            call path_vert.register( vtip_i, vtip_j )
-            vtip_direct = '+y'
-            exit
-          else if ( this.grid_edgey_tenary(ei+1,ej-1) == -1 ) then
-            ! turn ton "down"
-            call path_vert.register( vtip_i, vtip_j )
-            vtip_direct = '-y'
-            exit
-          else 
-            call ut__assert( this.grid_edgex_ternary(ei+1,ej) == +1,  &
-                            'Something is strange.' )
-            
-          end if
-          
-          next_ej = ej - 1
-          next_left_i = vtip_i
-          next_left_j = vtip_j-1
-          if ( this.grid.edgey_ternary( 'vtip_i,vtip_j))
-          
-
-      if ( step_forward_i==1 ) then
-        direct = 'E'
-      else if ( step_foward_j==1 ) then
-        direct = 'N'
-      else if ( step_foward_i==-1) then
-        direct = 'W'
-      else if ( step_foward_j=-1 )
-        direct = 'S'
-      else 
-        call ut__fatal( 'Something is strange.' )
-      end if
-
-
-
-      call path_vert.set_tip( 'x', )  !   B of A===>B
-      j = path_vert_j       !       
-      do while ( i /= path_vert_i .and.  &
-                 j /= path_vert_j )
-        call path.vert_add( i, j )
-        path_vert_num += 1
-        path_vert_i(path_vert_num) = i
-        patH-vert_j(path_vert_num) = j
-
-
-            
-
-    end subroutine iExtract_boundary_curve
 
   end subroutine slice__scalar_draw_contour
 
