@@ -37,70 +37,6 @@ module slice_m
 contains
 
 
-  subroutine path_vert_explore( this )
-    class(path_vert_t) <io> :: this
-
-    integer :: head_i, head_j
-    integer :: step_forward_i, step_forward_j
-    integer :: step_turn_left_i, step_turn_left_j
-    integer :: step_turn_right_i, step_turn_right_j
-
-    !!>
-        edge direction from foot-vert to head-vert
-                            .
-           f-->h   (1,0)    .     f
-       ......................     |  (0,-1)
-                            .     h   
-             h              ...................  
-             |     (0,1)    .   
-             f              .  h<--f (-1,0)
-    !!<
-
-    head_i = this.i(this.num)
-    head_j = this.j(this.num)
-    foot_i = this.i(this.num-1)
-    foot_j = this.j(this.num-1)
-    step_forward_i = head_i - foot_i
-    step_forward_j = head_j - foot_j
-    step_turn_left_i =  -step_forward_j ! Vector
-    step_turn_left_j =  +step_forward_i !  outer
-    step_turn_right_i = +step_forward_j !   product
-    step_turn_right_j = -step_forward_i !    with unit-z.
-
-    if ( step_forward_i==1 ) then
-      direct = 'E'
-    else if ( step_foward_j==1 ) then
-      direct = 'N'
-    else if ( step_foward_i==-1) then
-      direct = 'W'
-    else if ( step_foward_j=-1 )
-      direct = 'S'
-    else 
-      call ut__fatal( 'Something is strange.' )
-    end if
-
-    select case (direct)
-      case ('E')
-        !!>
-                             i=hi
-                     -o-------o-------o j=hj-1
-                      |       |       |
-                      |       |<--edgey(hi,hj-1)
-                      |       |       |
-                     -f======>h-------o j=hj
-                              |       |
-                              |<--edgey(hi,hj)
-
-        !!<
-         
-        if ( this.edgey_ternary(head_i,head_j-1) == 1 ) then
-          ! turn left
-
-
-        
-  end subroutine path_vert_explore
-
-
   subroutine slice__scalar_initialize( this, nu, nv,  &
                                        u_min, u_max,  &
                                        v_min, v_max,  &
@@ -225,7 +161,6 @@ contains
 
     end do
 
-
     call iExtract_boundary_curve
 
   contains
@@ -271,172 +206,77 @@ contains
                                                 path_closed )
       char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
       integer <io> :: i_now, j_now
-      logical <out> :: path_cloased
-      integer :: p 
-      logical :: can_turn, path_closed
+      logical <out> :: path_closed
 
-      path_closed = .false.
+      logical :: path_closed
+      integer :: i_now_before, j_now_before
 
       do 
+        i_now_before = i_now
+        j_now_before = j_now
+        !
         ! left
-        call contour_path.turn_left( 'just check',       &
-                                     this.mesh_edge,     &
+        !
+        call contour_path.turn_left( this.mesh_edge,     &
                                      this.mesh_vert.nu,  &
                                      this.mesh_vert.nv,  &
                                      direct_now,         &
                                      i_now, j_now,       &
-                                     ans=can_turn  )
-        if ( can_turn ) then
-          call contour_path.turn_left( 'do it',            &
-                                       this.mesh_edge,     &
-                                       this.mesh_vert.nu,  &
-                                       this.mesh_vert.nv,  &
-                                       direct_now,         &
-                                       i_now, j_now,       &
-                                       ans=path_closed )
-          if ( path_closed ) then
-            return
-          else
-            call contour_path.register( i_now, j_now )
-          end if
+                                     path_closed )
+        if ( path_closed ) then
+          return
+        else
+          call contour_path.register( i_now, j_now )
         end if
+
+        !
         ! right
-        call contour_path.turn_right( 'just check',       &
-                                      this.mesh_edge,     &
+        !
+        call contour_path.turn_right( this.mesh_edge,     &
                                       this.mesh_vert.nu,  &
                                       this.mesh_vert.nv,  &
                                       direct_now,         &
                                       i_now, j_now,       &
-                                      ans=can_turn )
-        if ( can_turn ) then
-          call contour_path.turn_right( 'do it',            &
-                                        this.mesh_edge,     &
-                                        this.mesh_vert.nu,  &
-                                        this.mesh_vert.nv,  &
-                                        direct_now,         &
-                                        i_now, j_now,       &
-                                        ans=path_closed  )
-          if ( path_closed ) then
-            return
-          else
-            call contour_path.register( i_now, j_now )
-          end if
+                                      path_closed )
+        if ( path_closed ) then
+          return
+        else
+          call contour_path.register( i_now, j_now )
         end if
+
+        !
         ! straight
-        call contour_path.go_foward( 'just check',        &
-                                      this.mesh_edge,     &
-                                      this.mesh_vert.nu,  &
-                                      this.mesh_vert.nv,  &
-                                      direct_now,         &
-                                      i_now, j_now,       &
-                                      ans=can_turn )
-        if ( can_turn ) then
-          call contour_path.go_foward( 'do it',             &
-                                        this.mesh_edge,     &
-                                        this.mesh_vert.nu,  &
-                                        this.mesh_vert.nv,  &
-                                        direct_now,         &
-                                        i_now, j_now,       &
-                                        ans=path_closed  )
-          if ( path_closed ) then
-            return
-          else
-          !!>
-              We do not need to register the forward-stepped point,
-              because the path
-                       1---2---3
-                               |          
-                               4---5---6---7
-              is the same as the folowing:
-                       1-------2
-                               |          
-                               3-----------4
-          !!<
-            ! call contour_path.register( i_now, j_now )
-            ! So, we do nothing here.
-          end if
+        !
+        call contour_path.go_foward( this.mesh_edge,     &
+                                     this.mesh_vert.nu,  &
+                                     this.mesh_vert.nv,  &
+                                     direct_now,         &
+                                     i_now, j_now,       &
+                                     path_closed )
+        if ( path_closed ) then
+          return
+        else
+        !!>
+            We do not need to register the forward-stepped point,
+            because the path
+                     1---2---3
+                             |          
+                             4---5---6---7
+            is the same as
+                     1-------2
+                             |          
+                             3-----------4
+        !!<
+          ! call contour_path.register( i_now, j_now )
+          ! So, we do nothing here.
         end if
+        call ut__assert( i_now /= i_now_before .and.  &
+                         j_now /= j_now_before,       &
+                         'Failed to follow the path.' )
       end do
 
     end subroutine iTrace_path_and_erase_footprint
 
-    subroutine iCalc_path_turns_from_edges
-  
-      integer :: i, j
-      char(len=4) :: pattern
-
-      do j = 1, this.vert_nv
-        do i = 1, this.vert_nu
-          if ( i == this.vert_nu ) then
-            east_edge = NULL
-          else 
-            east_edge = this.edgex_ternary(i,j)
-          end if
-          if ( i == 1 ) then
-            west_edge = NULL
-          else 
-            west_edge = this.edgex_ternary(i-1,j)
-          end if
-          if ( j == vert_nv ) then
-            north_edge = NULL
-          else 
-            north_edge = this.edgey_ternary(i,j)
-          end if 
-          if ( j == 1 ) then
-            south_edge = NULL
-          else
-            south_edge = this.edgey_ternary(i,j-1)
-          end if
-
-          pattern = neibhbor_edges_pattern( north_edge, &
-                                            west_edge,  &
-                                            south_edge, &
-                                            east_edge )
-          select case ( pattern )
-                  !'NWSE'
-            case ( 'io  ' )
-              this.vert_turn(i,j) = 'R'
-            case ( ' io ' )
-              this.vert_turn(i,j) = 'R'
-            case ( '  io' )
-              this.vert_turn(i,j) = 'R'
-            case ( 'o  i' )
-              this.vert_turn(i,j) = 'R'
-            case ( 'ioio' )
-              this.vert_turn(i,j) = 'R'
-            case ( 'ioio' )
-              this.vert_turn(i,j) = 'R'
-
-            pattern(1:4) = iChar(n)//iChar(w)//iChar(s)//iChar(e)
-
-          contains 
-
-            function iChar(i)
-              integer <in> :: i
-
-              select case(i)
-                case ('+1')
-                  iChar = 'i' ! inward
-
-          end function neibhbor_edges_pattern
-
-           lect case (west_edge)
-            case (+1) ! coming from west
-              if ( north_edge == +1 ) then
-                this.vert_turn(i,j) = 'L'
-              else if ( south_edge == -1 ) then
-                this.vert_turn(i,j) = 'R'
-              else if ( east_edge == +1 ) then
-                this.vert_vect(i,j) = 'S'
-              else
-                call ut__assert( 'Something is wrong.' )
-              end if
-            case (-1) ! coming from east
-              if ( north_edge == +1 ) then
-                this.vert_turn(i,j) = 'R'
-              else 
-          
-    end subroutine iCalc_path_turns_from_edges
 
     subroutine iExtract_boundary_curve
       integer :: i, j  ! edges indexes
