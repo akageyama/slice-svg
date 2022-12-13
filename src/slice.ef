@@ -37,6 +37,86 @@ module slice_m
 contains
 
 
+  subroutine trace_path_and_erase_trace( edge,         &
+                                         vert_nu,      &
+                                         vert_nv,      &
+                                         direct_now,   &
+                                         i_now,        &
+                                         j_now )
+    type(slice_mesh_edge_t) <in> :: mesh_edge
+    integer <in> :: vert_nu, vert_nv
+    char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
+    integer <in> :: i_now, j_now
+
+    logical :: path_closed
+    integer :: i_now_before, j_now_before
+
+    do 
+      i_now_before = i_now
+      j_now_before = j_now
+      !
+      call contour_path.turn_left( mesh_edge,     &
+                                   vert_nu,       &
+                                   vert_nv,       &
+                                   direct_now,    &
+                                   i_now, j_now,  &
+                                   path_closed )
+      if ( path_closed ) then
+        return
+      else
+        call contour_path.register( i_now, j_now )
+      end if
+
+      !
+      ! right
+      !
+      call contour_path.turn_right( mesh_edge,    &
+                                    vert_nu,      &
+                                    vert_nv,      &
+                                    direct_now,   &
+                                    i_now, j_now, &
+                                    path_closed )
+      if ( path_closed ) then
+        return
+      else
+        call contour_path.register( i_now, j_now )
+      end if
+
+      !
+      ! straight
+      !
+      call contour_path.go_foward( mesh_edge,     &
+                                   vert.nu,       &
+                                   vert.nv,       &
+                                   direct_now,    &
+                                   i_now, j_now,  &
+                                   path_closed )
+      if ( path_closed ) then
+        return
+      else
+      !!>
+          We do not need to register the forward-stepped point,
+          because the path
+                   1---2---3
+                           |          
+                           4---5---6---7
+          is the same as
+                   1-------2
+                           |          
+                           3-----------4
+      !!<
+        ! call contour_path.register( i_now, j_now )
+        ! So, we do nothing here.
+      end if
+
+      call ut__assert( i_now /= i_now_before .and.  &
+                       j_now /= j_now_before,       &
+                      'Failed to follow the path?' )
+    end do
+
+  end subroutine trace_path_and_erase_trace
+
+
   subroutine slice__scalar_initialize( this, nu, nv,  &
                                        u_min, u_max,  &
                                        v_min, v_max,  &
@@ -51,8 +131,8 @@ contains
                                     u_min, u_max,  &
                                     v_min, v_max )
 
-    call this.mesh_cell_initialize( this.mesh_vert )
-    call this.mesh_edge_initialize( this.mesh_vert )
+    call this.mesh_cell.initialize( this.mesh_vert )
+    call this.mesh_edge.initialize( this.mesh_vert )
 
     if ( present(val) ) then
       this.val_vert(:,:) = val(:,:)
@@ -108,7 +188,7 @@ contains
               t/|            |t \      | 1 | 2 | 3 |
               / +------------+ ..\.... +---+---+---+ ej=1
              /      / south       \   ei=1 2   3   4 
-            /  edgeu(ei=1,ej=3)    \            
+            /  edgeu(ei=1,ej=3)    \
            /                        \
         edgev(ei=1,ej=3)           edgev(ei=2,ej=3)
 
@@ -143,8 +223,9 @@ contains
        |   |   M           P   |
        +---+---2=P=1=P=1=P=2---+
     !!<
-    logical :: just_once = .true.
     type(contour_path_t), save :: contour_path
+    logical :: status
+    logical :: just_once = .true.
 
     ==<just_once>==
       call contour_path.initialize( this.mesh_vert.nu,  &
@@ -154,17 +235,26 @@ contains
     call contour_path.reset
     call this.mesh_edge.apply_stokes( this.mesh_cell, level )
 
-    do while ( this.mesh_edge.contour_path_exist() ) 
-      call iFind_start_edge( 'E', i_now, j_now )
-      call iTrace_path_and_erase_footprint( 'E', i_now, j_now, closed )
+    call iFind_start_edge( 'E', i_now, j_now, status )
+    do while ( status == 'have found' )
+      call trace_path_and_erase_trace( this.mesh_edge,    &
+                                       this.mesh_vert.nu, &
+                                       this.mesh_vert.nv, &
+                                       'E', i_now, j_now )
+      ! <check>
+        do i = 1, contour_path.num
+          ut__message( i, contour_path.list_i(i), contour_path.list_j(i) )
+        end do
+      ! </check>
+      call iFind_start_edge( 'E', i_now, j_now, status )
     end do
 
   contains
 
-
-    subroutine iFind_start_edge( direct_now, i_now, j_now )
+    subroutine iFind_start_edge( direct_now, i_now, j_now, status )
       char(len=1) :: direct_now
       integer <out> :: i_now, j_now
+      char(len=10) :: status ! 'no contour' or 'have found'
       !!>
             Tring to find a eastward arrow AB.
                 +---+---+---+
@@ -189,89 +279,14 @@ contains
             j_now = v0j
             call contour_path.set_start_position( v0i, v0j )
             call contour_path.register( i_now, j_now ) ! Other end of edge.
+            status = 'have found'
             return
           end if
         end do
       end do 
+      status = 'no contour'
       call ut__fatal( 'Cound not find a start edge.' )
     end subroutine iFind_start_edge
-
-    subroutine iTrace_path_and_erase_footprint( direct_now,  &
-                                                i_now,       &
-                                                j_now,       &
-                                                path_closed )
-      char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
-      integer <io> :: i_now, j_now
-      logical <out> :: path_closed
-
-      logical :: path_closed
-      integer :: i_now_before, j_now_before
-
-      do 
-        i_now_before = i_now
-        j_now_before = j_now
-        !
-        ! left
-        !
-        call contour_path.turn_left( this.mesh_edge,     &
-                                     this.mesh_vert.nu,  &
-                                     this.mesh_vert.nv,  &
-                                     direct_now,         &
-                                     i_now, j_now,       &
-                                     path_closed )
-        if ( path_closed ) then
-          return
-        else
-          call contour_path.register( i_now, j_now )
-        end if
-
-        !
-        ! right
-        !
-        call contour_path.turn_right( this.mesh_edge,     &
-                                      this.mesh_vert.nu,  &
-                                      this.mesh_vert.nv,  &
-                                      direct_now,         &
-                                      i_now, j_now,       &
-                                      path_closed )
-        if ( path_closed ) then
-          return
-        else
-          call contour_path.register( i_now, j_now )
-        end if
-
-        !
-        ! straight
-        !
-        call contour_path.go_foward( this.mesh_edge,     &
-                                     this.mesh_vert.nu,  &
-                                     this.mesh_vert.nv,  &
-                                     direct_now,         &
-                                     i_now, j_now,       &
-                                     path_closed )
-        if ( path_closed ) then
-          return
-        else
-        !!>
-            We do not need to register the forward-stepped point,
-            because the path
-                     1---2---3
-                             |          
-                             4---5---6---7
-            is the same as
-                     1-------2
-                             |          
-                             3-----------4
-        !!<
-          ! call contour_path.register( i_now, j_now )
-          ! So, we do nothing here.
-        end if
-        call ut__assert( i_now /= i_now_before .and.  &
-                         j_now /= j_now_before,       &
-                         'Failed to follow the path.' )
-      end do
-
-    end subroutine iTrace_path_and_erase_footprint
 
   end subroutine slice__scalar_draw_contour
 
