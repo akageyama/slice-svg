@@ -28,47 +28,44 @@ module contour_path_m
     integer :: vert_nu, vert_nv
     integer :: num ! total number of vertex points of the path
     integer, dimension(:), allocatable :: list_i, list_j
-    integer :: start_position_i, start_position_j
   contains
     procedure :: initialize => contour_path__initialize
-    procedure :: register => contour_path__register
     procedure :: reset => contour_path__reset
     procedure :: turn_left => contour_path__turn_left
     procedure :: turn_right => contour_path__turn_right
     procedure :: go_foward => contour_path__go_forward
+    procedure :: closed_or_not => contour_path__closed_or_not
     procedure, pass :: trace_and_erase  &
-                    => contour_path_trace_and_erase
+                       => contour_path__trace_and_erase
+    procedure, pass :: set_starting_edge &
+                       => contour_path__set_starting_edge
   end type contour_path_t
 
 
 contains
 
 
-  function contour_path_closed( start_i, start_j,  &
-                                i_now, j_now ) result(ans)
-    integer <in> :: start_i, start_j
+  function contour_path__closed_or_not( this, i_now, j_now ) result(ans)
+    class(contour_path_t) <in> :: this
     integer <in> :: i_now, j_now
     logical :: ans
-
-    ans = ( start_i == i_now .and. &
-            start_j == j_now )
-
-  end function contour_path_closed
+    ans = ( i_now == this.list_i(1) .and. &
+            j_now == this.list_j(1) )
+  end function contour_path__closed_or_not
 
  
-  subroutine contour_path__turn_left( this, edge,               &
-                                      vert_nu, vert_nv,         &
-                                      direct_now, i_now, j_now, &
-                                      path_closed  )
-    class(contour_path_t) <io> :: this
+  subroutine turn_left( edge,         &
+                        vert_nu,      &
+                        vert_nv,      &
+                        direct_now,   &
+                        i_now,        &
+                        j_now )
     type(slice_mesh_edge_t) <io> :: edge
     integer <in> :: vert_nu, vert_nv
+    integer <in> :: start_i, start_j
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
-    logical <out> :: path_closed
 
-    path_closed = .false.  ! default value.
-    
     select case (direct_now)
       case ('E')
         !!>
@@ -83,9 +80,6 @@ contains
           j_now += 1                         ! Move the head point
           direct_now = 'N'                   ! Turn 90 degree
           edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case ('N')
         !!>
@@ -101,9 +95,6 @@ contains
           i_now -= 1                         ! Move the head point
           direct_now = 'W'                   ! Turn 90 degree
           edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case ('W')
         !!>
@@ -118,9 +109,6 @@ contains
           j_now -= 1                       ! Move the head point
           direct_now = 'S'                 ! Turn 90 degree
           edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case ('S')
         !!>
@@ -136,27 +124,24 @@ contains
           i_now += 1                       ! Move the head point
           direct_now = 'E'                 ! Turn 90 degree
           edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
     end select
 
-  end subroutine contour_path__turn_left
+  end subroutine turn_left
 
  
-  subroutine contour_path__turn_right( this, edge,               &
-                                       vert_nu, vert_nv,         &
-                                       direct_now, i_now, j_now, &
-                                       path_closed  )
-    class(contour_path_t) <io> :: this
+  subroutine turn_right( edge,        &
+                         vert_nu,     &
+                         vert_nv,     &
+                         direct_now,  &
+                         i_now,       &
+                         j_now )
     type(slice_mesh_edge_t) <io> :: edge
     integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
-    logical <out> :: path_closed
 
     path_closed = .false.  ! default value.
 
@@ -175,9 +160,6 @@ contains
           j_now -= 1                         ! Move the head point
           direct_now = 'S'                   ! Turn 90 degree
           edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case ('N')
         !!>
@@ -187,15 +169,12 @@ contains
               | 
               N
         !!<
-        call assert( i_now <= this.vert_nu-1,  &
+        call assert( i_now <= vert_nu-1,  &
                     'Impossible! You are going northward on i=imax?!' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
           i_now += 1                         ! Move the head point
           direct_now = 'E'                   ! Turn 90 degree
           edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case ('W')
         !!>
@@ -204,15 +183,12 @@ contains
            -- + <---W
               |  
         !!<
-        call assert( j_now <= this.vert_nv-1,  &
+        call assert( j_now <= vert_nv-1,  &
                     'Impossible! You are going westward on j=jmax?!' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           j_now += 1                       ! Move the head point
           direct_now = 'S'                 ! Turn 90 degree
           edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case ('S')
         !!>
@@ -228,27 +204,24 @@ contains
           i_now -= 1                       ! Move the head point
           direct_now = 'W'                 ! Turn 90 degree
           edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
     end select
 
-  end subroutine contour_path__turn_right  
+  end subroutine turn_right  
 
  
-  subroutine contour_path__go_forward( this, edge,               &
-                                       vert_nu, vert_nv,         &
-                                       direct_now, i_now, j_now, &
-                                       path_closed  )
-    class(contour_path_t) <io> :: this
+  subroutine go_forward( edge,        &
+                         vert_nu,     &
+                         vert_nv,     &
+                         direct_now,  &
+                         i_now,       &
+                         j_now )
     type(slice_mesh_edge_t) <io> :: edge
     integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
-    logical <out> :: path_closed
 
     path_closed = .false.  ! default value.
 
@@ -261,12 +234,9 @@ contains
                |      Checking if you can go straight or not.
 
         !!<
-        if ( i_now == this.vert_nu ) return  ! You cannot go forward.
+        if ( i_now == vert_nu ) return  ! You cannot go forward.
         if ( edge.u_ternary(i_now,j_now) == +1 ) then 
           i_now += 1
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case ('N')
         !!>
@@ -277,12 +247,9 @@ contains
                | 
                N
         !!<
-        if ( j_now == this.vert_nv ) return  ! You cannot go forward.
+        if ( j_now == vert_nv ) return  ! You cannot go forward.
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           j_now += 1
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case ('W')
         !!>
@@ -293,9 +260,6 @@ contains
         if ( i_now == 1 ) return  ! You cannot go forward.
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
           i_now -= 1
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case ('S')
         !!>
@@ -309,15 +273,12 @@ contains
         if ( j_now == 1 ) return  ! You cannot go forward.
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
           j_now -= 1
-          if ( contour_path_closed( this, i_now, j_now ) ) then
-            path_closed = .true.
-          end if
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
     end select
 
-  end subroutine contour_path__go_forward
+  end subroutine go_forward
 
 
   subroutine contour_path__reset( this )
@@ -347,42 +308,90 @@ contains
   end subroutine contour_path__initialize
 
 
+  subroutine contour_path__set_starting_edge( this,         &
+                                              mesh_edge,    &
+                                              direct_now,        &
+                                              status,            &
+                                              i_now, j_now )
+    class(contour_path_t) <io> :: this
+    type(slice_mesh_edge_t) <in> :: mesh_edge
+    char(len=1) <in> :: direct_now
+    char(len=10) <out> :: status ! 'no contour' or 'have found'
+    integer <out> :: i_now, j_now
+    !!>
+          Tring to find a eastward arrow AB.
+              +---+---+---+
+              |           |
+              A==>B       +
+                /  |       |
+              /   +---+---+
+              /
+            This.
+    !!< 
+    integer :: ei, ej
+
+    call ut__assert( direct_now=='E',  &
+                    'We assume start edge is E(astward).' )
+    call ut__assert( this.num == 0,  &
+                    'Forgot resetting contour_path.' )
+
+    do ej = 1, mesh_edge.u_nv
+      do ei = 1, mesh_edge.u_nu
+        if ( mesh_edge.u_ternary(ei,ej) == +1 ) then
+          ! Found a boundary curve of 'E(astward)' direction.
+          start_i = ei ! Vertex indexes of an left-end of
+          start_j = ej ! an edge is the same as the edge indexes.
+          call register( this, start_i, start_j )
+          i_now = start_i + 1
+          j_now = start_j
+          call register( this, i_now, j_now )
+          status = 'have found'
+          return
+        end if
+      end do
+    end do 
+    status = 'no contour'
+    call ut__fatal( 'Cound not find a start edge.' )
+  end subroutine contour_path__set_starting_edge    
+
+
   subroutine countour_path__set_start_position( this, i, j )
     class(contour_path_t) <io> :: this
     integer <in> :: i, j
 
     call ut__assert( this.num == 0,   &
                     'You forgot to reset vert num.' )
-    call contour_path__register( this, i, j )
+    call register( this, i_now, j_now )
     this.start_position_i = i
     this.start_position_j = j
   end subroutine countour_path__set_start_position
 
 
-  subroutine contour_path__register( this, i, j )
-    class(contour_path_t) <io> :: this
+  subroutine register( contour_path, i, j )
+    type(contour_path_t) <io> :: contour_path
     integer <in> :: i, j
 
     integer :: n
     n = this.num + 1
-    call assert( n <= size(this.list_i,dim=1),  &
+    call assert( n <= size(contour_path.list_i,dim=1),  &
                 'Increase array size of path_vert.' )
-    this.list_i(n) = i
-    this.list_j(n) = j
-    this.num = n
-  end subroutine contour_path__register
+    contour_path.list_i(n) = i
+    contour_path.list_j(n) = j
+    contour_path.num = n
+  end subroutine register
 
 
-  subroutine contour_path_trace_and_erase( this,       &
-                                           edge,       &
-                                           vert_nu,    &
-                                           vert_nv,    &
-                                           direct_now, &
-                                           i_now,      &
-                                           j_now )
-    class(contour_path_t) <in> :: this
+  subroutine contour_path__trace_and_erase( this,       &
+                                            edge,       &
+                                            vert_nu,    &
+                                            vert_nv,    &
+                                            direct_now, &
+                                            i_now,      &
+                                            j_now )
+    class(contour_path_t) <io> :: this
     type(slice_mesh_edge_t) <in> :: mesh_edge
     integer <in> :: vert_nu, vert_nv
+    integer <in> :: start_i, start_j
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <in> :: i_now, j_now
 
@@ -393,43 +402,43 @@ contains
       i_now_before = i_now
       j_now_before = j_now
       !
-      call contour_path.turn_left( mesh_edge,     &
-                                   vert_nu,       &
-                                   vert_nv,       &
-                                   direct_now,    &
-                                   i_now, j_now,  &
-                                   path_closed )
-      if ( path_closed ) then
+      call turn_left( mesh_edge,     &
+                      vert_nu,       &
+                      vert_nv,       &
+                      direct_now,    &
+                      i_now,         &
+                      j_now )
+      if ( path_is_closed( this, i_now, j_now ) ) then
         return
       else
-        call contour_path.register( i_now, j_now )
+        call register( this, i_now, j_now )
       end if
 
       !
       ! right
       !
-      call contour_path.turn_right( mesh_edge,    &
-                                    vert_nu,      &
-                                    vert_nv,      &
-                                    direct_now,   &
-                                    i_now, j_now, &
-                                    path_closed )
-      if ( path_closed ) then
+      call turn_right( mesh_edge,    &
+                       vert_nu,      &
+                       vert_nv,      &
+                       direct_now,   &
+                       i_now,        &
+                       j_now )
+      if ( path_is_closed( this, i_now, j_now ) ) then
         return
       else
-        call contour_path.register( i_now, j_now )
+        call register( this, i_now, j_now )
       end if
 
       !
       ! straight
       !
-      call contour_path.go_foward( mesh_edge,     &
-                                   vert.nu,       &
-                                   vert.nv,       &
-                                   direct_now,    &
-                                   i_now, j_now,  &
-                                   path_closed )
-      if ( path_closed ) then
+      call go_foward( mesh_edge,     &
+                      vert_nu,       &
+                      vert_nv,       &
+                      direct_now,    &
+                      i_now,         &
+                      j_now )
+      if ( path_is_closed( this, i_now, j_now ) ) then
         return
       else
       !!>
@@ -443,7 +452,7 @@ contains
                            |          
                            3-----------4
       !!<
-        ! call contour_path.register( i_now, j_now )
+        ! call register( i_now, j_now )
         ! So, we do nothing here.
       end if
 
@@ -452,7 +461,7 @@ contains
                       'Failed to follow the path?' )
     end do
 
-  end subroutine contour_path_trace_and_erase
+  end subroutine contour_path__trace_and_erase
 
 
 end module contour_path_m

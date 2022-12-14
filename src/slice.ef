@@ -154,58 +154,27 @@ contains
     call contour_path.reset
     call this.mesh_edge.apply_stokes( this.mesh_cell, level )
 
-    call iFind_start_edge( 'E', i_now, j_now, status )
+    call contour_path.set_starting_edge( mesh_edge,         &
+                                         'E',               &
+                                         status,            &
+                                         i_now,             &
+                                         j_now )
     do while ( status == 'have found' )
       call contour_path.trace_and_erase( this.mesh_edge,    &
                                          this.mesh_vert.nu, &
                                          this.mesh_vert.nv, &
-                                         'E', i_now, j_now )
+                                         'E',               &
+                                         i_now,             &
+                                         j_now )
       ! <check>
         do i = 1, contour_path.num
           ut__message( i, contour_path.list_i(i), contour_path.list_j(i) )
         end do
       ! </check>
-      call iFind_start_edge( 'E', i_now, j_now, status )
+      call contour_path.set_starting_edge( mesh_edge, 'E',    &
+                                           status,            &
+                                           i_now, j_now )
     end do
-
-  contains
-
-    subroutine iFind_start_edge( direct_now, i_now, j_now, status )
-      char(len=1) :: direct_now
-      integer <out> :: i_now, j_now
-      char(len=10) :: status ! 'no contour' or 'have found'
-      !!>
-            Tring to find a eastward arrow AB.
-                +---+---+---+
-                |           |
-                A==>B       +
-                 /  |       |
-                /   +---+---+
-               /
-             This.
-      !!< 
-      integer :: ei, ej, v0i, v0j
-
-      call ut__assert( direct_now=='E',  &
-                      'We assume start edge is E(astward).' )
-      do ej = 1, this.mesh_edge.u_nv
-        do ei = 1, this.mesh_edge.u_nu
-          if ( this.mesh_edge.u_ternary(ei,ej) == +1 ) then
-            ! Found a boundary curve of 'E(astward)' direction.
-            v0i = ei ! Vertex indexes of an left-end of
-            v0j = ej ! an edge is the same as the edge indexes.
-            i_now = v0i + 1
-            j_now = v0j
-            call contour_path.set_start_position( v0i, v0j )
-            call contour_path.register( i_now, j_now ) ! Other end of edge.
-            status = 'have found'
-            return
-          end if
-        end do
-      end do 
-      status = 'no contour'
-      call ut__fatal( 'Cound not find a start edge.' )
-    end subroutine iFind_start_edge
 
   end subroutine slice__scalar_draw_contour
 
