@@ -31,10 +31,6 @@ module contour_path_m
   contains
     procedure :: initialize => contour_path__initialize
     procedure :: reset => contour_path__reset
-    procedure :: turn_left => contour_path__turn_left
-    procedure :: turn_right => contour_path__turn_right
-    procedure :: go_foward => contour_path__go_forward
-    procedure :: closed_or_not => contour_path__closed_or_not
     procedure, pass :: trace_and_erase  &
                        => contour_path__trace_and_erase
     procedure, pass :: set_starting_edge &
@@ -45,13 +41,13 @@ module contour_path_m
 contains
 
 
-  function contour_path__closed_or_not( this, i_now, j_now ) result(ans)
-    class(contour_path_t) <in> :: this
+  function path_is_closed( contour_path, i_now, j_now ) result(ans)
+    type(contour_path_t) <in> :: contour_path
     integer <in> :: i_now, j_now
     logical :: ans
-    ans = ( i_now == this.list_i(1) .and. &
-            j_now == this.list_j(1) )
-  end function contour_path__closed_or_not
+    ans = ( i_now == contour_path.list_i(1) .and. &
+            j_now == contour_path.list_j(1) )
+  end function path_is_closed
 
  
   subroutine turn_left( edge,         &
@@ -62,7 +58,6 @@ contains
                         j_now )
     type(slice_mesh_edge_t) <io> :: edge
     integer <in> :: vert_nu, vert_nv
-    integer <in> :: start_i, start_j
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
 
@@ -74,8 +69,8 @@ contains
           E--> + --   at '+' point, and moving eastward.
                |      Checking if you can turn left (northward) or not.
         !!<
-        call assert( j_now <= vert_nv-1,  &
-                    'Impossible! You are going easthward on j=jmax?!' )
+        call ut__assert( j_now <= vert_nv-1,  &
+                        'Impossible! You are going easthward on j=jmax?!' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           j_now += 1                         ! Move the head point
           direct_now = 'N'                   ! Turn 90 degree
@@ -89,8 +84,8 @@ contains
               | 
               N
         !!<
-        call assert( i_now >= 2,  &
-                    'Impossible! You are going northward on i=1?!' )
+        call ut__assert( i_now >= 2,  &
+                        'Impossible! You are going northward on i=1?!' )
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
           i_now -= 1                         ! Move the head point
           direct_now = 'W'                   ! Turn 90 degree
@@ -103,8 +98,8 @@ contains
               |  
               v
         !!<
-        call assert( j_now >= 2,  &
-                    'Impossible! You are going westward on j=1?!' )
+        call ut__assert( j_now >= 2,  &
+                        'Impossible! You are going westward on j=1?!' )
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
           j_now -= 1                       ! Move the head point
           direct_now = 'S'                 ! Turn 90 degree
@@ -118,8 +113,8 @@ contains
            -- + -->
               |
         !!<
-        call assert( i_now <= vert_nu-1,  &
-                    'Impossible! You are going southward on i=imax?!' )
+        call ut__assert( i_now <= vert_nu-1,  &
+                        'Impossible! You are going southward on i=imax?!' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
           i_now += 1                       ! Move the head point
           direct_now = 'E'                 ! Turn 90 degree
@@ -143,8 +138,6 @@ contains
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
 
-    path_closed = .false.  ! default value.
-
     select case (direct_now)
       case ('E')
         !!>
@@ -154,8 +147,8 @@ contains
                |      Checking if you can turn right (southward) or not.
                v
         !!<
-        call assert( j_now >= 2,  &
-                    'Impossible! You are going easthward on j=1?!' )
+        call ut__assert( j_now >= 2,  &
+                        'Impossible! You are going easthward on j=1?!' )
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
           j_now -= 1                         ! Move the head point
           direct_now = 'S'                   ! Turn 90 degree
@@ -169,8 +162,8 @@ contains
               | 
               N
         !!<
-        call assert( i_now <= vert_nu-1,  &
-                    'Impossible! You are going northward on i=imax?!' )
+        call ut__assert( i_now <= vert_nu-1,  &
+                        'Impossible! You are going northward on i=imax?!' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
           i_now += 1                         ! Move the head point
           direct_now = 'E'                   ! Turn 90 degree
@@ -183,8 +176,8 @@ contains
            -- + <---W
               |  
         !!<
-        call assert( j_now <= vert_nv-1,  &
-                    'Impossible! You are going westward on j=jmax?!' )
+        call ut__assert( j_now <= vert_nv-1,  &
+                        'Impossible! You are going westward on j=jmax?!' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           j_now += 1                       ! Move the head point
           direct_now = 'S'                 ! Turn 90 degree
@@ -198,8 +191,8 @@ contains
           <-- + -- 
               |
         !!<
-        call assert( i_now >= 2 ,  &
-                    'Impossible! You going southward on i=1?!' )
+        call ut__assert( i_now >= 2 ,  &
+                        'Impossible! You going southward on i=1?!' )
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
           i_now -= 1                       ! Move the head point
           direct_now = 'W'                 ! Turn 90 degree
@@ -222,8 +215,6 @@ contains
     integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
-
-    path_closed = .false.  ! default value.
 
     select case (direct_now)
       case ('E')
@@ -286,8 +277,6 @@ contains
     this.num = 0
     this.list_i(:) = 0
     this.list_j(:) = 0
-    this.start_position_i = 0
-    this.start_position_j = 0
   end subroutine contour_path__reset
 
 
@@ -310,8 +299,8 @@ contains
 
   subroutine contour_path__set_starting_edge( this,         &
                                               mesh_edge,    &
-                                              direct_now,        &
-                                              status,            &
+                                              direct_now,   &
+                                              status,       &
                                               i_now, j_now )
     class(contour_path_t) <io> :: this
     type(slice_mesh_edge_t) <in> :: mesh_edge
@@ -328,7 +317,7 @@ contains
               /
             This.
     !!< 
-    integer :: ei, ej
+    integer :: start_i, start_j, ei, ej
 
     call ut__assert( direct_now=='E',  &
                     'We assume start edge is E(astward).' )
@@ -355,26 +344,14 @@ contains
   end subroutine contour_path__set_starting_edge    
 
 
-  subroutine countour_path__set_start_position( this, i, j )
-    class(contour_path_t) <io> :: this
-    integer <in> :: i, j
-
-    call ut__assert( this.num == 0,   &
-                    'You forgot to reset vert num.' )
-    call register( this, i_now, j_now )
-    this.start_position_i = i
-    this.start_position_j = j
-  end subroutine countour_path__set_start_position
-
-
   subroutine register( contour_path, i, j )
     type(contour_path_t) <io> :: contour_path
     integer <in> :: i, j
 
     integer :: n
-    n = this.num + 1
-    call assert( n <= size(contour_path.list_i,dim=1),  &
-                'Increase array size of path_vert.' )
+    n = contour_path.num + 1
+    call ut__assert( n <= size(contour_path.list_i,dim=1),  &
+                    'Increase array size of path_vert.' )
     contour_path.list_i(n) = i
     contour_path.list_j(n) = j
     contour_path.num = n
@@ -382,18 +359,17 @@ contains
 
 
   subroutine contour_path__trace_and_erase( this,       &
-                                            edge,       &
+                                            mesh_edge,  &
                                             vert_nu,    &
                                             vert_nv,    &
                                             direct_now, &
                                             i_now,      &
                                             j_now )
     class(contour_path_t) <io> :: this
-    type(slice_mesh_edge_t) <in> :: mesh_edge
+    type(slice_mesh_edge_t) <io> :: mesh_edge
     integer <in> :: vert_nu, vert_nv
-    integer <in> :: start_i, start_j
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
-    integer <in> :: i_now, j_now
+    integer <io> :: i_now, j_now
 
     logical :: path_closed
     integer :: i_now_before, j_now_before
@@ -432,12 +408,12 @@ contains
       !
       ! straight
       !
-      call go_foward( mesh_edge,     &
-                      vert_nu,       &
-                      vert_nv,       &
-                      direct_now,    &
-                      i_now,         &
-                      j_now )
+      call go_forward( mesh_edge,     &
+                       vert_nu,       &
+                       vert_nv,       &
+                       direct_now,    &
+                       i_now,         &
+                       j_now )
       if ( path_is_closed( this, i_now, j_now ) ) then
         return
       else
