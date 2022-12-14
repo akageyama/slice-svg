@@ -36,25 +36,28 @@ module contour_path_m
     procedure :: turn_left => contour_path__turn_left
     procedure :: turn_right => contour_path__turn_right
     procedure :: go_foward => contour_path__go_forward
+    procedure, pass :: trace_and_erase  &
+                    => contour_path_trace_and_erase
   end type contour_path_t
 
 
 contains
 
 
-  function contour_path_closed( this, i_now, j_now ) result(ans)
-    type(contour_path_t) <in> :: this
+  function contour_path_closed( start_i, start_j,  &
+                                i_now, j_now ) result(ans)
+    integer <in> :: start_i, start_j
     integer <in> :: i_now, j_now
     logical :: ans
 
-    ans = ( i_now == this.start_position_i .and. &
-            j_now == this.start_position_j )
+    ans = ( start_i == i_now .and. &
+            start_j == j_now )
 
   end function contour_path_closed
 
  
   subroutine contour_path__turn_left( this, edge,               &
-                                      vert_nu, vert,nv          &
+                                      vert_nu, vert_nv,         &
                                       direct_now, i_now, j_now, &
                                       path_closed  )
     class(contour_path_t) <io> :: this
@@ -74,7 +77,7 @@ contains
           E--> + --   at '+' point, and moving eastward.
                |      Checking if you can turn left (northward) or not.
         !!<
-        call assert( j_now <= this.vert_nv-1,  &
+        call assert( j_now <= vert_nv-1,  &
                     'Impossible! You are going easthward on j=jmax?!' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           j_now += 1                         ! Move the head point
@@ -127,7 +130,7 @@ contains
            -- + -->
               |
         !!<
-        call assert( i_now <= this.vert_nu-1,  &
+        call assert( i_now <= vert_nu-1,  &
                     'Impossible! You are going southward on i=imax?!' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
           i_now += 1                       ! Move the head point
@@ -368,6 +371,88 @@ contains
     this.list_j(n) = j
     this.num = n
   end subroutine contour_path__register
+
+
+  subroutine contour_path_trace_and_erase( this,       &
+                                           edge,       &
+                                           vert_nu,    &
+                                           vert_nv,    &
+                                           direct_now, &
+                                           i_now,      &
+                                           j_now )
+    class(contour_path_t) <in> :: this
+    type(slice_mesh_edge_t) <in> :: mesh_edge
+    integer <in> :: vert_nu, vert_nv
+    char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
+    integer <in> :: i_now, j_now
+
+    logical :: path_closed
+    integer :: i_now_before, j_now_before
+
+    do 
+      i_now_before = i_now
+      j_now_before = j_now
+      !
+      call contour_path.turn_left( mesh_edge,     &
+                                   vert_nu,       &
+                                   vert_nv,       &
+                                   direct_now,    &
+                                   i_now, j_now,  &
+                                   path_closed )
+      if ( path_closed ) then
+        return
+      else
+        call contour_path.register( i_now, j_now )
+      end if
+
+      !
+      ! right
+      !
+      call contour_path.turn_right( mesh_edge,    &
+                                    vert_nu,      &
+                                    vert_nv,      &
+                                    direct_now,   &
+                                    i_now, j_now, &
+                                    path_closed )
+      if ( path_closed ) then
+        return
+      else
+        call contour_path.register( i_now, j_now )
+      end if
+
+      !
+      ! straight
+      !
+      call contour_path.go_foward( mesh_edge,     &
+                                   vert.nu,       &
+                                   vert.nv,       &
+                                   direct_now,    &
+                                   i_now, j_now,  &
+                                   path_closed )
+      if ( path_closed ) then
+        return
+      else
+      !!>
+          We do not need to register the forward-stepped point,
+          because the path
+                   1---2---3
+                           |          
+                           4---5---6---7
+          is the same as
+                   1-------2
+                           |          
+                           3-----------4
+      !!<
+        ! call contour_path.register( i_now, j_now )
+        ! So, we do nothing here.
+      end if
+
+      call ut__assert( i_now /= i_now_before .and.  &
+                       j_now /= j_now_before,       &
+                      'Failed to follow the path?' )
+    end do
+
+  end subroutine contour_path_trace_and_erase
 
 
 end module contour_path_m

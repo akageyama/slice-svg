@@ -8,7 +8,6 @@ module slice_m
   implicit none
   private
 
-
   type, public :: slice__scalar_t
     type(slice_mesh_vert_t) :: mesh_vert
     type(slice_mesh_cell_t) :: mesh_cell
@@ -35,86 +34,6 @@ module slice_m
 
 
 contains
-
-
-  subroutine trace_path_and_erase_trace( edge,         &
-                                         vert_nu,      &
-                                         vert_nv,      &
-                                         direct_now,   &
-                                         i_now,        &
-                                         j_now )
-    type(slice_mesh_edge_t) <in> :: mesh_edge
-    integer <in> :: vert_nu, vert_nv
-    char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
-    integer <in> :: i_now, j_now
-
-    logical :: path_closed
-    integer :: i_now_before, j_now_before
-
-    do 
-      i_now_before = i_now
-      j_now_before = j_now
-      !
-      call contour_path.turn_left( mesh_edge,     &
-                                   vert_nu,       &
-                                   vert_nv,       &
-                                   direct_now,    &
-                                   i_now, j_now,  &
-                                   path_closed )
-      if ( path_closed ) then
-        return
-      else
-        call contour_path.register( i_now, j_now )
-      end if
-
-      !
-      ! right
-      !
-      call contour_path.turn_right( mesh_edge,    &
-                                    vert_nu,      &
-                                    vert_nv,      &
-                                    direct_now,   &
-                                    i_now, j_now, &
-                                    path_closed )
-      if ( path_closed ) then
-        return
-      else
-        call contour_path.register( i_now, j_now )
-      end if
-
-      !
-      ! straight
-      !
-      call contour_path.go_foward( mesh_edge,     &
-                                   vert.nu,       &
-                                   vert.nv,       &
-                                   direct_now,    &
-                                   i_now, j_now,  &
-                                   path_closed )
-      if ( path_closed ) then
-        return
-      else
-      !!>
-          We do not need to register the forward-stepped point,
-          because the path
-                   1---2---3
-                           |          
-                           4---5---6---7
-          is the same as
-                   1-------2
-                           |          
-                           3-----------4
-      !!<
-        ! call contour_path.register( i_now, j_now )
-        ! So, we do nothing here.
-      end if
-
-      call ut__assert( i_now /= i_now_before .and.  &
-                       j_now /= j_now_before,       &
-                      'Failed to follow the path?' )
-    end do
-
-  end subroutine trace_path_and_erase_trace
 
 
   subroutine slice__scalar_initialize( this, nu, nv,  &
@@ -237,10 +156,10 @@ contains
 
     call iFind_start_edge( 'E', i_now, j_now, status )
     do while ( status == 'have found' )
-      call trace_path_and_erase_trace( this.mesh_edge,    &
-                                       this.mesh_vert.nu, &
-                                       this.mesh_vert.nv, &
-                                       'E', i_now, j_now )
+      call contour_path.trace_and_erase( this.mesh_edge,    &
+                                         this.mesh_vert.nu, &
+                                         this.mesh_vert.nv, &
+                                         'E', i_now, j_now )
       ! <check>
         do i = 1, contour_path.num
           ut__message( i, contour_path.list_i(i), contour_path.list_j(i) )
