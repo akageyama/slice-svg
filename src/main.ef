@@ -27,6 +27,8 @@ program main
 
   real :: theta = 0.0
 
+  call const_base__check
+
   du = (umax-umin)/(NU-1)
   dv = (vmax-vmin)/(NV-1)
 
@@ -45,8 +47,6 @@ program main
   ymin = 0.0
   xmax = window_width
   ymax = window_height
-
-  call const_base__check
 
   call fig01.open( 'test.svg', width=window_width, height=window_height )
   call fig01.group_begin( 'color="blue"' )

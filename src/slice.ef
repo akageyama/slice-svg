@@ -46,10 +46,11 @@ contains
     real <in> :: v_min, v_max
     real, dimension(nu,nv) <optin> :: val
 
+    allocate(this.val_vert(nu,nv))
+
     call this.mesh_vert.initialize( nu, nv,        &
                                     u_min, u_max,  &
                                     v_min, v_max )
-
     call this.mesh_cell.initialize( this.mesh_vert )
     call this.mesh_edge.initialize( this.mesh_vert )
 
