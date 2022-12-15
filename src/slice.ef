@@ -154,9 +154,9 @@ contains
                                     this.mesh_vert.nv )
     ==</just_once>==
 
-    call contour_path.reset
     call this.mesh_edge.apply_stokes( this.mesh_cell, level )
 
+    call contour_path.reset
     direct_now = 'E' ! Try to find E(ast)-ward edge.
     call contour_path.set_starting_edge( this.mesh_edge,  &
                                          direct_now,      &
@@ -164,6 +164,9 @@ contains
                                          i_now,           &
                                          j_now )
     do while ( status == 'have found' )
+      !!>
+          Tring to find the 1st contour of this level.
+      !!<
       call contour_path.trace_and_erase( this.mesh_edge,    &
                                          this.mesh_vert.nu, &
                                          this.mesh_vert.nv, &
@@ -177,6 +180,12 @@ contains
                                contour_path.list_j(i) )
         end do
       ! </check>
+      !!>
+          Generally, there are multiple contours of this level.
+      !!<
+  exit
+      call contour_path.reset
+      direct_now = 'E' ! Try to find E(ast)-ward edge.
       call contour_path.set_starting_edge( this.mesh_edge,  &
                                            direct_now,      &
                                            status,          &

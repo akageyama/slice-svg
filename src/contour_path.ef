@@ -69,8 +69,7 @@ contains
           E--> + --   at '+' point, and moving eastward.
                |      Checking if you can turn left (northward) or not.
         !!<
-        call ut__assert( j_now <= vert_nv-1,  &
-                        'Impossible! You are going easthward on j=jmax?!' )
+        if ( j_now == vert_nv ) return
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           j_now += 1                         ! Move the head point
           direct_now = 'N'                   ! Turn 90 degree
@@ -84,8 +83,7 @@ contains
               | 
               N
         !!<
-        call ut__assert( i_now >= 2,  &
-                        'Impossible! You are going northward on i=1?!' )
+        if ( i_now == 1 ) return
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
           i_now -= 1                         ! Move the head point
           direct_now = 'W'                   ! Turn 90 degree
@@ -98,8 +96,7 @@ contains
               |  
               v
         !!<
-        call ut__assert( j_now >= 2,  &
-                        'Impossible! You are going westward on j=1?!' )
+        if ( j_now == 1 ) return
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
           j_now -= 1                       ! Move the head point
           direct_now = 'S'                 ! Turn 90 degree
@@ -113,8 +110,7 @@ contains
            -- + -->
               |
         !!<
-        call ut__assert( i_now <= vert_nu-1,  &
-                        'Impossible! You are going southward on i=imax?!' )
+        if ( i_now == vert_nu ) return
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
           i_now += 1                       ! Move the head point
           direct_now = 'E'                 ! Turn 90 degree
@@ -147,8 +143,7 @@ contains
                |      Checking if you can turn right (southward) or not.
                v
         !!<
-        call ut__assert( j_now >= 2,  &
-                        'Impossible! You are going easthward on j=1?!' )
+        if ( j_now == 1 ) return
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
           j_now -= 1                         ! Move the head point
           direct_now = 'S'                   ! Turn 90 degree
@@ -162,8 +157,7 @@ contains
               | 
               N
         !!<
-        call ut__assert( i_now <= vert_nu-1,  &
-                        'Impossible! You are going northward on i=imax?!' )
+        if ( i_now == vert_nu ) return
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
           i_now += 1                         ! Move the head point
           direct_now = 'E'                   ! Turn 90 degree
@@ -176,8 +170,7 @@ contains
            -- + <---W
               |  
         !!<
-        call ut__assert( j_now <= vert_nv-1,  &
-                        'Impossible! You are going westward on j=jmax?!' )
+        if ( j_now == vert_nv ) return
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           j_now += 1                       ! Move the head point
           direct_now = 'S'                 ! Turn 90 degree
@@ -191,8 +184,7 @@ contains
           <-- + -- 
               |
         !!<
-        call ut__assert( i_now >= 2 ,  &
-                        'Impossible! You going southward on i=1?!' )
+        if ( i_now == 1 ) return
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
           i_now -= 1                       ! Move the head point
           direct_now = 'W'                 ! Turn 90 degree
@@ -216,6 +208,12 @@ contains
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
 
+    !!>
+        This routine should be called after "turn_left" or
+        "turn_right". Therefore, we can assume that we can
+        always go forward safely, as long as the path is closed.
+    !!<
+
     select case (direct_now)
       case ('E')
         !!>
@@ -225,9 +223,12 @@ contains
                |      Checking if you can go straight or not.
 
         !!<
-        if ( i_now == vert_nu ) return  ! You cannot go forward.
+        call ut__assert( i_now /= vert_nu,            &
+                        '__MODFUNC__: Impossible! '   &
+                     // ' Tying to go through the right wall.' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then 
           i_now += 1
+          return
         end if
       case ('N')
         !!>
@@ -238,9 +239,12 @@ contains
                | 
                N
         !!<
-        if ( j_now == vert_nv ) return  ! You cannot go forward.
+        call ut__assert( j_now /= vert_nv,            &
+                        '__MODFUNC__: Impossible! '   &
+                     // ' Tying to go through the top wall.' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           j_now += 1
+          return
         end if
       case ('W')
         !!>
@@ -248,9 +252,12 @@ contains
             <-- + <---W
                 |  
         !!<
-        if ( i_now == 1 ) return  ! You cannot go forward.
+        call ut__assert( i_now /= 1,                  &
+                        '__MODFUNC__: Impossible! '   &
+                     // ' Tying to go through the left wall.' )
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
           i_now -= 1
+          return
         end if
       case ('S')
         !!>
@@ -261,13 +268,18 @@ contains
                 |
                 v
         !!<
-        if ( j_now == 1 ) return  ! You cannot go forward.
+        call ut__assert( j_now /= 1,                  &
+                        '__MODFUNC__: Impossible! '   &
+                     // ' Tying to go through the bottom wall.' )
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
           j_now -= 1
+          return
         end if
       case default
-        call ut__fatal( 'Wrong direct case.' )
+        call ut__fatal( '__MODFUNC__: Wrong direct case.' )
     end select
+
+    call ut__fatal( '__MODFUNC__: Failed to go forward.' )
 
   end subroutine go_forward
 
@@ -303,26 +315,24 @@ contains
                                               status,       &
                                               i_now, j_now )
     class(contour_path_t) <io> :: this
-    type(slice_mesh_edge_t) <in> :: mesh_edge
+    type(slice_mesh_edge_t) <io> :: mesh_edge
     char(len=1) <in> :: direct_now
     char(len=10) <out> :: status ! 'no contour' or 'have found'
     integer <out> :: i_now, j_now
     !!>
-          Tring to find a eastward arrow AB.
+          Tring to find an eastward arrow AB.
               +---+---+---+
               |           |
-              A==>B       +
-                /  |       |
-              /   +---+---+
-              /
-            This.
+              +---+       +
+                  |       |
+                  A==>B---+
     !!< 
     integer :: start_i, start_j, ei, ej
 
     call ut__assert( direct_now=='E',  &
-                    'We assume start edge is E(astward).' )
+                    '__MODFUNC__: We assume start edge is E(astward).' )
     call ut__assert( this.num == 0,  &
-                    'Forgot resetting contour_path.' )
+                    '__MODFUNC__: Forgot resetting contour_path.' )
 
     do ej = 1, mesh_edge.u_nv
       do ei = 1, mesh_edge.u_nu
@@ -334,6 +344,7 @@ contains
           i_now = start_i + 1
           j_now = start_j
           call register( this, i_now, j_now )
+          mesh_edge.u_ternary(start_i,start_j) = 0  ! Erase the edge
           status = 'have found'
           return
         end if
@@ -351,7 +362,7 @@ contains
     integer :: n
     n = contour_path.num + 1
     call ut__assert( n <= size(contour_path.list_i,dim=1),  &
-                    'Increase array size of path_vert.' )
+                    '__MODFUNC__: Increase array size of path_vert.' )
     contour_path.list_i(n) = i
     contour_path.list_j(n) = j
     contour_path.num = n
@@ -372,11 +383,29 @@ contains
     integer <io> :: i_now, j_now
 
     logical :: path_closed
-    integer :: i_now_before, j_now_before
+!debug s
+integer :: i, j
+do j=1, mesh_edge.u_nv
+do i=1, mesh_edge.u_nu
+if ( mesh_edge.u_ternary(i,j) /= 0 ) then
+!debugp i, j, mesh_edge.u_ternary(i,j)
+end if
+end do
+end do
+do j=1, mesh_edge.v_nv
+do i=1, mesh_edge.v_nu
+if ( mesh_edge.v_ternary(i,j) /= 0 ) then
+!debugp i, j, mesh_edge.v_ternary(i,j)
+end if
+end do
+end do
+! debug e
 
     do 
-      i_now_before = i_now
-      j_now_before = j_now
+!debugp 'do loop.'    
+!debugp vert_nu    
+!debugp vert_nv    
+!debugp direct_now
       !
       call turn_left( mesh_edge,     &
                       vert_nu,       &
@@ -384,10 +413,13 @@ contains
                       direct_now,    &
                       i_now,         &
                       j_now )
+!debugp 'done turn_left'
+!debugp i_now, j_now, direct_now
       if ( path_is_closed( this, i_now, j_now ) ) then
         return
       else
         call register( this, i_now, j_now )
+!debugp 'registered.'        
       end if
 
       !
@@ -399,10 +431,13 @@ contains
                        direct_now,   &
                        i_now,        &
                        j_now )
+!debugp 'done turn_right'
+!debugp i_now, j_now, direct_now
       if ( path_is_closed( this, i_now, j_now ) ) then
         return
       else
         call register( this, i_now, j_now )
+!debugp 'registered.'        
       end if
 
       !
@@ -414,6 +449,8 @@ contains
                        direct_now,    &
                        i_now,         &
                        j_now )
+!debugp 'done go forward'
+!debugp i_now, j_now, direct_now
       if ( path_is_closed( this, i_now, j_now ) ) then
         return
       else
@@ -432,9 +469,6 @@ contains
         ! So, we do nothing here.
       end if
 
-      call ut__assert( i_now /= i_now_before .and.  &
-                       j_now /= j_now_before,       &
-                      'Failed to follow the path?' )
     end do
 
   end subroutine contour_path__trace_and_erase

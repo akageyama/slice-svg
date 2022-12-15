@@ -100,6 +100,12 @@ endif
 
 # default target
 
+view: test.svg
+	open test.svg
+
+test.svg: test
+	./test
+
 rumme: test
 	./test
 

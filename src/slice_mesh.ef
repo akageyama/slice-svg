@@ -241,6 +241,7 @@ contains
     this.mean_val_min = minval(this.mean_val)
   end subroutine slice_mesh_cell__set_meanval
 
+
   subroutine slice_mesh_edge__apply_stokes( this, mesh_cell, level )
     class(slice_mesh_edge_t) <io> :: this
     type(slice_mesh_cell_t) <in> :: mesh_cell
@@ -272,9 +273,9 @@ contains
     do j = 1, mesh_cell.nv
       do i = 1, mesh_cell.nu
         if ( mesh_cell.mean_val(i,j) >= level ) then
-          this.u_ternary(i,j+1) += 1  ! right-in-south
+          this.u_ternary(i,j)   += 1  ! right-in-south
           this.v_ternary(i+1,j) += 1  !    up-in-east
-          this.u_ternary(i,j)   -= 1  !  left-in-north
+          this.u_ternary(i,j+1) -= 1  !  left-in-north
           this.v_ternary(i,j)   -= 1  !  down-in-west
         end if
       end do
