@@ -31,7 +31,7 @@ module contour_path_m
   contains
     procedure :: initialize => contour_path__initialize
     procedure :: reset => contour_path__reset
-    procedure, pass :: trace_and_erase  &
+    procedure :: trace_and_erase  &
                        => contour_path__trace_and_erase
     procedure, pass :: set_starting_edge &
                        => contour_path__set_starting_edge
@@ -41,25 +41,33 @@ module contour_path_m
 contains
 
 
-  function path_is_closed( contour_path, i_now, j_now ) result(ans)
-    type(contour_path_t) <in> :: contour_path
+  function returned_to_start_point( i_start, j_start,  &
+                                    i_now, j_now ) result(ans)
+    type(path_t) <in> :: path
+    integer <in> :: i_start, j_start
     integer <in> :: i_now, j_now
     logical :: ans
-    ans = ( i_now == contour_path.list_i(1) .and. &
-            j_now == contour_path.list_j(1) )
-  end function path_is_closed
+    ans = ( i_start == i_now  .and.  &
+            j_start == j_now )
+  end function returned_to_start_point
 
  
-  subroutine turn_left( edge,         &
-                        vert_nu,      &
-                        vert_nv,      &
-                        direct_now,   &
-                        i_now,        &
-                        j_now )
+  subroutine turn_left( path,            &
+                        edge,            &
+                        direct_now,      &
+                        i_now,           &
+                        j_now,           &
+                        moved_one_step,  &
+                        path_is_closed )
+    type(contour_path_t) <in> :: path
     type(slice_mesh_edge_t) <io> :: edge
-    integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
+    logical <out> :: moved_one_step
+    logical <out> :: path_is_closed
+
+    moved_one_step = .false.  ! Default.
+    path_is_closed = .false.  ! Default
 
     select case (direct_now)
       case ('E')
@@ -69,11 +77,19 @@ contains
           E--> + --   at '+' point, and moving eastward.
                |      Checking if you can turn left (northward) or not.
         !!<
-        if ( j_now == vert_nv ) return
+        if ( j_now == path.vert_nv ) return
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
-          edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
-          j_now += 1                         ! Move the head point
-          direct_now = 'N'                   ! Turn 90 degree
+          edge.u_ternary(i_now-1,j_now) = 0   ! Erase the trace
+          j_now += 1                          ! Move the head point
+          direct_now = 'N'                    ! Turn 90 degree
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.v_ternary(i_now,j_now-1) = 0 ! Erase the last edge.
+          end if
         end if
       case ('N')
         !!>
@@ -85,9 +101,17 @@ contains
         !!<
         if ( i_now == 1 ) return
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
-          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
+          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the trace
           i_now -= 1                         ! Move the head point
           direct_now = 'W'                   ! Turn 90 degree
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.u_ternary(i_now,j_now) = 0 ! Erase the last edge.
+          end if
         end if
       case ('W')
         !!>
@@ -98,9 +122,17 @@ contains
         !!<
         if ( j_now == 1 ) return
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
-          edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
-          j_now -= 1                       ! Move the head point
-          direct_now = 'S'                 ! Turn 90 degree
+          edge.u_ternary(i_now,j_now) = 0     ! Erase the trace
+          j_now -= 1                          ! Move the head point
+          direct_now = 'S'                    ! Turn 90 degree
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.v_ternary(i_now,j_now+1) = 0 ! Erase the last edge.
+          end if
         end if
       case ('S')
         !!>
@@ -112,9 +144,17 @@ contains
         !!<
         if ( i_now == vert_nu ) return
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
-          edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
-          i_now += 1                       ! Move the head point
-          direct_now = 'E'                 ! Turn 90 degree
+          edge.v_ternary(i_now,j_now) = 0     ! Erase the trace
+          i_now += 1                          ! Move the head point
+          direct_now = 'E'                    ! Turn 90 degree
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.u_ternary(i_now-1,j_now) = 0 ! Erase the last edge.
+          end if
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
@@ -123,16 +163,22 @@ contains
   end subroutine turn_left
 
  
-  subroutine turn_right( edge,        &
-                         vert_nu,     &
-                         vert_nv,     &
-                         direct_now,  &
-                         i_now,       &
-                         j_now )
+  subroutine turn_right( path,            &
+                         edge,            &
+                         direct_now,      &
+                         i_now,           &
+                         j_now,           &
+                         moved_one_step,  &
+                         path_is_closed )
+    type(contour_path_t) <in> :: path
     type(slice_mesh_edge_t) <io> :: edge
-    integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
+    logical <out> :: moved_one_step
+    logical <out> :: path_is_closed
+
+    moved_one_step = .false.  ! Default.
+    path_is_closed = .false.  ! Default
 
     select case (direct_now)
       case ('E')
@@ -145,9 +191,17 @@ contains
         !!<
         if ( j_now == 1 ) return
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
-          edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
+          edge.u_ternary(i_now-1,j_now) = 0  ! Erase the trace
           j_now -= 1                         ! Move the head point
           direct_now = 'S'                   ! Turn 90 degree
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.v_ternary(i_now,j_now) = 0  ! Erase the last edge.
+          end if
         end if
       case ('N')
         !!>
@@ -159,9 +213,17 @@ contains
         !!<
         if ( i_now == vert_nu ) return
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
-          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
-          i_now += 1                         ! Move the head point
+          edge.v_ternary(i_now,j_now-1) = 0    ! Erase the trace
+          i_now += 1                           ! Move the head point
           direct_now = 'E'                   ! Turn 90 degree
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.u_ternary(i_now-1,j_now) = 0  ! Erase the last edge.
+          end if
         end if
       case ('W')
         !!>
@@ -172,9 +234,17 @@ contains
         !!<
         if ( j_now == vert_nv ) return
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
-          edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
-          j_now += 1                       ! Move the head point
-          direct_now = 'S'                 ! Turn 90 degree
+          edge.u_ternary(i_now,j_now) = 0      ! Erase the trace
+          j_now += 1                           ! Move the head point
+          direct_now = 'S'                     ! Turn 90 degree
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.v_ternary(i_now,j_now-1) = 0  ! Erase the last edge.
+          end if
         end if
       case ('S')
         !!>
@@ -186,32 +256,46 @@ contains
         !!<
         if ( i_now == 1 ) return
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
-          edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
-          i_now -= 1                       ! Move the head point
-          direct_now = 'W'                 ! Turn 90 degree
+          edge.v_ternary(i_now,j_now) = 0    ! Erase the trace
+          i_now -= 1                         ! Move the head point
+          direct_now = 'W'                   ! Turn 90 degree
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.u_ternary(i_now,j_now) = 0  ! Erase the last edge.
+          end if
         end if
       case default
-        call ut__fatal( 'Wrong direct case.' )
+        call ut__fatal( '__MODFUNC__: Wrong direct case.' )
     end select
 
   end subroutine turn_right  
 
  
-  subroutine go_forward( edge,        &
-                         vert_nu,     &
-                         vert_nv,     &
-                         direct_now,  &
-                         i_now,       &
-                         j_now )
+  subroutine go_forward( path,            &
+                         edge,            &
+                         direct_now,      &
+                         i_now,           &
+                         j_now,           &
+                         moved_one_step,  &
+                         path_is_closed )
+    type(contour_path_t) <in> :: path
     type(slice_mesh_edge_t) <io> :: edge
-    integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
+    logical <out> :: moved_one_step
+    logical <out> :: path_is_closed
+
+    moved_one_step = .false.  ! Default.
+    path_is_closed = .false.  ! Default
 
     !!>
-        This routine should be called after "turn_left" or
-        "turn_right". Therefore, we can assume that we can
-        always go forward safely, as long as the path is closed.
+        This routine is called after "turn_left" or
+        "turn_right". So, we should be able to go 
+        forward, as long as the path is closed.
     !!<
 
     select case (direct_now)
@@ -227,8 +311,16 @@ contains
                         '__MODFUNC__: Impossible! '   &
                      // ' Tying to go through the right wall.' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then 
-          edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
+          edge.u_ternary(i_now-1,j_now) = 0   ! Erase the trace
           i_now += 1
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.u_ternary(i_now-1,j_now) = 0 ! Erase the last edge.
+          end if
           return
         end if
       case ('N')
@@ -244,8 +336,16 @@ contains
                         '__MODFUNC__: Impossible! '   &
                      // ' Tying to go through the top wall.' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
-          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
+          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the trace
           j_now += 1
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.v_ternary(i_now,j_now-1) = 0 ! Erase the last edge.
+          end if
           return
         end if
       case ('W')
@@ -258,8 +358,16 @@ contains
                         '__MODFUNC__: Impossible! '   &
                      // ' Tying to go through the left wall.' )
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
-          edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
+          edge.u_ternary(i_now,j_now) = 0   ! Erase the trace
           i_now -= 1
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.u_ternary(i_now,j_now) = 0 ! Erase the last edge.
+          end if
           return
         end if
       case ('S')
@@ -275,8 +383,16 @@ contains
                         '__MODFUNC__: Impossible! '   &
                      // ' Tying to go through the bottom wall.' )
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
-          edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
+          edge.v_ternary(i_now,j_now) = 0   ! Erase the trace
           j_now -= 1
+          moved_one_step = .true.
+          path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                    path.list_j(1),  &
+                                                    i_now,           &
+                                                    j_now )
+          if ( path_is_closed ) then
+            edge.v_ternary(i_now,j_now) = 0 ! Erase the last edge.
+          end if
           return
         end if
       case default
@@ -375,8 +491,6 @@ contains
 
   subroutine contour_path__trace_and_erase( this,       &
                                             mesh_edge,  &
-                                            vert_nu,    &
-                                            vert_nv,    &
                                             direct_now, &
                                             i_now,      &
                                             j_now )
@@ -386,7 +500,7 @@ contains
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
 
-    logical :: path_closed
+    logical :: moved_one_step, path_is_closed
 !debug s
 integer :: i, j
 do j=1, mesh_edge.u_nv
@@ -411,38 +525,33 @@ end do
 !debugp vert_nv    
 !debugp direct_now
       !
-      call turn_left( mesh_edge,     &
-                      vert_nu,       &
-                      vert_nv,       &
-                      direct_now,    &
-                      i_now,         &
-                      j_now )
-!debugp 'done turn_left'
-!debugp i_now, j_now, direct_now
-      if ( path_is_closed( this, i_now, j_now ) ) then
-        return
-      else
+      call turn_left( this,            &
+                      mesh_edge,       &
+                      direct_now,      &
+                      i_now,           &
+                      j_now,           &
+                      moved_one_step,  &
+                      path_is_closed )
+      if ( moved_one_step ) then
         call register( this, i_now, j_now )
-!debugp 'registered.'        
       end if
+      if ( path_is_closed ) return
 
       !
       ! right
       !
-      call turn_right( mesh_edge,    &
-                       vert_nu,      &
-                       vert_nv,      &
-                       direct_now,   &
-                       i_now,        &
-                       j_now )
+      call turn_right( this,            &
+                       mesh_edge,       &
+                       direct_now,      &
+                       i_now,           &
+                       j_now,           &
+                       moved_one_step,  &
+                       path_is_closed )
 !debugp 'done turn_right'
-!debugp i_now, j_now, direct_now
-      if ( path_is_closed( this, i_now, j_now ) ) then
-        return
-      else
+      if ( moved_one_step ) then
         call register( this, i_now, j_now )
-!debugp 'registered.'        
       end if
+      if ( path_is_closed ) return
 
       !
       ! straight
@@ -455,9 +564,6 @@ end do
                        j_now )
 !debugp 'done go forward'
 !debugp i_now, j_now, direct_now
-      if ( path_is_closed( this, i_now, j_now ) ) then
-        return
-      else
       !!>
           We do not need to register the forward-stepped point,
           because the path
@@ -469,8 +575,9 @@ end do
                            |          
                            3-----------4
       !!<
-        ! call register( i_now, j_now )
-        ! So, we do nothing here.
+      if ( path_is_closed ) return
+        call register( this, i_now, j_now )
+        return
       end if
 
     end do
