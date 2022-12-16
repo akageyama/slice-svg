@@ -20,6 +20,7 @@ program main
   real :: vmax = +PI
 
   real :: du, dv, u, v
+  real :: u2, v2, x2, y2
 
   real, dimension(NU,NV) :: pressure
 
@@ -52,41 +53,99 @@ program main
   call pres.initialize( NU, NV, umin, umax, vmin, vmax, pressure )
   call pres.vis_contour( 1.0 )
 
+  ! East
   do j = 1, NV
     do i = 1, NU-1
       if ( pres.mesh_edge.u_ternary(i,j) == 1 ) then
         u = pres.mesh_vert.pos_u(i)
         v = pres.mesh_vert.pos_v(j)
+        u2 = pres.mesh_vert.pos_u(i+1)
+        v2 = pres.mesh_vert.pos_v(j)
         x = window_width*(0.1 + (u-umin)/(umax-umin)*0.8)
-        y = window_height*(0.1 + (v-vmin)/(vmax-vmin)*0.8)
+        y = window_height*(0.9 - (v-vmin)/(vmax-vmin)*0.8)
+        x2 = window_width*(0.1 + (u2-umin)/(umax-umin)*0.8)
+        y2 = window_height*(0.9 - (v2-vmin)/(vmax-vmin)*0.8)
 !        call fig01.arrow( x, y, 10*cos(theta), 10*sin(theta) )
-        call fig01.line( x, y, x+10, y, stroke="black", stroke_width=1.0 )
+        call fig01.line( x, y, x2, y2, stroke="black", stroke_width=1.0 )
       end if
     end do
   end do
-      
+
+  ! North
+  do j = 1, NV-1
+    do i = 1, NU
+      if ( pres.mesh_edge.v_ternary(i,j) == 1 ) then
+        u = pres.mesh_vert.pos_u(i)
+        v = pres.mesh_vert.pos_v(j)
+        u2 = pres.mesh_vert.pos_u(i)
+        v2 = pres.mesh_vert.pos_v(j+1)
+        x = window_width*(0.1 + (u-umin)/(umax-umin)*0.8)
+        y = window_height*(0.9 - (v-vmin)/(vmax-vmin)*0.8)
+        x2 = window_width*(0.1 + (u2-umin)/(umax-umin)*0.8)
+        y2 = window_height*(0.9 - (v2-vmin)/(vmax-vmin)*0.8)
+!        call fig01.arrow( x, y, 10*cos(theta), 10*sin(theta) )
+        call fig01.line( x, y, x2, y2, stroke="black", stroke_width=1.0 )
+      end if
+    end do
+  end do  
+
+  ! West
+  do j = 1, NV
+    do i = 1, NU-1
+      if ( pres.mesh_edge.u_ternary(i,j) == -1 ) then
+        u = pres.mesh_vert.pos_u(i+1)
+        v = pres.mesh_vert.pos_v(j)
+        u2 = pres.mesh_vert.pos_u(i)
+        v2 = pres.mesh_vert.pos_v(j)
+        x = window_width*(0.1 + (u-umin)/(umax-umin)*0.8)
+        y = window_height*(0.9 - (v-vmin)/(vmax-vmin)*0.8)
+        x2 = window_width*(0.1 + (u2-umin)/(umax-umin)*0.8)
+        y2 = window_height*(0.9 - (v2-vmin)/(vmax-vmin)*0.8)
+!        call fig01.arrow( x, y, 10*cos(theta), 10*sin(theta) )
+        call fig01.line( x, y, x2, y2, stroke="black", stroke_width=1.0 )
+      end if
+    end do
+  end do    
+
+  ! South
+  do j = 1, NV-1
+    do i = 1, NU
+      if ( pres.mesh_edge.v_ternary(i,j) == -1 ) then
+        u = pres.mesh_vert.pos_u(i)
+        v = pres.mesh_vert.pos_v(j+1)
+        u2 = pres.mesh_vert.pos_u(i)
+        v2 = pres.mesh_vert.pos_v(j)
+        x = window_width*(0.1 + (u-umin)/(umax-umin)*0.8)
+        y = window_height*(0.9 - (v-vmin)/(vmax-vmin)*0.8)
+        x2 = window_width*(0.1 + (u2-umin)/(umax-umin)*0.8)
+        y2 = window_height*(0.9 - (v2-vmin)/(vmax-vmin)*0.8)
+!        call fig01.arrow( x, y, 10*cos(theta), 10*sin(theta) )
+        call fig01.line( x, y, x2, y2, stroke="black", stroke_width=1.0 )
+      end if
+    end do
+  end do         
   call pres.finalize
 
-  do i = 0, 10
-    x = window_width/10.0 * i
-    call fig01.line( x, ymin, x, ymax, stroke="black", stroke_width=1.0 )
-  end do
-  do j = 0, 10
-    y = window_height/10.0*j
-    call fig01.line( xmin, y, xmax, y, stroke="black", stroke_width=1.0 )
-  end do
+!   do i = 0, 10
+!     x = window_width/10.0 * i
+!     call fig01.line( x, ymin, x, ymax, stroke="black", stroke_width=1.0 )
+!   end do
+!   do j = 0, 10
+!     y = window_height/10.0*j
+!     call fig01.line( xmin, y, xmax, y, stroke="black", stroke_width=1.0 )
+!   end do
 
 
-  do i = 0, 10
-  do j = 0, 10
-    theta += PI/10
-    x = window_width/10.0 * i
-    y = window_height/10.0 * j
-    call fig01.arrow( x, y, 10*cos(theta), 10*sin(theta) )
-!    call fig01.text( x, y, "test", 40.0, color="red" )
-    call fig01.text( x, y, "test", 40.0 )
-  end do
-  end do
+!   do i = 0, 10
+!   do j = 0, 10
+!     theta += PI/10
+!     x = window_width/10.0 * i
+!     y = window_height/10.0 * j
+!     call fig01.arrow( x, y, 10*cos(theta), 10*sin(theta) )
+! !    call fig01.text( x, y, "test", 40.0, color="red" )
+!     call fig01.text( x, y, "test", 40.0 )
+!   end do
+!   end do
   call fig01.group_end()
   call fig01.close
 end program main

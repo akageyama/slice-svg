@@ -71,9 +71,9 @@ contains
         !!<
         if ( j_now == vert_nv ) return
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
+          edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
           j_now += 1                         ! Move the head point
           direct_now = 'N'                   ! Turn 90 degree
-          edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
         end if
       case ('N')
         !!>
@@ -85,9 +85,9 @@ contains
         !!<
         if ( i_now == 1 ) return
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
+          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
           i_now -= 1                         ! Move the head point
           direct_now = 'W'                   ! Turn 90 degree
-          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
         end if
       case ('W')
         !!>
@@ -98,9 +98,9 @@ contains
         !!<
         if ( j_now == 1 ) return
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
+          edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
           j_now -= 1                       ! Move the head point
           direct_now = 'S'                 ! Turn 90 degree
-          edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
         end if
       case ('S')
         !!>
@@ -112,9 +112,9 @@ contains
         !!<
         if ( i_now == vert_nu ) return
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
+          edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
           i_now += 1                       ! Move the head point
           direct_now = 'E'                 ! Turn 90 degree
-          edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
@@ -145,9 +145,9 @@ contains
         !!<
         if ( j_now == 1 ) return
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
+          edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
           j_now -= 1                         ! Move the head point
           direct_now = 'S'                   ! Turn 90 degree
-          edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
         end if
       case ('N')
         !!>
@@ -159,9 +159,9 @@ contains
         !!<
         if ( i_now == vert_nu ) return
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
+          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
           i_now += 1                         ! Move the head point
           direct_now = 'E'                   ! Turn 90 degree
-          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
         end if
       case ('W')
         !!>
@@ -172,9 +172,9 @@ contains
         !!<
         if ( j_now == vert_nv ) return
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
+          edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
           j_now += 1                       ! Move the head point
           direct_now = 'S'                 ! Turn 90 degree
-          edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
         end if
       case ('S')
         !!>
@@ -186,9 +186,9 @@ contains
         !!<
         if ( i_now == 1 ) return
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
+          edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
           i_now -= 1                       ! Move the head point
           direct_now = 'W'                 ! Turn 90 degree
-          edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
         end if
       case default
         call ut__fatal( 'Wrong direct case.' )
@@ -227,6 +227,7 @@ contains
                         '__MODFUNC__: Impossible! '   &
                      // ' Tying to go through the right wall.' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then 
+          edge.u_ternary(i_now-1,j_now) = 0  ! Erase the edge
           i_now += 1
           return
         end if
@@ -243,6 +244,7 @@ contains
                         '__MODFUNC__: Impossible! '   &
                      // ' Tying to go through the top wall.' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
+          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the edge
           j_now += 1
           return
         end if
@@ -256,6 +258,7 @@ contains
                         '__MODFUNC__: Impossible! '   &
                      // ' Tying to go through the left wall.' )
         if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
+          edge.u_ternary(i_now,j_now) = 0  ! Erase the edge
           i_now -= 1
           return
         end if
@@ -272,6 +275,7 @@ contains
                         '__MODFUNC__: Impossible! '   &
                      // ' Tying to go through the bottom wall.' )
         if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
+          edge.v_ternary(i_now,j_now) = 0  ! Erase the edge
           j_now -= 1
           return
         end if
