@@ -37,10 +37,6 @@ module contour_path_m
                        => contour_path__set_starting_edge
   end type contour_path_t
 
-  integer <const> :: NORTH = 0
-  integer <const> ::  WEST = 1
-  integer <const> :: SOUTH = 2
-  integer <const> ::  EAST = 3
 
   type direct_t
     integer :: d ! 0 (NORTH), 1 (WEST), 2 (SOUTH), 3 (EAST)
@@ -93,19 +89,20 @@ contains
     type(direct_t) <in> :: direct
 
     select case (direct.d)
-      case (NORTH)
+      case (SLICE_MESH__NORTH)
         this.j += 1
-      case (WEST)
+      case (SLICE_MESH__WEST)
         this.i -= 1
-      case (SOUTH)
+      case (SLICE_MESH__SOUTH)
         this.j -= 1
-      case (EAST)
+      case (SLICE_MESH__EAST)
         this.i += 1
       case default
         call ut__fatal( '__MODFUNC__: case error.' )
     end select
         
   end subroutine pos_on_vert__move
+  
 
   function returned_to_start_point( i_start, j_start,  &
                                     i_now, j_now ) result(ans)

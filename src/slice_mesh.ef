@@ -1,7 +1,17 @@
 module slice_mesh_m
   use ut_m
   implicit none
+  private
+  public :: SLICE_MESH__NORTH,  &
+            SLICE_MESH__WEST,   &
+            SLICE_MESH__SOUTH,  &
+            SLICE_MESH__EAST
 
+  integer <const> :: SLICE_MESH__NORTH = 0  !       0        0 (NORTH)
+  integer <const> :: SLICE_MESH__WEST  = 1  !       |        1 (WEST)
+  integer <const> :: SLICE_MESH__SOUTH = 2  !  1 -- + -- 3   2 (SOUTH)
+  integer <const> :: SLICE_MESH__EAST  = 3  !       |        3 (EAST)
+                                            !       2              
   type slice_mesh_vert_t
     !!>  
         v: vertex
