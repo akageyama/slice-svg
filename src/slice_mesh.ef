@@ -11,7 +11,27 @@ module slice_mesh_m
   integer <const> :: SLICE_MESH__WEST  = 1  !       |        1 (WEST)
   integer <const> :: SLICE_MESH__SOUTH = 2  !  1 -- + -- 3   2 (SOUTH)
   integer <const> :: SLICE_MESH__EAST  = 3  !       |        3 (EAST)
-                                            !       2              
+                                            !       2
+
+  type slice_mesh_direct_t
+    integer :: d ! 0 (NORTH), 1 (WEST), 2 (SOUTH), 3 (EAST)
+                 !        0
+                 !        |
+                 !   1 -- + -- 3
+                 !        |
+                 !        2
+  contains
+    procedure :: turn => slice_mesh_direct__turn
+  end type slice_mesh_direct_t
+
+
+  type slice_mesh_ivect_t ! integer vector
+    integer :: i, j
+  contains
+    procedure :: shift => slice_mesh_ivect__shift
+  end type slice_mesh_ivect_t
+
+
   type slice_mesh_vert_t
     !!>  
         v: vertex
@@ -88,10 +108,79 @@ module slice_mesh_m
     procedure :: initialize => slice_mesh_edge__initialize
     procedure :: finalize => slice_mesh_edge__finalize
     procedure :: apply_stokes => slice_mesh_edge__apply_stokes
+    procedure :: erase => slice_mesh_edge__erase
   end type slice_mesh_edge_t    
 
 
 contains
+
+
+  subroutine slice_mesh_direct__turn( this, how )
+    class(slice_mesh_direct_t) <io> :: this
+    char(len=*) <in> :: how  ! 'left' 
+                             ! 'right' 
+                             ! 'back'
+    !!>
+        direct ! 0 (NORTH), 1 (WEST), 2 (SOUTH), 3 (EAST)
+               !        0
+               !        |
+               !   1 -- + -- 3
+               !        |
+               !        2
+    !!<
+    select case (how)    
+      case ('left')
+        direct.d = mod(direct.d+1, 4)
+      case ('right')
+        direct.d = mod(direct.d+3, 4)
+      case ('back')
+        direct.d = mod(direct.d+2, 4)
+      case default
+        call ut__fatal( '__MODFUNC__: case error.' )
+    end select
+  end subroutine slice_mesh_direct__turn
+
+
+  function slice_mesh_ivect__shift( this, direct ) result(ans)
+    class(slice_mesh_ivect_t) <io> :: this
+    type(direct_t) <in> :: direct
+    type(slice_mesh_ivect_t) :: ans
+
+    ans = this  ! copy
+
+    select case (direct.d)
+      case (SLICE_MESH__NORTH)
+        ans.j += 1
+      case (SLICE_MESH__WEST)
+        ans.i -= 1
+      case (SLICE_MESH__SOUTH)
+        ans.j -= 1
+      case (SLICE_MESH__EAST)
+        ans.i += 1
+      case default
+        call ut__fatal( '__MODFUNC__: case error.' )
+    end select
+  end function slice_mesh_ivect__shift
+
+
+  subroutine slice_mesh_edge__erase( this, vert_pos, direction )
+    class(slice_mesh_edge_t) <io> :: this
+    type(slice_mesh_ivect_t) <in> :: vert_pos
+    integer <in> :: direction
+
+    select case (direction)
+      case (SLICE_MESH__NORTH)
+        this.v_ternary(vert_pos.i,   vert_pos.j  ) = 0
+      case (SLICE_MESH__WEST)
+        this.u_ternary(vert_pos.i-1, vert_pos.j  ) = 0
+      case (SLICE_MESH__SOUTH)
+        this.v_ternary(vert_pos.i,   vert_pos.j-1) = 0
+      case (SLICE_MESH__EAST)
+        this.u_ternary(vert_pos.i,   vert_pos.j  ) = 0
+      case default
+        call ut__fatal( '__MODFUNC__: case error.' )
+    end select
+  end subroutine slice_mesh_edge__erase
 
 
   subroutine slice_mesh_vert__initialize( this, nu, nv,  &

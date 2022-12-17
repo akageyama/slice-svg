@@ -145,8 +145,9 @@ contains
     !!<
     type(contour_path_t), save :: contour_path
     logical :: just_once = .true.
-    integer :: i, i_now, j_now
-    char(len=1) :: direct_now
+    type(slice_mesh_ivect_t) :: vpos_now
+    integer :: i
+    type(slice_mesh_direct_t) :: direct_now
     char(len=10) :: status
 
     ==<just_once>==
@@ -157,20 +158,18 @@ contains
     call this.mesh_edge.apply_stokes( this.mesh_cell, level )
 
     call contour_path.reset
-    direct_now = 'E' ! Try to find E(ast)-ward edge.
+    direct_now.d = SLICE_MESH__EAST ! Try to find east-ward edge.
     call contour_path.set_starting_edge( this.mesh_edge,  &
                                          direct_now,      &
                                          status,          &
-                                         i_now,           &
-                                         j_now )
+                                         vpos_now )
     do while ( status == 'have found' )
       !!>
-          Tring to find the 1st contour of this level.
+          Tring to find the 1st contour for this level.
       !!<
       call contour_path.trace_and_erase( this.mesh_edge,    &
                                          direct_now,        &
-                                         i_now,             &
-                                         j_now )
+                                         vpos_now )
       ! <check>
         do i = 1, contour_path.num
           call ut__message( "contour path: ",           &
@@ -179,16 +178,15 @@ contains
         end do
       ! </check>
       !!>
-          Generally, there are multiple contours of this level.
+          Generally, more contours exist for this level.
       !!<
   exit
       call contour_path.reset
-      direct_now = 'E' ! Try to find E(ast)-ward edge.
+      direct_now.d = SLICE_MESH__EAST ! Try to find east-ward edge.
       call contour_path.set_starting_edge( this.mesh_edge,  &
                                            direct_now,      &
                                            status,          &
-                                           i_now,           &
-                                           j_now )
+                                           vpos_now )
     end do
 
   end subroutine slice__scalar_vis_contour
