@@ -13,7 +13,7 @@ module slice_mesh_m
   integer <const> :: SLICE_MESH__EAST  = 3  !       |        3 (EAST)
                                             !       2
 
-  type slice_mesh_direct_t
+  type, public :: slice_mesh_direct_t
     integer :: d ! 0 (NORTH), 1 (WEST), 2 (SOUTH), 3 (EAST)
                  !        0
                  !        |
@@ -25,7 +25,7 @@ module slice_mesh_m
   end type slice_mesh_direct_t
 
 
-  type slice_mesh_ivect_t ! integer vector
+  type, public :: slice_mesh_ivect_t ! integer vector
     integer :: i, j
   contains
     procedure :: shift => slice_mesh_ivect__shift
@@ -80,7 +80,7 @@ module slice_mesh_m
     procedure :: set_meanval => slice_mesh_cell__set_meanval
   end type slice_mesh_cell_t  
 
-  type slice_mesh_edge_t
+  type, public :: slice_mesh_edge_t
     !!>                            
                                  edge_v                                    
         v: vertex                   |
@@ -132,25 +132,27 @@ contains
     !!<
     select case (how)    
       case ('left')
-        ans.d = mod(direct.d+1, 4)
+        ans.d = mod(this.d+1, 4)
       case ('right')
-        ans.d = mod(direct.d+3, 4)
+        ans.d = mod(this.d+3, 4)
       case ('back')  ! Though this will not be used...
-        ans.d = mod(direct.d+2, 4)
+        ans.d = mod(this.d+2, 4)
+      case ('forward')  
+        ans.d = this.d
       case default
         call ut__fatal( '__MODFUNC__: case error.' )
     end select
   end function slice_mesh_direct__turn
 
 
-  function slice_mesh_ivect__shift( this, direct ) result(ans)
+  function slice_mesh_ivect__shift( this, direction ) result(ans)
     class(slice_mesh_ivect_t) <io> :: this
-    type(direct_t) <in> :: direct
+    integer <in> :: direction
     type(slice_mesh_ivect_t) :: ans
 
     ans = this  ! copy
 
-    select case (direct.d)
+    select case (direction)
       case (SLICE_MESH__NORTH)
         ans.j += 1
       case (SLICE_MESH__WEST)
@@ -392,10 +394,11 @@ contains
   end function slice_mesh_edge__has_nonzero_ternary
 
 
-  function slice_mesh_edge__can_turn_to( this, vpos_now,  &
+  function slice_mesh_edge__can_turn_to( this,          &
+                                         vpos_now,      &
                                          direct_turned ) result(ans)
     class(slice_mesh_edge_t) <in> :: this
-    type(slice_mesh_ivec_t) <in> :: vpos_now
+    type(slice_mesh_ivect_t) <in> :: vpos_now
     type(slice_mesh_direct_t) <in> :: direct_turned
     logical :: ans
   
@@ -455,8 +458,5 @@ contains
         call ut__fatal( '__MODFUNC__: case error.' )
     end select
   end function slice_mesh_edge__can_turn_to
-
-
-
 
 end module slice_mesh_m
