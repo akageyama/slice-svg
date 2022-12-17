@@ -109,6 +109,7 @@ module slice_mesh_m
     procedure :: finalize => slice_mesh_edge__finalize
     procedure :: apply_stokes => slice_mesh_edge__apply_stokes
     procedure :: erase => slice_mesh_edge__erase
+    procedure :: can_turn_to => slice_mesh_edge__can_turn_to
   end type slice_mesh_edge_t    
 
 
@@ -389,4 +390,38 @@ contains
     ans = maxval(this.u_ternary(:,:)) == 1
   end function slice_mesh_edge__has_nonzero_ternary
 
+
+  function slice_mesh_edge__can_turn_to( this, vpos_now, direct_now, turn ) result(ans)
+    class(slice_mesh_edge_t) <in> :: this
+    type(slice_mesh_ivec_t) <in> :: vpos_now
+    type(slice_mesh_direct_t) <in> :: direct_now
+    char(len=*) <in> :: turn ! 'left' or 'right'
+    logical :: ans
+
+    integer <in> :: i, j
+    integer :: turned_direction
+
+    call ut__assert( turn == 'left' or turn == 'right',  &
+                    '__MODFUNC__: Bad arg "turn".' )
+
+    i = vpos_now.i
+    j = vpos_now.j
+
+    ans = .false.  ! default
+
+    turned_direction = direct_now.turn( turn )
+
+    select case (turned_direction)
+      case (SLICE_MESH__NORTH)
+        if ( this.v_ternary(i,j)   == +1 ) ans = .true.
+      case (SLICE_MESH__SOUTH)
+        if ( this.v_ternary(i,j-1) == -1 ) ans = .true.
+      case (SLICE_MESH__EAST)
+        if ( this.u_ternary(i,j)   == +1 ) ans = .true.
+      case (SLICE_MESH__WEST)
+        if ( this.u_ternary(i-1,j) == -1 ) ans = .true.
+      case default
+        call ut__fatal( '__MODFUNC__: case error.' )
+    end select
+  end function slice_mesh_edge__can_turn_to
 end module slice_mesh_m

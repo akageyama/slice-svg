@@ -53,15 +53,71 @@ contains
   end function returned_to_start_point
 
 
- 
-  subroutine turn( which,           &
+  function impossible_turn( i, j, nu, nv, direction, turn ) result(ans)
+    integer <in> :: i, j, nu, nv
+    integer <in> :: direction
+    char(len=*) <in> :: turn
+    logical :: ans
+
+    !!>
+        
+          + - + - + - N<==+ - + - + - + ...j=nv
+          |   |   |   |   |   |   |   |
+          + - + - + - + - + - + - + - +
+          |   |   |   |   |   |   |   |
+          + - + - + - M<==+ - + - + - +
+          |   |   |   |   |   |   |   |
+          + - + - + - + - + - + - + - +
+          |   |   |   |   |   |   |   |
+          + - + - + - + - + - + - + - + ...j=1
+          .                           .
+          .                           .
+         i=nu                        i=nu
+
+          Suppose you are going westward. When
+        you have arrived the vertex position
+        labeld 'M' in the above figure, you may 
+        be able to turn left or right as long as 
+        the edge value (edge_v.ternary) there is
+        -1 (southward) or +1 (northward), respect-
+        ively. However, when you are at the vertex 
+        point 'N', it is apparent that you cannot 
+        turn right.
+    !!<
+
+    call ut__assert( which_turn == 'left' .or.  &
+                     which_turn == 'right',     &
+                    '__MODFUNC__: Bad argument "turn".' )
+
+    ans = .false.  ! Default.
+
+    select case (direction)
+      case (SLICE_MESH__EAST)
+        if ( j == 1  .and. turn == 'right' ) ans = .true.
+        if ( j == nv .and. turn == 'left'  ) ans = .true.
+      case (SLICE_MESH__NORTH)
+        if ( i == 1  .and. turn == 'left'  ) ans = .true.
+        if ( i == nu .and. turn == 'right' ) ans = .true.
+      case (SLICE_MESH__WEST)
+        if ( j == 1  .and. turn == 'left'  ) ans = .true.
+        if ( j == nv .and. turn == 'right' ) ans = .true.
+      case (SLICE_MESH__SOUTH)
+        if ( i == 1  .and. turn == 'right' ) ans = .true.
+        if ( i == nu .and. turn == 'left'  ) ans = .true.
+      case default
+        call ut__fatal( '__MODFUNC__: case error.' )
+    end select
+  end subroutine impossible_turn
+
+
+  subroutine turn( which_turn,      &
                    path,            &
                    edge,            &
                    direct_now,      &
                    vpos_now,        &
                    moved_one_step,  &
                    path_is_closed )
-    char(len=*) <in> :: which
+    char(len=*) <in> :: which_turn
     type(contour_path_t) <in> :: path
     type(slice_mesh_edge_t) <io> :: edge
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
@@ -72,10 +128,19 @@ contains
     moved_one_step = .false.  ! Default.
     path_is_closed = .false.  ! Default.
 
-    
+    call ut__assert( which_turn == 'left' .or.  &
+                     which_turn == 'right',     &
+                    '__MODFUNC__: Bad argument "which_turn".' )
 
-    select case (direct_now)
-      case ('E')
+    if ( impossible_turn( vpos_now.i,   vpos_now.j,    &
+                          path.vert_nu, path.vert.nv,  &
+                          direct_now.d, which_turn ) ) return
+
+    if ( edge.can_turn_to)
+
+
+    select case (direct_now.d)
+      case (SLICE_MESH__EAST)
         !!>
                ^        
                |      You are now (i,j)=(i_now,j_now),
