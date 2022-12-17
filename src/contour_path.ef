@@ -110,127 +110,63 @@ contains
   end subroutine impossible_turn
 
 
-  subroutine turn( which_turn,      &
+  subroutine turn( which_way,       &
                    path,            &
                    edge,            &
                    direct_now,      &
                    vpos_now,        &
                    moved_one_step,  &
                    path_is_closed )
-    char(len=*) <in> :: which_turn
+    char(len=*) <in> :: which_way
     type(contour_path_t) <in> :: path
     type(slice_mesh_edge_t) <io> :: edge
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     type(slice_mesh_ivec_t) <io> :: vpos_now
     logical <out> :: moved_one_step
     logical <out> :: path_is_closed
+    !!>
+               ^        
+               |      You are now (i,j)=(i_now,j_now),
+          E--> + --   at '+' point, and moving eastward.
+               |      Check if you can turn left (northward) or not.
+
+               |       
+           <-- + --   There are other cases such as north-to-west,
+               ^
+               | 
+               N
+
+               | 
+            -- + <---W  and from east-to-south.
+               |  
+               v
+    !!<
+    type(slice_mesh_direct_t) :: direct_turned
 
     moved_one_step = .false.  ! Default.
     path_is_closed = .false.  ! Default.
 
-    call ut__assert( which_turn == 'left' .or.  &
-                     which_turn == 'right',     &
-                    '__MODFUNC__: Bad argument "which_turn".' )
+    call ut__assert( which_way == 'left' .or.  &
+                     which_way == 'right',     &
+                    '__MODFUNC__: Bad argument "which_way".' )
 
     if ( impossible_turn( vpos_now.i,   vpos_now.j,    &
                           path.vert_nu, path.vert.nv,  &
-                          direct_now.d, which_turn ) ) return
+                          direct_now.d, which_way ) ) return
 
-    if ( edge.can_turn_to)
+    direct_turned = direct_now.turn( which_way )
 
-
-    select case (direct_now.d)
-      case (SLICE_MESH__EAST)
-        !!>
-               ^        
-               |      You are now (i,j)=(i_now,j_now),
-          E--> + --   at '+' point, and moving eastward.
-               |      Checking if you can turn left (northward) or not.
-        !!<
-        if ( j_now == path.vert_nv ) return
-        if ( edge.v_ternary(i_now,j_now) == +1 ) then
-          edge.u_ternary(i_now-1,j_now) = 0   ! Erase the trace
-          j_now += 1                          ! Move the head point
-          direct_now = 'N'                    ! Turn 90 degree
-          moved_one_step = .true.
-          path_is_closed = returned_to_start_point( path.list_i(1),  &
-                                                    path.list_j(1),  &
-                                                    i_now,           &
-                                                    j_now )
-          if ( path_is_closed ) then
-            edge.v_ternary(i_now,j_now-1) = 0 ! Erase the last edge.
-          end if
-        end if
-      case ('N')
-        !!>
-              | 
-          <-- + --
-              ^
-              | 
-              N
-        !!<
-        if ( i_now == 1 ) return
-        if ( edge.u_ternary(i_now-1,j_now) == -1 ) then
-          edge.v_ternary(i_now,j_now-1) = 0  ! Erase the trace
-          i_now -= 1                         ! Move the head point
-          direct_now = 'W'                   ! Turn 90 degree
-          moved_one_step = .true.
-          path_is_closed = returned_to_start_point( path.list_i(1),  &
-                                                    path.list_j(1),  &
-                                                    i_now,           &
-                                                    j_now )
-          if ( path_is_closed ) then
-            edge.u_ternary(i_now,j_now) = 0 ! Erase the last edge.
-          end if
-        end if
-      case ('W')
-        !!>
-              | 
-           -- + <---W
-              |  
-              v
-        !!<
-        if ( j_now == 1 ) return
-        if ( edge.v_ternary(i_now,j_now-1) == -1 ) then
-          edge.u_ternary(i_now,j_now) = 0     ! Erase the trace
-          j_now -= 1                          ! Move the head point
-          direct_now = 'S'                    ! Turn 90 degree
-          moved_one_step = .true.
-          path_is_closed = returned_to_start_point( path.list_i(1),  &
-                                                    path.list_j(1),  &
-                                                    i_now,           &
-                                                    j_now )
-          if ( path_is_closed ) then
-            edge.v_ternary(i_now,j_now+1) = 0 ! Erase the last edge.
-          end if
-        end if
-      case ('S')
-        !!>
-              S
-              | 
-              v
-           -- + -->
-              |
-        !!<
-        if ( i_now == path.vert_nu ) return
-        if ( edge.u_ternary(i_now,j_now) == +1 ) then
-          edge.v_ternary(i_now,j_now) = 0     ! Erase the trace
-          i_now += 1                          ! Move the head point
-          direct_now = 'E'                    ! Turn 90 degree
-          moved_one_step = .true.
-          path_is_closed = returned_to_start_point( path.list_i(1),  &
-                                                    path.list_j(1),  &
-                                                    i_now,           &
-                                                    j_now )
-          if ( path_is_closed ) then
-            edge.u_ternary(i_now-1,j_now) = 0 ! Erase the last edge.
-          end if
-        end if
-      case default
-        call ut__fatal( 'Wrong direct case.' )
-    end select
-
-  end subroutine turn_left
+    if ( edge.can_turn_to( vpos_now, direct_turned ) ) then
+      edge.erase( vpos_now, direct_turned )
+      vpos_now = vpos_now.shift( direct_turned )
+      direct_now = direct_turned
+      moved_one_step = .true.
+      path_is_closed = returned_to_start_point( path.list_i(1),  &
+                                                path.list_j(1),  &
+                                                i_now,           &
+                                                j_now )
+    end if
+  end subroutine turn
  
   subroutine turn_left( path,            &
                         edge,            &

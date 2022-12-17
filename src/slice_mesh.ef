@@ -116,11 +116,12 @@ module slice_mesh_m
 contains
 
 
-  subroutine slice_mesh_direct__turn( this, how )
-    class(slice_mesh_direct_t) <io> :: this
+  function slice_mesh_direct__turn( this, how ) result(ans)
+    class(slice_mesh_direct_t) <in> :: this
     char(len=*) <in> :: how  ! 'left' 
                              ! 'right' 
                              ! 'back'
+    type(slice_mesh_direct_t) :: ans
     !!>
         direct ! 0 (NORTH), 1 (WEST), 2 (SOUTH), 3 (EAST)
                !        0
@@ -131,15 +132,15 @@ contains
     !!<
     select case (how)    
       case ('left')
-        direct.d = mod(direct.d+1, 4)
+        ans.d = mod(direct.d+1, 4)
       case ('right')
-        direct.d = mod(direct.d+3, 4)
-      case ('back')
-        direct.d = mod(direct.d+2, 4)
+        ans.d = mod(direct.d+3, 4)
+      case ('back')  ! Though this will not be used...
+        ans.d = mod(direct.d+2, 4)
       case default
         call ut__fatal( '__MODFUNC__: case error.' )
     end select
-  end subroutine slice_mesh_direct__turn
+  end function slice_mesh_direct__turn
 
 
   function slice_mesh_ivect__shift( this, direct ) result(ans)
@@ -391,27 +392,57 @@ contains
   end function slice_mesh_edge__has_nonzero_ternary
 
 
-  function slice_mesh_edge__can_turn_to( this, vpos_now, direct_now, turn ) result(ans)
+  function slice_mesh_edge__can_turn_to( this, vpos_now,  &
+                                         direct_turned ) result(ans)
     class(slice_mesh_edge_t) <in> :: this
     type(slice_mesh_ivec_t) <in> :: vpos_now
-    type(slice_mesh_direct_t) <in> :: direct_now
-    char(len=*) <in> :: turn ! 'left' or 'right'
+    type(slice_mesh_direct_t) <in> :: direct_turned
     logical :: ans
+  
+    !!>
+          + - + - + - + - + - + - + - + ...j=vert_nv
+          |   |   |   |   |   |   |   |
+          + - + - + - + - + - + - + - +
+          |   |   |   |   |   |   |   |
+          + - + - + - M==>N - + - + - +
+          |   |   |   |   |   |   |   |
+          + - + - + - + - + - + - + - +
+          |   |   |   |   |   |   |   |
+          + - + - + - + - + - + - + - + ...j=1
+          .                           .
+          .                           .
+         i=1                         i=vert_nu
 
-    integer <in> :: i, j
-    integer :: turned_direction
-
-    call ut__assert( turn == 'left' or turn == 'right',  &
-                    '__MODFUNC__: Bad arg "turn".' )
+          Suppose you are now located at the vertex 
+        position labeld 'M' in the above figure, you 
+        move to a nearest neighbor vertex in 
+        the next step. The nearest neighbor vertex to
+        move is determined by the condition that the
+        edge value toward the nearest neighbor has a
+        proper, non-zero, value of edge ternary.
+          For example, in the above case, if the value
+        of edge_u.ternary on the M-N edge is +1, i.e., 
+        eastward, then you jump to N.
+    !!<
+    integer :: i, j, vert_nu, vert_nv, dir
 
     i = vpos_now.i
     j = vpos_now.j
+    vert_nu = this.v_nu
+    vert_nv = this.u_nv
+    dir = direct_turned.d
 
     ans = .false.  ! default
 
-    turned_direction = direct_now.turn( turn )
+    if ( ( i==1       .and. dir==SLICE_MESH__WEST  ) .or.  &
+         ( i==vert_nu .and. dir==SLICE_MESH__EAST  ) .or.  &
+         ( j==1       .and. dir==SLICE_MESH__SOUTH ) .or.  &
+         ( j==vert_nv .and. dir==SLICE_MESH__NORTH ) ) then
+      ! You cannot go through the border.
+      return
+    end if
 
-    select case (turned_direction)
+    select case (direct_turned.d )
       case (SLICE_MESH__NORTH)
         if ( this.v_ternary(i,j)   == +1 ) ans = .true.
       case (SLICE_MESH__SOUTH)
@@ -424,4 +455,8 @@ contains
         call ut__fatal( '__MODFUNC__: case error.' )
     end select
   end function slice_mesh_edge__can_turn_to
+
+
+
+
 end module slice_mesh_m
