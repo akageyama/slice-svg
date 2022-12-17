@@ -499,23 +499,6 @@ contains
     integer <io> :: i_now, j_now
 
     logical :: moved_one_step, path_is_closed
-!debug s
-integer :: i, j
-do j=1, mesh_edge.u_nv
-do i=1, mesh_edge.u_nu
-if ( mesh_edge.u_ternary(i,j) /= 0 ) then
-!debugp i, j, mesh_edge.u_ternary(i,j)
-end if
-end do
-end do
-do j=1, mesh_edge.v_nv
-do i=1, mesh_edge.v_nu
-if ( mesh_edge.v_ternary(i,j) /= 0 ) then
-!debugp i, j, mesh_edge.v_ternary(i,j)
-end if
-end do
-end do
-! debug e
 
     do 
 !debugp 'do loop.'    
