@@ -37,9 +37,75 @@ module contour_path_m
                        => contour_path__set_starting_edge
   end type contour_path_t
 
+  integer <const> :: NORTH = 0
+  integer <const> ::  WEST = 1
+  integer <const> :: SOUTH = 2
+  integer <const> ::  EAST = 3
+
+  type direct_t
+    integer :: d ! 0 (NORTH), 1 (WEST), 2 (SOUTH), 3 (EAST)
+                 !        0
+                 !        |
+                 !   1 -- + -- 3
+                 !        |
+                 !        2
+  contains
+    procedure :: turn => direct__turn
+  end type direct_t
+
+  type pos_on_vert_t
+    integer :: i, j
+  contains
+    procedure :: move => pos_in_vert__move
+    procedure :: check_if_move_to => pos_in_vert__check_if_move_to
+  end type pos_on_vert_t
 
 contains
 
+  subroutine direct__turn( this, how )
+    class(direct_t) <io> :: this
+    char(len=*) <in> :: how ! 'left', 
+                            ! 'right', 
+                            ! 'back'
+    !!>
+        direct ! 0 (NORTH), 1 (WEST), 2 (SOUTH), 3 (EAST)
+               !        0
+               !        |
+               !   1 -- + -- 3
+               !        |
+               !        2
+    !!<
+    select case (how)    
+      case ('left')
+        direct.d = mod(direct.d+1, 4)
+      case ('right')
+        direct.d = mod(direct.d+3, 4)
+      case ('back')
+        direct.d = mod(direct.d+2, 4)
+      case default
+        call ut__fatal( '__MODFUNC__: case error.' )
+    end select
+  end subroutine direct__turn
+
+
+  subroutine pos_on_vert__move( this, direct )
+    class(pos_on_vert_t) <io> :: this
+    type(direct_t) <in> :: direct
+
+    select case (direct.d)
+      case (NORTH)
+        this.j += 1
+      case (WEST)
+        this.i -= 1
+      case (SOUTH)
+        this.j -= 1
+      case (EAST)
+        this.i += 1
+      case default
+        call ut__fatal( '__MODFUNC__: case error.' )
+    end select
+        
+  end subroutine pos_on_vert__move
 
   function returned_to_start_point( i_start, j_start,  &
                                     i_now, j_now ) result(ans)
