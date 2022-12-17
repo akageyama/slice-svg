@@ -43,7 +43,6 @@ contains
 
   function returned_to_start_point( i_start, j_start,  &
                                     i_now, j_now ) result(ans)
-    type(path_t) <in> :: path
     integer <in> :: i_start, j_start
     integer <in> :: i_now, j_now
     logical :: ans
@@ -142,7 +141,7 @@ contains
            -- + -->
               |
         !!<
-        if ( i_now == vert_nu ) return
+        if ( i_now == path.vert_nu ) return
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
           edge.v_ternary(i_now,j_now) = 0     ! Erase the trace
           i_now += 1                          ! Move the head point
@@ -211,7 +210,7 @@ contains
               | 
               N
         !!<
-        if ( i_now == vert_nu ) return
+        if ( i_now == path.vert_nu ) return
         if ( edge.u_ternary(i_now,j_now) == +1 ) then
           edge.v_ternary(i_now,j_now-1) = 0    ! Erase the trace
           i_now += 1                           ! Move the head point
@@ -232,7 +231,7 @@ contains
            -- + <---W
               |  
         !!<
-        if ( j_now == vert_nv ) return
+        if ( j_now == path.vert_nv ) return
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
           edge.u_ternary(i_now,j_now) = 0      ! Erase the trace
           j_now += 1                           ! Move the head point
@@ -307,7 +306,7 @@ contains
                |      Checking if you can go straight or not.
 
         !!<
-        call ut__assert( i_now /= vert_nu,            &
+        call ut__assert( i_now /= path.vert_nu,       &
                         '__MODFUNC__: Impossible! '   &
                      // ' Tying to go through the right wall.' )
         if ( edge.u_ternary(i_now,j_now) == +1 ) then 
@@ -332,7 +331,7 @@ contains
                | 
                N
         !!<
-        call ut__assert( j_now /= vert_nv,            &
+        call ut__assert( j_now /= path.vert_nv,       &
                         '__MODFUNC__: Impossible! '   &
                      // ' Tying to go through the top wall.' )
         if ( edge.v_ternary(i_now,j_now) == +1 ) then
@@ -496,7 +495,6 @@ contains
                                             j_now )
     class(contour_path_t) <io> :: this
     type(slice_mesh_edge_t) <io> :: mesh_edge
-    integer <in> :: vert_nu, vert_nv
     char(len=1) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     integer <io> :: i_now, j_now
 
@@ -521,8 +519,6 @@ end do
 
     do 
 !debugp 'do loop.'    
-!debugp vert_nu    
-!debugp vert_nv    
 !debugp direct_now
       !
       call turn_left( this,            &
@@ -556,12 +552,13 @@ end do
       !
       ! straight
       !
-      call go_forward( mesh_edge,     &
-                       vert_nu,       &
-                       vert_nv,       &
-                       direct_now,    &
-                       i_now,         &
-                       j_now )
+      call go_forward( this,            &
+                       mesh_edge,       &
+                       direct_now,      &
+                       i_now,           &
+                       j_now,           &
+                       moved_one_step,  &
+                       path_is_closed )
 !debugp 'done go forward'
 !debugp i_now, j_now, direct_now
       !!>
@@ -575,7 +572,7 @@ end do
                            |          
                            3-----------4
       !!<
-      if ( path_is_closed ) return
+      if ( path_is_closed ) then
         call register( this, i_now, j_now )
         return
       end if

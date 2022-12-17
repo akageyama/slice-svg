@@ -168,8 +168,6 @@ contains
           Tring to find the 1st contour of this level.
       !!<
       call contour_path.trace_and_erase( this.mesh_edge,    &
-                                         this.mesh_vert.nu, &
-                                         this.mesh_vert.nv, &
                                          direct_now,        &
                                          i_now,             &
                                          j_now )
