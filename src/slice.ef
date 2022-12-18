@@ -180,7 +180,6 @@ contains
       !!>
           Generally, more contours exist for this level.
       !!<
-  exit
       call contour_path.reset
       direct_now.d = SLICE_MESH__EAST ! Try to find east-ward edge.
       call contour_path.set_starting_edge( this.mesh_edge,  &

@@ -49,9 +49,10 @@ ifeq ($(this_host),alf)  # Alfven
         FC = mpinfort
         FFLAGS = 
 endif
-ifeq ($(this_host),pi)  # Kobe
-        FC = mpifrtpx
-        FFLAGS = -X03 -Free -Kopenmp -NRtrap
+ifeq ($(this_host),pif)  # Kobe
+        EFPP = ../bin/efpp.py
+        FC = gfortran
+        FFLAGS = 
 endif
 ifeq ($(this_host),mac)  # Mac
         EFPP = ../bin/efpp.py

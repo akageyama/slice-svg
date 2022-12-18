@@ -88,8 +88,9 @@ contains
     moved_one_step = .false.  ! Default.
     path_is_closed = .false.  ! Default.
 
-    call ut__assert( which_way == 'left' .or.  &
-                     which_way == 'right',     &
+    call ut__assert( which_way == 'left'    .or.  &
+                     which_way == 'right'   .or.  &
+                     which_way == 'forward',      &
                     '__MODFUNC__: Bad argument "which_way".' )
 
     direct_turned = direct_now.turn( which_way )
@@ -176,7 +177,6 @@ contains
       end do
     end do 
     status = 'no contour'
-    call ut__fatal( '__MODFUNC__: Cound not find a start edge.' )
   end subroutine contour_path__set_starting_edge    
 
 
