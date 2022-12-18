@@ -32,7 +32,7 @@ module slice_mesh_m
   end type slice_mesh_ivect_t
 
 
-  type slice_mesh_vert_t
+  type, public :: slice_mesh_vert_t
     !!>  
         v: vertex
             |       |       |       |       |
@@ -55,7 +55,7 @@ module slice_mesh_m
     procedure :: finalize => slice_mesh_vert__finalize
   end type slice_mesh_vert_t  
 
-  type slice_mesh_cell_t
+  type, public :: slice_mesh_cell_t
     !!>  
         v: vertex
         c: cell

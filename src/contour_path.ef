@@ -25,7 +25,7 @@ module contour_path_m
        +---+---2=P=1=P=1=P=2---+
   !!<
 
-  type contour_path_t
+  type, public :: contour_path_t
     integer :: vert_nu, vert_nv
     integer :: num ! total number of vertex points of the path
     integer, dimension(:), allocatable :: list_i, list_j
