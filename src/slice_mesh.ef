@@ -202,7 +202,7 @@ contains
                      (nv > 1) .and.         &
                      (u_max > u_min) .and.  &
                      (v_max > v_min),       &
-                    'Invalid coord-related arguments.' )
+                    '__MODFUNC__: Invalid arguments.' )
 
     this.nu = nu
     this.nv = nv
@@ -219,12 +219,10 @@ contains
 
     do i = 1, nu
       this.pos_u(i) = u_min + du*(i-1)
-!debugp i, this.pos_u(i)        
     end do
 
     do j = 1, nv
       this.pos_v(j) = v_min + dv*(j-1)
-!debugp j, this.pos_v(j)        
     end do
   end subroutine slice_mesh_vert__initialize
 
