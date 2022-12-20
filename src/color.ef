@@ -1,0 +1,61 @@
+module color_m
+  use ut_m
+  implicit none
+  private
+  public :: COLOR
+
+
+  type, public :: color_t ! basic color type
+    real :: r, g, b       ! float 0.0 to 1.0
+  contains
+    procedure :: in_code => color__in_code
+    procedure :: in_byte => color__in_byte
+  end type color_t
+
+  type, public :: color_byte_t 
+    integer :: r, g, b   ! 0 to 255
+  end type color_byte_t
+
+  type, public :: color_constants_t
+    type(color_t) :: red   = color_t(1.0, 0.0, 0.0)
+    type(color_t) :: green = color_t(0.0, 1.0, 0.0)
+    type(color_t) :: blue  = color_t(0.0, 0.0, 1.0)
+    type(color_t) :: white = color_t(1.0, 1.0, 1.0)
+    type(color_t) :: black = color_t(0.0, 0.0, 0.0)
+  end type color_constants_t
+
+  type(color_constants_t), protected :: COLOR
+
+
+contains
+
+
+  function color__in_code( rgb ) result(code) 
+    class(color_t) <in> :: rgb ! e.g., rgb=(1.0, 0.0, 0.0)
+    char(len=7) :: code        !          ==> '#FF0000'
+
+    ! integer :: r, g, b
+
+    ! r = nint(255*rgb.r)
+    ! g = nint(255*rgb.g)
+    ! b = nint(255*rgb.b)
+    type(color_byte_t) :: rgb_byte
+
+    rgb_byte = rgb.in_byte()
+
+    write(code,"('#'3(Z2.2))") r, g, b  
+  end function color__in_code
+
+  function color__in_byte( rgb ) result(rgb_byte)
+    class(color_t) <in> :: rgb     ! e.g., rgb=(1.0, 0.0, 0.0)
+    type(color_byte_t) :: rgb_byte !            ==>(255, 0, 0)
+
+    integer :: r, g, b
+
+    r = nint(255*rgb.r)
+    g = nint(255*rgb.g)
+    b = nint(255*rgb.b)    
+    rgb_byte = color_byte_t(r,g,b)
+  end function color__in_byte
+
+end module color_m
