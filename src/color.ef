@@ -17,11 +17,16 @@ module color_m
   end type color_byte_t
 
   type, public :: color_constants_t
-    type(color_t) :: red   = color_t(1.0, 0.0, 0.0)
-    type(color_t) :: green = color_t(0.0, 1.0, 0.0)
-    type(color_t) :: blue  = color_t(0.0, 0.0, 1.0)
-    type(color_t) :: white = color_t(1.0, 1.0, 1.0)
-    type(color_t) :: black = color_t(0.0, 0.0, 0.0)
+    type(color_t) :: white   = color_t(1.0, 1.0, 1.0)
+    type(color_t) :: black   = color_t(0.0, 0.0, 0.0)
+    type(color_t) :: red     = color_t(1.0, 0.0, 0.0)
+    type(color_t) :: green   = color_t(0.0, 1.0, 0.0)
+    type(color_t) :: blue    = color_t(0.0, 0.0, 1.0)
+    type(color_t) :: magenta = color_t(1.0, 0.0, 1.0)
+    type(color_t) :: yellow  = color_t(1.0, 1.0, 0.0)
+    type(color_t) :: cyan    = color_t(0.0, 1.0, 1.0)
+  contains
+    procedure :: gray => color_constants__gray
   end type color_constants_t
 
   type(color_constants_t), protected :: COLOR
@@ -29,21 +34,26 @@ module color_m
 
 contains
 
+  function color_constants__gray( this, whiteness ) result(gray)
+    class(color_constants_t) <in> :: this
+    real <in> :: whiteness
+    type(color_t) :: gray
+
+    real :: w
+    w = max(0.0, whiteness)
+    w = min(1.0, w)
+    gray = color_t(w, w, w)
+  end function color_constants__gray
 
   function color__in_code( rgb ) result(code) 
     class(color_t) <in> :: rgb ! e.g., rgb=(1.0, 0.0, 0.0)
     char(len=7) :: code        !          ==> '#FF0000'
 
-    ! integer :: r, g, b
+    type(color_byte_t) :: byte
 
-    ! r = nint(255*rgb.r)
-    ! g = nint(255*rgb.g)
-    ! b = nint(255*rgb.b)
-    type(color_byte_t) :: rgb_byte
+    byte = rgb.in_byte()
 
-    rgb_byte = rgb.in_byte()
-
-    write(code,"('#'3(Z2.2))") r, g, b  
+    write(code,"('#'3(Z2.2))") byte.r, byte.g, byte.b
   end function color__in_code
 
   function color__in_byte( rgb ) result(rgb_byte)
