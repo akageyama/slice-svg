@@ -1,3 +1,6 @@
+!!>
+    Note: svglib_fig_t ==> svglib_t
+!!<
 module svglib_m
   use const_base_m
   use fileut_m
@@ -12,7 +15,7 @@ module svglib_m
     real :: hue, sat, val
   end type color_hsv_t
 
-  type, public :: svglib_fig_t
+  type, public :: svglib_t
     char(len=300) :: file_name
     integer :: width, height
     integer :: file_unit
@@ -25,7 +28,7 @@ module svglib_m
     procedure :: line => svglib__line
     procedure :: arrow => svglib__arrow
     procedure :: text => svglib__text
-  end type svglib_fig_t
+  end type svglib_t
 
 
 contains
@@ -148,7 +151,7 @@ contains
 
 
   subroutine indent_pop( this )
-    type(svglib_fig_t) <io> :: this
+    type(svglib_t) <io> :: this
 
     if ( this.indent_level > 0 ) then
       this.indent_level -= 1
@@ -159,7 +162,7 @@ contains
 
 
   subroutine indent_push( this )
-    type(svglib_fig_t) <io> :: this
+    type(svglib_t) <io> :: this
 
     this.indent_level += 1
   end subroutine indent_push
@@ -167,7 +170,7 @@ contains
 
 
   subroutine print_footer( this )
-    type(svglib_fig_t) <in> :: this
+    type(svglib_t) <in> :: this
 
     call write_out( this, ' ' )
     call write_out( this, '</svg>' )
@@ -175,7 +178,7 @@ contains
 
 
   subroutine print_header( this, width, height )
-    type(svglib_fig_t) <in> :: this
+    type(svglib_t) <in> :: this
     integer <in> :: width,  height
 
     char(len=*) <const> :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
@@ -195,7 +198,7 @@ contains
 
 
   subroutine print_marker_arrow( this, scale )
-    type(svglib_fig_t) <in> :: this
+    type(svglib_t) <in> :: this
     integer <in> :: scale
 
     real :: buffer, px, py, qx, qy, rx, ry, sx, sy, tx, ty
@@ -277,7 +280,7 @@ contains
 
 
   subroutine write_out( this, line )
-    type(svglib_fig_t) <in> :: this
+    type(svglib_t) <in> :: this
     char(len=*) <in> :: line
 
     integer <const> :: NUM_SPACES_PER_INDENT = 2
@@ -291,7 +294,7 @@ contains
 
 
   subroutine svglib__arrow( this, x, y, vx, vy )
-    class(svglib_fig_t) <in> :: this
+    class(svglib_t) <in> :: this
     real <in> :: x, y, vx, vy
 
     real <const> :: VERY_SHORT = 0.1 
@@ -342,7 +345,7 @@ contains
 
 
   subroutine svglib__close( this )
-    class(svglib_fig_t) <in> :: this
+    class(svglib_t) <in> :: this
 
     call print_footer( this )
     call fileut__close( this.file_unit )
@@ -351,7 +354,7 @@ contains
 
 
   subroutine svglib__group_begin( this, attribute )
-    class(svglib_fig_t) <io> :: this
+    class(svglib_t) <io> :: this
     char(len=*) <in> :: attribute
 
     write(this.file_unit, *) ''
@@ -361,7 +364,7 @@ contains
 
 
   subroutine svglib__group_end( this )
-    class(svglib_fig_t) <io> :: this
+    class(svglib_t) <io> :: this
     write(this.file_unit, *) '</g>'
     call indent_pop( this )
   end subroutine svglib__group_end
@@ -373,7 +376,7 @@ contains
                                  stroke_width,  &
                                  marker_start,  &
                                  marker_end )
-    class(svglib_fig_t) <in> :: this
+    class(svglib_t) <in> :: this
 
     real <in> :: x1, y1, x2, y2
     char(len=*) <in> :: stroke
@@ -433,7 +436,7 @@ contains
 
 
   subroutine svglib__open( this, file_name, width, height )
-    class(svglib_fig_t) <io> :: this
+    class(svglib_t) <io> :: this
     char(len=*) <in> :: file_name
     integer <in> :: width, height
 
@@ -462,7 +465,7 @@ integer :: i
 
   subroutine svglib__text( this, x, y, string, font_size,  &
                            color, text_anchor, stroke_width )
-    class(svglib_fig_t) <in> :: this
+    class(svglib_t) <in> :: this
     real <in> :: x, y
     char(len=*) <in> :: string
     real <in> :: font_size

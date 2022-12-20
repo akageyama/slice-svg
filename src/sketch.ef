@@ -23,13 +23,51 @@ module sketch_m
     real :: dudx, dvdy
     char(len=300) :: title
     char(len=300) :: filename
+    type(svglib_t) :: svglib
   contains
     procedure :: initialize => sketch__initialize
     procedure :: to_screen_pos => sketch__to_screen_pos
+    !
+    procedure :: open => sketch__open
   end type sketch
 
 
 contains
+
+  subroutine sketch__open( this )
+    class(sketch_t) <in> :: this
+
+    call this.svglib.open( this.filename,  &
+                           this.screen_size.width,  &
+                           this.screen_size.height )
+
+  end subroutine sketch__open
+
+
+  subroutine sketch__close( this )
+    class(sketch_t) <in> :: this
+
+    call this.svglib.close
+  end subroutine sketch__close
+
+
+  subroutine sketch__line( this, u1, v1,  &
+                                 u2, v2,  &
+                                 color,   &
+                                 width )
+    class(sketch_t) <in> :: this
+    real <in> :: u1, v1 ! line start position in simulation coords.
+    real <in> :: v1, v2 ! line finish position in simulation coords.
+    real
+    type(screen_pos_t) :: start, finish
+
+     start  = this.to_screen_pos( stetch_pos_t(u1,v1) )
+     finish = this.to_screen_pos( stetch_pos_t(u2,v2) )
+
+     call this.svglib.line( xy1.x )
+
+  end subroutine sketch__line
+
 
   function sketch__to_screen_pos( this, sketch_pos ) result(screen_pos)
     class(sketch_t) <in> :: this
