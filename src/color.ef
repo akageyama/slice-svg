@@ -2,7 +2,7 @@ module color_m
   use ut_m
   implicit none
   private
-  public :: COLOR
+  public :: COLOR__CONSTATNS
 
 
   type, public :: color_t ! basic color type
@@ -27,12 +27,22 @@ module color_m
     type(color_t) :: cyan    = color_t(0.0, 1.0, 1.0)
   contains
     procedure :: gray => color_constants__gray
+    procedure, pass :: test_print => color_constants__test_print
   end type color_constants_t
 
-  type(color_constants_t), protected :: COLOR
+  type(color_constants_t), protected :: COLOR__CONSTATNS
 
 
 contains
+
+  subroutine color_constants__test_print( this )
+    class(color_constants_t) <in> :: this
+
+    char(len=7) :: color_code
+
+    color_code = COLOR__CONSTATNS.white.in_code()
+    call ut__message( 'COLOR__CONSTATNS.white = ' // color_code )
+  end subroutine color_constants__test_print
 
   function color_constants__gray( this, whiteness ) result(gray)
     class(color_constants_t) <in> :: this
@@ -55,6 +65,7 @@ contains
 
     write(code,"('#'3(Z2.2))") byte.r, byte.g, byte.b
   end function color__in_code
+
 
   function color__in_byte( rgb ) result(rgb_byte)
     class(color_t) <in> :: rgb     ! e.g., rgb=(1.0, 0.0, 0.0)

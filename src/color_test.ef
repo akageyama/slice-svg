@@ -3,14 +3,16 @@ program test
   implicit none
 
 
-  print *, 'hello world.'
-  print *, 'COLOR.red = ', COLOR.red
-  print *, 'COLOR.green = ', COLOR.green
-  print *, 'COLOR.white = ', COLOR.white
-  print *, 'COLOR.black code = ', COLOR.black.in_code()
-  print *, 'COLOR.blue  code = ', COLOR.blue.in_code()
-  print *, 'COLOR.green  code = ', COLOR.green.in_code()
-  print *, 'COLOR.gray(0.5) = ', COLOR.gray( 0.5 )
-  print *, 'COLOR.gray(0.9) = ', COLOR.gray( 0.9 )
+  call COLOR__CONSTATNS.test_print
+
+  ! print *, 'hello world.'
+  ! print *, 'COLOR.red = ', COLOR.red
+  ! print *, 'COLOR.green = ', COLOR.green
+  ! print *, 'COLOR.white = ', COLOR.white
+  ! print *, 'COLOR.black code = ', COLOR.black.in_code()
+  ! print *, 'COLOR.blue  code = ', COLOR.blue.in_code()
+  ! print *, 'COLOR.green  code = ', COLOR.green.in_code()
+  ! print *, 'COLOR.gray(0.5) = ', COLOR.gray( 0.5 )
+  ! print *, 'COLOR.gray(0.9) = ', COLOR.gray( 0.9 )
 
 end program test
