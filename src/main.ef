@@ -126,14 +126,14 @@ program main
   end do         
   call pres.finalize
 
-!   do i = 0, 10
-!     x = window_width/10.0 * i
-!     call fig01.line( x, ymin, x, ymax, stroke="black", stroke_width=1.0 )
-!   end do
-!   do j = 0, 10
-!     y = window_height/10.0*j
-!     call fig01.line( xmin, y, xmax, y, stroke="black", stroke_width=1.0 )
-!   end do
+  do i = 0, 10
+    x = window_width/10.0 * i
+    call fig01.line( x, ymin, x, ymax, stroke="black", stroke_width=1.0 )
+  end do
+  do j = 0, 10
+    y = window_height/10.0*j
+    call fig01.line( xmin, y, xmax, y, stroke="black", stroke_width=1.0 )
+  end do
 
 
 !   do i = 0, 10

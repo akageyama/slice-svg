@@ -89,8 +89,6 @@ contains
     char(len=*) <in> :: string
     real <in> :: r1, r2, r3, r4
     char(len=200) :: line
-    char(len=1) <const> :: QUOTE = '"'
-    char(len=1) <const> :: SPACE = ' '
 
     write(line, "(a)") trim(string)//QUOTE//trim(r2s(r1))   &
                                    //SPACE//trim(r2s(r2))   &
@@ -104,7 +102,6 @@ contains
     char(len=*) <in> :: string
     integer <in> :: val
     char(len=200) :: line
-    char(len=1) <const> :: QUOTE = '"'
 
     write(line, "(a,a,i0,a)") trim(string), QUOTE, val, QUOTE
   end function text_line_str_i
@@ -252,16 +249,18 @@ contains
     !                     //' fill="currentcolor"' &
     !                     //' id="arrow"' &
     !                     //' orient="auto">' )
-    call write_out( this, '<marker'                     &
-                            // trim(str_viewbox)        &
-                            // trim(str_markerWidth)    &
-                            // trim(str_markerHeight)   &
-                            // trim(str_refX)           &
-                            // trim(str_refY)           &
-                            //' stroke="currentcolor"'  &
-                            //' fill="currentcolor"'    &
-                            //' id="arrow"'             &
-                            //' orient="auto">' )                        
+    call write_out( this, '<marker'                             &
+                          // SPACE // trim(str_viewbox)         &
+                          // SPACE // trim(str_markerWidth)     &
+                          // SPACE // trim(str_markerHeight)    &
+                          // SPACE // trim(str_refX)            &
+                          // SPACE // trim(str_refY)            &
+                          // SPACE // 'stroke="currentcolor"'   &
+                          // SPACE // 'fill="currentcolor"'     &
+                          // SPACE // 'id="arrow"'              &
+                          // SPACE // 'orient="auto"'           &
+                          // SPACE // '>' )                        
+
     str_line_start_finish = text_line( 'x1', px,  &
                                        'y1', py,  &
                                        'x2', qx,  &
@@ -274,10 +273,10 @@ contains
     !                           //'" stroke-width="2" />' )
 
     ! memo: indent
-    call write_out( this, '  <line'                               &
-                             SPACE // trim(str_line_start_finish) &
-                             SPACE // trim(str_stroke_width)      &
-                             SPACE //                             &
+    call write_out( this, '  <line'                                  &
+                             // SPACE // trim(str_line_start_finish) &
+                             // SPACE // trim(str_stroke_width)      &
+                             // SPACE //                             &
                              '/>' )
     call write_out( this, '  <polygon points="'//trim(r2s(rx))  &
                                           //','//trim(r2s(ry))  &
@@ -358,8 +357,8 @@ contains
     call svglib__line( this, x, y,          &
                        slightly_shifted_x,  &
                        slightly_shifted_y,  &
-                       stroke="none",  &
-                       stroke_width=amaf, &
+                       stroke="none",       &
+                       stroke_width=amaf,   &
                        marker_start="arrow" )
   end subroutine svglib__arrow
 
@@ -403,6 +402,9 @@ contains
     real <in> :: stroke_width
     char(len=*) <optin> :: marker_start, marker_end
 
+    char(len=200) :: str_line_start_finish
+    char(len=200) :: str_line_stroke, str_line_stroke_width
+    char(len=200) :: str_marker_start, str_marker_end
     integer :: unit
 
     unit = this.file_unit
@@ -412,10 +414,6 @@ contains
           stroke="none" stroke-width="1" 
           marker-end="url(#arrow-blue)" />  
     !!<          
-
-    char(len=200) :: str_line_start_finish
-    char(len=200) :: str_line_stroke, str_line_stroke_width
-    char(len=200) :: str_marker_start, str_marker_end
 
     str_line_start_finish = text_line( 'x1', x1,  &
                                        'y1', y1,  &
@@ -442,11 +440,11 @@ contains
       !               //' marker-start='                          &
       !                     //'"url(#'//trim(marker_start)//')"'  &
       !               //' />' )
-      call write_out( this, '<line'
+      call write_out( this, '<line'                                   &
                             // SPACE // trim(str_line_start_finish)   &
                             // SPACE // trim(str_line_stroke)         &
                             // SPACE // trim(str_line_stroke_width)   &
-                            // SPACE // trim(str_marker_start)
+                            // SPACE // trim(str_marker_start)        &
                             // SPACE // '/>' )
     else if ( present(marker_end) ) then
       str_marker_end = 'marker-end=' // QUOTE               &
@@ -466,11 +464,11 @@ contains
       !               //' marker-end='                            &
       !                     //'"url(#'//trim(marker_end)//')"'    &
       !               //' />' )
-      call write_out( this, '<line'
+      call write_out( this, '<line'                                   &
                             // SPACE // trim(str_line_start_finish)   &
                             // SPACE // trim(str_line_stroke)         &
                             // SPACE // trim(str_line_stroke_width)   &
-                            // SPACE // trim(str_marker_end)
+                            // SPACE // trim(str_marker_end)          &
                             // SPACE // '/>' )
     else
       ! call write_out( this,                                     &
@@ -483,7 +481,7 @@ contains
       !               //' stroke-width="'                         &
       !                            //trim(r2s(stroke_width))//'"' &
       !               //' />' )
-      call write_out( this, '<line'
+      call write_out( this, '<line'                                   &
                             // SPACE // trim(str_line_start_finish)   &
                             // SPACE // trim(str_line_stroke)         &
                             // SPACE // trim(str_line_stroke_width)   &
@@ -531,14 +529,30 @@ integer :: i
     char(len=*) <optin> :: text_anchor
     real <optin> :: stroke_width
 
+    char(len=200) :: str_text_pos, str_font_size, str_fill_color
+
+    str_text_pos = text_line( 'x=', x, 'y=', y )
+    str_font_size = text_line( 'font-size=', font_size )
     if ( present(color) ) then
-      call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'   &
-                                       //' font-size="'//trim(r2s(font_size))//'"'  &
-                                       //' fill="'//trim(color)//'">' )
+      ! call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'   &
+      !                                  //' font-size="'//trim(r2s(font_size))//'"'  &
+      !                                  //' fill="'//trim(color)//'">' )
+      str_fill_color = 'fill=' // QUOTE // trim(color) // QUOTE
+      call write_out( this, '<text'                            &
+                             // SPACE // trim(str_text_pos)    &
+                             // SPACE // trim(str_font_size)   &
+                             // SPACE // trim(str_fill_color)  &
+                             // SPACE // '>' )
     else
-      call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'   &
-                                       //' font-size="'//trim(r2s(font_size))//'"'  &
-                                       //' fill="black">' )
+      ! call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'   &
+      !                                  //' font-size="'//trim(r2s(font_size))//'"'  &
+      !                                  //' fill="black">' )
+      str_fill_color = 'fill=' // QUOTE // 'black' // QUOTE
+      call write_out( this, '<text'                            &
+                             // SPACE // trim(str_text_pos)    &
+                             // SPACE // trim(str_font_size)   &
+                             // SPACE // trim(str_fill_color)  &
+                             // SPACE // '>' )                                       
 
     end if
     call write_out( this, trim(string) )
