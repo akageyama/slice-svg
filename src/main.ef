@@ -126,26 +126,26 @@ program main
   end do         
   call pres.finalize
 
-  do i = 0, 10
-    x = window_width/10.0 * i
-    call fig01.line( x, ymin, x, ymax, stroke="black", stroke_width=1.0 )
-  end do
-  do j = 0, 10
-    y = window_height/10.0*j
-    call fig01.line( xmin, y, xmax, y, stroke="black", stroke_width=1.0 )
-  end do
+!   do i = 0, 10
+!     x = window_width/10.0 * i
+!     call fig01.line( x, ymin, x, ymax, stroke="black", stroke_width=1.0 )
+!   end do
+!   do j = 0, 10
+!     y = window_height/10.0*j
+!     call fig01.line( xmin, y, xmax, y, stroke="black", stroke_width=1.0 )
+!   end do
 
 
-  do i = 0, 10
-  do j = 0, 10
-    theta += PI/10
-    x = window_width/10.0 * i
-    y = window_height/10.0 * j
-    call fig01.arrow( x, y, 10*cos(theta), 10*sin(theta) )
-!    call fig01.text( x, y, "test", 40.0, color="red" )
-    call fig01.text( x, y, "test", 40.0 )
-  end do
-  end do
+!   do i = 0, 10
+!   do j = 0, 10
+!     theta += PI/10
+!     x = window_width/10.0 * i
+!     y = window_height/10.0 * j
+!     call fig01.arrow( x, y, 10*cos(theta), 10*sin(theta) )
+! !    call fig01.text( x, y, "test", 40.0, color="red" )
+!     call fig01.text( x, y, "test", 40.0 )
+!   end do
+!   end do
   call fig01.group_end()
   call fig01.close
 end program main
