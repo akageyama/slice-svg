@@ -2,18 +2,11 @@
     Note: svglib_fig_t ==> svglib_t
 !!<
 module svglib_m
+  use color_m
   use const_base_m
   use fileut_m
   implicit none
   private
-
-  type color_rgb_t
-    real :: r, g, b
-  end type color_rgb_t
-
-  type color_hsv_t
-    real :: hue, sat, val
-  end type color_hsv_t
 
   type, public :: svglib_t
     char(len=300) :: file_name
@@ -43,86 +36,6 @@ contains
     end if
   end subroutine assert
   
-
-  function normalized_value_to_color_code( value ) result(color_code)
-    real <in> :: value
-    type(color_rgb_t) :: rgb
-    type(color_hsv_t) :: hsv
-    char(len=7) :: color_code ! '#FFFFFF' for white
-
-    call assert( value >= 0.0 .and. value <= 1.0,  &
-                 'Normalized value out of range.' )
-
-    hsv.hue = 0.7 * value
-    hsv.sat = 1.0
-    hsv.val = 1.0
-
-   rgb = iConvert_hsv_to_rgb( hsv )
-   color_code = iConvert_rgb_to_code( rgb )
-
-  contains
-
-    function iConvert_hsv_to_rgb( hsv ) result (rgb)
-      type(color_hsv_t) <in> :: hsv
-      type(color_rgb_t) :: rgb
-      !!>
-          Copied from VFIVE.
-      !!<
-      integer :: hue_
-      real :: local_, diff_, m, n, k;
-
-      local_ = hsv.hue * 360.0;
-      local_ = mod(local_,360.0)
-      local_ = local_ - 360.0;
-      local_ = local_ / 60.0;
-      hue_ = int(local_);
-      diff_ = local_ - hue_;
-      m = hsv.val * (1.0 - hsv.sat);
-      n = hsv.val * (1.0 - hsv.sat * diff_);
-      k = hsv.val * (1.0 - hsv.sat * (1.0 - diff_));
-
-      select case (hue_) 
-        case (0)
-	        rgb.r = hsv.val
-	        rgb.g = k
-	        rgb.b = m
-        case (1)
-          rgb.r = n
-          rgb.g = hsv.val
-          rgb.b = m
-        case (2)
-          rgb.r = m
-          rgb.g = hsv.val
-          rgb.b = k
-        case (3)
-          rgb.r = m
-          rgb.g = n
-          rgb.b = hsv.val
-        case (4)
-          rgb.r = k
-          rgb.g = m
-          rgb.b = hsv.val
-        case (5)
-          rgb.r = hsv.val
-          rgb.g = m
-          rgb.b = n
-      end select
-    end function iConvert_hsv_to_rgb
-
-    function iConvert_rgb_to_code( rgb ) result(code) 
-      type(color_rgb_t) <in> :: rgb
-      char(len=7) :: code
-
-      integer :: r, g, b
-
-      r = nint(255*rgb.r)
-      g = nint(255*rgb.g)
-      b = nint(255*rgb.b)
-
-      write(code,"('#'3(Z2.2))") r, g, b
-    end function iConvert_rgb_to_code
-
-  end function normalized_value_to_color_code
   
 
   function get_date_and_time() result(string)
@@ -166,7 +79,6 @@ contains
 
     this.indent_level += 1
   end subroutine indent_push
-
 
 
   subroutine print_footer( this )
@@ -442,7 +354,7 @@ contains
 
 real :: v
 integer :: i
- char(len=7) :: sgks
+ char(len=7) :: color_code
 
     this.file_name = trim(file_name)
     this.indent_level = 0
@@ -456,8 +368,8 @@ integer :: i
 
     do i = 0, 100
       v = 0.01*i
-      sgks(1:7) = normalized_value_to_color_code( v )
-      print *, sgks
+      color_code = color__norm_real_to_color_code( v )
+      print *, color_code
     end do
 
   end subroutine svglib__open

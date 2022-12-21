@@ -3,7 +3,7 @@ program test
   implicit none
 
 
-  call COLOR__CONSTATNS.test_print
+  call COLOR__CONST.test_print
 
   ! print *, 'hello world.'
   ! print *, 'COLOR.red = ', COLOR.red

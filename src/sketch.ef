@@ -1,4 +1,5 @@
 module sketch_m
+  use color_m
   use svglib_m
   use ut_m
   implicit none
@@ -20,16 +21,15 @@ module sketch_m
   type, public :: sketch_t
     type(screen_size_t) :: screen_size
     real :: u_max, u_min, v_max, v_min
-    real :: dudx, dvdy
+    real :: dxdu, dydv
     char(len=300) :: title
     char(len=300) :: filename
     type(svglib_t) :: svglib
   contains
     procedure :: initialize => sketch__initialize
     procedure :: to_screen_pos => sketch__to_screen_pos
-    !
     procedure :: open => sketch__open
-  end type sketch
+  end type sketch_t
 
 
 contains
@@ -57,14 +57,17 @@ contains
                                  width )
     class(sketch_t) <in> :: this
     real <in> :: u1, v1 ! line start position in simulation coords.
-    real <in> :: v1, v2 ! line finish position in simulation coords.
-    real
+    real <in> :: u2, v2 ! line finish position in simulation coords.
+    type(color_t) <optin> :: color
+    real <optin> :: width
+
     type(screen_pos_t) :: start, finish
 
      start  = this.to_screen_pos( stetch_pos_t(u1,v1) )
      finish = this.to_screen_pos( stetch_pos_t(u2,v2) )
 
-     call this.svglib.line( xy1.x )
+     call this.svglib.line( start.x, start.y,   &
+                            finish.x, finish.y )
 
   end subroutine sketch__line
 
@@ -92,8 +95,10 @@ contains
                   .......
                   delta_u
     !!<
-    delta_u = sketch_pos.u - u_min
-    delta_v = v_max - sketch_pos.v
+    real :: delta_u, delta_v 
+    real :: mx, my   ! margin x and y
+    delta_u = sketch_pos.u - this.u_min
+    delta_v = this.v_max - sketch_pos.v
     mx = this.screen_size.margin_x
     my = this.screen_size.margin_y
     screen_pos.x = mx + this.dxdu*delta_u
@@ -115,10 +120,11 @@ contains
     char(len=*) <in> :: filename
 
     real :: draw_area_width_in_phys,   &
-            draw_area_height_in_phys,  &
-    real :: aspect_ratio
+            draw_area_height_in_phys
     real :: draw_area_width_in_pixel,  &
             draw_area_height_in_pixel
+    real :: aspect_ratio
+    real :: u_max, u_min, v_max, v_min
 
     u_max = upper_right_in_phys.u
     u_min =  lower_left_in_phys.u
@@ -164,22 +170,22 @@ contains
                  / draw_area_width_in_phys
 
     this.screen_size.width = screen_width_in_pixel
-    this.screen_size.mergin_x = 0.1*screen_width_in_pixel
-    this.screen_size.margin_y = screen_size.margin_x 
+    this.screen_size.margin_x = 0.1*screen_width_in_pixel
+    this.screen_size.margin_y = this.screen_size.margin_x 
 
     ! Keeping the aspect ratio,
     draw_area_width_in_pixel = screen_width_in_pixel     &
-                             - 2*screen_size.margin_x
+                             - 2*this.screen_size.margin_x
     draw_area_height_in_pixel = draw_area_width_in_pixel &
                               * aspect_ratio
     this.screen_size.height = draw_area_height_in_pixel  &
-                            + 2*margin_y
+                            + 2*this.screen_size.margin_y
 
-    this.dudx = screen_size.width / draw_area_width_in_phys   
-    this.dvdy = screen_size.height / draw_area_height_in_phys
+    this.dxdu = this.screen_size.width / draw_area_width_in_phys   
+    this.dydv = this.screen_size.height / draw_area_height_in_phys
 
-    call ut__assert( this.dudx > 0.0 .and.
-                     this.dvdy > 0.0       &
+    call ut__assert( this.dxdu > 0.0 .and. &
+                     this.dydv > 0.0,      &
                      '__MODFUNC__: Something is strange.' )
   end subroutine sketch__initialize
 

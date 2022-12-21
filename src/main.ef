@@ -4,7 +4,7 @@ program main
   use slice_m
   implicit none
 
-  type(svglib_fig_t) :: fig01, fig02, fig03
+  type(svglib_t) :: fig01, fig02, fig03
   type(slice__scalar_t) :: prs
 
   integer :: window_width = 1200
