@@ -10,7 +10,7 @@ module svglib_m
 
   type, public :: svglib_t
     char(len=300) :: file_name
-    integer :: width, height
+    real :: width, height
     integer :: file_unit
     integer :: indent_level
   contains
@@ -91,14 +91,14 @@ contains
 
   subroutine print_header( this, width, height )
     type(svglib_t) <in> :: this
-    integer <in> :: width,  height
+    real <in> :: width,  height
 
     char(len=*) <const> :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
     char(len=100) :: str_width, str_height, str_viewbox
 
-    write(str_width, "(a, i0, a)") 'width="', width, '"'
-    write(str_height, "(a, i0, a)") 'height="', height, '"'
-    write(str_viewbox, "(a, i0, 1x, i0, 1x, i0, 1x, i0, a)") 'viewBox="', 0, 0, width, height, '">'
+    write(str_width, "(a, a, a)") 'width="', r2s(width), '"'
+    write(str_height, "(a, a, a)") 'height="', r2s(height), '"'
+    write(str_viewbox, "(a, i0, 1x, i0, 1x, a, 1x, a, a)") 'viewBox="', 0, 0, trim(r2s(width)), trim(r2s(height)), '">'
 
     call write_out( this, '<svg '//STR_XMLNS//' '//trim(str_width)//' '//trim(str_height)//' '//trim(str_viewbox) )
     call write_out( this, '<!--' )
@@ -350,7 +350,7 @@ contains
   subroutine svglib__open( this, file_name, width, height )
     class(svglib_t) <io> :: this
     char(len=*) <in> :: file_name
-    integer <in> :: width, height
+    real <in> :: width, height
 
 real :: v
 integer :: i

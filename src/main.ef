@@ -7,8 +7,8 @@ program main
   type(svglib_t) :: fig01, fig02, fig03
   type(slice__scalar_t) :: prs
 
-  integer :: window_width = 1200
-  integer :: window_height = 1000
+  real :: window_width = 1200.0
+  real :: window_height = 1000.0
   integer :: i, j
   real :: x, y, xmin, ymin, xmax, ymax
 

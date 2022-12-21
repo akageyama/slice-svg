@@ -35,7 +35,7 @@ module sketch_m
 contains
 
   subroutine sketch__open( this )
-    class(sketch_t) <in> :: this
+    class(sketch_t) <io> :: this
 
     call this.svglib.open( this.filename,  &
                            this.screen_size.width,  &
@@ -53,21 +53,30 @@ contains
 
   subroutine sketch__line( this, u1, v1,  &
                                  u2, v2,  &
-                                 color,   &
-                                 width )
+                                 width,   &
+                                 color )
     class(sketch_t) <in> :: this
     real <in> :: u1, v1 ! line start position in simulation coords.
     real <in> :: u2, v2 ! line finish position in simulation coords.
+    real <in> :: width
     type(color_t) <optin> :: color
-    real <optin> :: width
+
+    char(len=7) :: color_code
 
     type(screen_pos_t) :: start, finish
 
-     start  = this.to_screen_pos( stetch_pos_t(u1,v1) )
-     finish = this.to_screen_pos( stetch_pos_t(u2,v2) )
+    start  = this.to_screen_pos( sketch_pos_t(u1,v1) )
+    finish = this.to_screen_pos( sketch_pos_t(u2,v2) )
 
-     call this.svglib.line( start.x, start.y,   &
-                            finish.x, finish.y )
+    if ( present(color) ) then
+      color_code = color.to_code()
+    else
+      color_code = COLOR__CONST.black.to_code()
+    end if
+    call this.svglib.line( start.x,  start.y,   &
+                           finish.x, finish.y,  &
+                           color_code,          &
+                           width )
 
   end subroutine sketch__line
 
