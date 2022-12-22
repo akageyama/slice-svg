@@ -236,19 +236,6 @@ contains
     str_markerWidth  = text_line(' markerWidth=',  viewbox_width )
     str_markerHeight = text_line(' markerHeight=', viewbox_height )
 
-    ! call write_out( this, '<marker'//' viewBox="'  &
-    !                     //trim(r2s(viewbox_upperleft_x))//' '  &
-    !                     //trim(r2s(viewbox_upperleft_y))//' '  &
-    !                     //trim(r2s(viewbox_width))//' '  &
-    !                     //trim(r2s(viewbox_height))//'"'  &
-    !                     //' markerWidth="'//trim(r2s(viewbox_width))//'"' &
-    !                     //' markerHeight="'//trim(r2s(viewbox_height))//'"' &
-    !                     //' refX="'//trim("0.0")//'"'  &
-    !                     //' refY="'//trim("0.0")//'"'  &
-    !                     //' stroke="currentcolor"' &
-    !                     //' fill="currentcolor"' &
-    !                     //' id="arrow"' &
-    !                     //' orient="auto">' )
     call write_out( this, '<marker'                             &
                           // SPACE // trim(str_viewbox)         &
                           // SPACE // trim(str_markerWidth)     &
@@ -266,11 +253,6 @@ contains
                                        'x2=', qx,  &
                                        'y2=', qy )
     str_stroke_width = text_line( 'stroke-width=', 2 )
-    ! call write_out( this, '  <line x1="'//trim(r2s(px))  &
-    !                           //'" y1="'//trim(r2s(py))  &
-    !                           //'" x2="'//trim(r2s(qx))  &
-    !                           //'" y2="'//trim(r2s(qy))  &
-    !                           //'" stroke-width="2" />' )
 
     ! memo: indent
     call write_out( this, '  <line'                                  &
@@ -345,12 +327,6 @@ contains
 
     slightly_shifted_x = x + VERY_SHORT*vx_norm
     slightly_shifted_y = y + VERY_SHORT*vy_norm
-
-    ! this.line( x, y,                &
-    !            slightly_shifted_x,  &
-    !            slightly_shifted_y,  &
-    !            'blue',              &
-    !            stroke_width=1.0 )
 
     amaf = vector_amp / real(ASCALE)
 !debugp vector_amp, amaf    
@@ -428,18 +404,6 @@ contains
                                          // trim(marker_start)  &
                                          // ')'                 &
                                          // QUOTE 
-      ! call write_out( this,                                     &
-      !                 '<line'                                   &
-      !               //' x1="'//trim(r2s(x1))//'"'               &
-      !               //' y1="'//trim(r2s(y1))//'"'               &
-      !               //' x2="'//trim(r2s(x2))//'"'               &
-      !               //' y2="'//trim(r2s(y2))//'"'               &
-      !               //' stroke="'//trim(stroke)//'"'            &
-      !               //' stroke-width="'                         &
-      !                            //trim(r2s(stroke_width))//'"' &
-      !               //' marker-start='                          &
-      !                     //'"url(#'//trim(marker_start)//')"'  &
-      !               //' />' )
       call write_out( this, '<line'                                   &
                             // SPACE // trim(str_line_start_finish)   &
                             // SPACE // trim(str_line_stroke)         &
@@ -452,18 +416,6 @@ contains
                                      // trim(marker_end)    &
                                      // ')'                 &
                                      // QUOTE 
-      ! call write_out( this,                                     &
-      !                 '<line'                                   &
-      !               //' x1="'//trim(r2s(x1))//'"'               &
-      !               //' y1="'//trim(r2s(y1))//'"'               &
-      !               //' x2="'//trim(r2s(x2))//'"'               &
-      !               //' y2="'//trim(r2s(y2))//'"'               &
-      !               //' stroke="'//trim(stroke)//'"'            &
-      !               //' stroke-width="'                         &
-      !                            //trim(r2s(stroke_width))//'"' &
-      !               //' marker-end='                            &
-      !                     //'"url(#'//trim(marker_end)//')"'    &
-      !               //' />' )
       call write_out( this, '<line'                                   &
                             // SPACE // trim(str_line_start_finish)   &
                             // SPACE // trim(str_line_stroke)         &
@@ -471,16 +423,6 @@ contains
                             // SPACE // trim(str_marker_end)          &
                             // SPACE // '/>' )
     else
-      ! call write_out( this,                                     &
-      !                 '<line'                                   &
-      !               //' x1="'//trim(r2s(x1))//'"'               &
-      !               //' y1="'//trim(r2s(y1))//'"'               &
-      !               //' x2="'//trim(r2s(x2))//'"'               &
-      !               //' y2="'//trim(r2s(y2))//'"'               &
-      !               //' stroke="'//trim(stroke)//'"'            &
-      !               //' stroke-width="'                         &
-      !                            //trim(r2s(stroke_width))//'"' &
-      !               //' />' )
       call write_out( this, '<line'                                   &
                             // SPACE // trim(str_line_start_finish)   &
                             // SPACE // trim(str_line_stroke)         &
@@ -544,9 +486,6 @@ integer :: i
                              // SPACE // trim(str_fill_color)  &
                              // SPACE // '>' )
     else
-      ! call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'   &
-      !                                  //' font-size="'//trim(r2s(font_size))//'"'  &
-      !                                  //' fill="black">' )
       str_fill_color = 'fill=' // QUOTE // 'black' // QUOTE
       call write_out( this, '<text'                            &
                              // SPACE // trim(str_text_pos)    &
