@@ -7,24 +7,77 @@ program main
 
   integer :: window_width = 1200
   integer :: window_height = 1000
-  integer :: i, j
-  real :: x, y, xmin, ymin, xmax, ymax
+  integer :: i, j ,k ,l
+  real :: x, y, z ,a,b,xmin, ymin, xmax, ymax
+  integer <const> :: nverts = 3
+  real, dimension(nverts) :: path_data_x, path_data_y
+
+  xmin = 0.0
+  ymin = 0.0
+  xmax = window_width
+  ymax = window_height
+  
+  
+  path_data_x(1) = 0.0
+  path_data_x(2) = 100.0
+  path_data_x(3) = 150.0
+  path_data_y(1) = 0.0
+  path_data_y(2) = 150.0
+  path_data_y(3) = 100.0
+
+   
+   
 
   call const_base__check
 
   call fig01.open( 'test.svg', width=window_width, height=window_height )
   call fig01.group_begin( 'color="blue"' )
 
-  call fig01.arrow( 100.0, 100.0, 100.0, 100.0 )
-
-  do i = 0, 10
-    x = window_width/10.0 * i
+  do i = 0, 12
+    x = window_width/12.0 * i
     call fig01.line( x, ymin, x, ymax, stroke="black", stroke_width=1.0 )
   end do
   do j = 0, 10
     y = window_height/10.0*j
     call fig01.line( xmin, y, xmax, y, stroke="black", stroke_width=1.0 )
   end do
+   call fig01.text( 750.0, 250.0,"width12 arrow if k10= (xy)(100or0).0*(a+1),(100or0).0*a,(vxvy)25.0," ,&
+                            font_size=10.0, color = "red",text_anchor = "start", stroke_width = 25.0 )
+   call fig01.text( 800.0, 350.0,"green square" ,&
+                            font_size=10.0, color = "red",text_anchor = "start", stroke_width = 25.0 )  
+  
+  do k = 0,10
+   a = real(k)
+   if (mod(k,2)==1) then
+   call fig01.arrow( 100.0*(a+1),0.0,25.0,25.0)
+   else
+   call fig01.arrow( 0.0,100.0*a,25.0,25.0)
+   end if
+ end do
+ do l = 0,3
+ b = real(l)
+ if (mod(l,4)==0) then
+ call fig01.line(550.0,550.0,650.0,550.0,stroke="green",stroke_width=10.0)
+ else if (mod(l,4)==1) then
+ call fig01.line(650.0,550.0,650.0,650.0,stroke="green",stroke_width=10.0)
+ else if (mod(l,4)==2) then
+ call fig01.line(650.0,650.0,550.0,650.0,stroke="green",stroke_width=10.0)
+ else
+ call fig01.line(550.0,650.0,550.0,550.0,stroke="green",stroke_width=10.0)
+
+ end if
+ end do
+
+!call fig01.polygon()
+! subroutine svglib__polygon2( this,  &
+  !                              nverts,   &  ! 点の数
+  !                              path_data_x, & ! real, dimension(nverts) 
+  !                              path_data_y, & ! real, dimension(nverts)
+  !                              stroke,  &
+  !                              stroke_width,  &
+  !                              fill, &
+  !                              fill_opacity )
+ call fig01.polygon2(nverts, path_data_x, path_data_y, "yellow", 1.0 ,"yellow", 0.25)
 
   call fig01.group_end()
   call fig01.close

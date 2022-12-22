@@ -25,6 +25,8 @@ module svglib_m
     procedure :: line => svglib__line
     procedure :: arrow => svglib__arrow
     procedure :: text => svglib__text
+    !procedure :: polygon => svglib__polygon
+    procedure :: polygon2 => svglib__polygon2
   end type svglib_fig_t
 
 
@@ -178,7 +180,7 @@ contains
     type(svglib_fig_t) <in> :: this
     integer <in> :: width,  height
 
-    char(len=*) <const> :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
+    char(len=*), parameter :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
     char(len=100) :: str_width, str_height, str_viewbox
 
     write(str_width, "(a, i0, a)") 'width="', width, '"'
@@ -276,9 +278,10 @@ contains
   end function r2s
 
 
-  subroutine write_out( this, line )
+  subroutine write_out( this, line, new_line )
     type(svglib_fig_t) <in> :: this
     char(len=*) <in> :: line
+    logical <optin> :: new_line
 
     integer <const> :: NUM_SPACES_PER_INDENT = 2
     integer :: num_spaces
@@ -286,7 +289,15 @@ contains
 
     num_spaces = this.indent_level*NUM_SPACES_PER_INDENT
 
+    if ( present(new_line) ) then
+      if ( .not. new_line ) then
+        write(this.file_unit, fmt='(a)', advance='no') BLANK_LINE(1:num_spaces)//trim(line)
+        return
+      end if
+    end if
+
     write(this.file_unit, *) BLANK_LINE(1:num_spaces)//trim(line)
+
   end subroutine write_out
 
 
@@ -301,7 +312,7 @@ contains
     real :: amaf ! arrow_marker_amplification_factor
 
     logical :: first_time_call = .true.
-    integer <const> :: ASCALE=10 ! arrow glyph length scale
+    integer <const> :: ASCALE=100 ! arrow glyph length scale
 
     if (first_time_call) then
       call print_marker_arrow( this, scale=ASCALE )
@@ -473,9 +484,107 @@ integer :: i
     call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'  &
                                      //' font-size="'//trim(r2s(font_size))//'"'  &
                                      //' fill="'//trim(color)//'">' )
+             ! text_anchor and stroke_width is nothing
     call write_out( this, trim(string) )
     call write_out( this, '</text>' )
 
   end subroutine svglib__text
+  !!>
+  subroutine svglib__polygon( this ,infile)
+
+  class(svglib_fig_t) <io> :: this
+  char(len=*) <optin> :: infile
+  integer :: data_num = 0 ,i
+  real :: a ,b
+  real :: x(1000),y(1000)
+  integer ::ios = 1
+
+  
+  open(10,file ='test.txt',status ='old')
+
+  do i = 1,100
+  read(10,*,iostat = ios) a ,b
+  x(i) = a
+  y(i) = b
+  if(ios<0) exit
+  data_num = data_num + 1
+  end do
+
+  close(10)
+  print *, data_num
+
+  do i = 1, (data_num-1)
+  call svglib__line( this, x(i), y(i),&
+                       x(i+1),&
+                       y(i+1),&
+                       stroke="red",&
+                       stroke_width=1.0 )
+
+  end do
+  call svglib__line( this, x(data_num), y(data_num),&
+                       x(1),&
+                       y(1),&
+                       stroke= "red",&
+                       stroke_width=1.0 )
+
+  end subroutine svglib__polygon
+  !!<
+
+  ! subroutine svglib__polygon2( this,  &
+  !                              nverts,   &  ! 点の数
+  !                              path_data_x, & ! real, dimension(nverts) 
+  !                              path_data_y, & ! real, dimension(nverts)
+  !                              stroke,  &
+  !                              stroke_width,  &
+  !                              fill, &
+  !                              fill_opacity )
+  !!<
+
+  subroutine svglib__polygon2( this, nverts, path_data_x, path_data_y, &
+                               stroke, stroke_width, &
+                               fill, fill_opacity )
+   class(svglib_fig_t) <io> :: this
+   integer <in> :: nverts
+   real, dimension(nverts) :: path_data_x
+   real, dimension(nverts) :: path_data_y 
+   char(len=*) <in> :: stroke
+   real <in> :: stroke_width
+   char(len=*) <in> :: fill
+   real <in> :: fill_opacity
+   
+
+   integer :: i
+   !real :: x, y
+   !real :: x(nverts), y(nverts)
+   char(len=300), dimension(nverts) :: l_string
+
+   !do i = 1, nverts
+    ! read(path_data_x(i-1),*) x
+    ! read(path_data_y(i-1),*) y
+    ! x(i) = x
+    ! y(i) = y
+  ! end do
+
+  ! call write_out(this,'<path d = "M '//trim(r2s(e(1)))//' '//trim(r2s(f(1))))
+
+                      
+   do i = 1, nverts
+    if(i == 1) then
+     l_string(i) = '<path d = "M '//trim(r2s(path_data_x(i)))//' '//trim(r2s(path_data_y(i)))
+    else if(i == nverts) then
+     l_string(i) = ' L '//trim(r2s(path_data_x(i)))//' '//trim(r2s(path_data_y(i)))//'  Z"' &
+                    //' stroke="'//trim(stroke)//'" stroke-width = "'//trim(r2s(stroke_width))//'"' &
+                    //' fill="'//trim(fill)//'" fill-opacity = "'//trim(r2s(fill_opacity))//'" />'
+    else
+     l_string(i) = ' L '//trim(r2s(path_data_x(i)))//' '//trim(r2s(path_data_y(i)))
+    end if
+   end do 
+  
+   do i = 1, nverts
+    call write_out(this, l_string(i), new_line=.false.)
+   end do
+
+  end subroutine svglib__polygon2
+ 
 
 end module svglib_m
