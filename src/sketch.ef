@@ -37,7 +37,6 @@ module sketch_m
 contains
 
 
-
   subroutine sketch__group_begin( this, line_type,            &
                                         line_width_in_pixel,  &
                                         line_color,           &
@@ -63,36 +62,36 @@ contains
 
     if ( present(line_color) ) then
       nop += 1
-      str(nop) = ' line-color=' // line_color.to_code()
+      str(nop) = 'line-color=' // line_color.to_code()
     end if
 
     if ( present(fill_color) ) then
       nop += 1
-      str(nop) = ' fill-color=' // fill_color.to_code()
+      str(nop) = 'fill-color=' // fill_color.to_code()
     end if
 
     if ( present(line_width_in_pixel) ) then
       nop += 1
-      str(nop) = svglib__text_line( ' line-width=', line_width_in_pixel )
+      str(nop) = svglib__text_line( 'line-width=', line_width_in_pixel )
     end if
 
     if ( present(line_opacity) ) then
       nop += 1
-      str(nop) = svglib__text_line( ' line-opacity=', line_opacity )
+      str(nop) = svglib__text_line( 'line-opacity=', line_opacity )
     end if    
 
     if ( present(fill_opacity) ) then
       nop += 1
-      str(nop) = svglib__text_line( ' fill-opacity=', fill_opacity )
+      str(nop) = svglib__text_line( 'fill-opacity=', fill_opacity )
     end if    
 
     if ( present(line_type) ) then
       nop += 1
       select case (line_type)
         case ('dotted')
-          str(nop) = ' stroke-width="5 5"'
+          str(nop) = 'stroke-width="5 5"'
         case ('dashed')
-          str(nop) = ' stroke-width="10 5"'
+          str(nop) = 'stroke-width="10 5"'
         case default
           call ut__fatal( '__MODFUNC__: case error.' )
       end select
@@ -101,7 +100,7 @@ contains
     if ( nop > 0 ) then
       str_long = ''
       do n = 1, nop
-        str_long = trim(str_long) // str(n)
+        str_long = trim(str_long) // trim(str(n)) // ' '
       end do
       call this.svglib.group_begin( trim(str_long) )
     end if
@@ -122,6 +121,42 @@ contains
     call this.svglib.group_end
   end subroutine sketch__group_end
 
+
+  subroutine sketch__text( this, u, v,                &
+                                 string,              &
+                                 font_size_in_pixel,  &
+                                 text_anchor,         &
+                                 color )
+
+    real <in> :: u, v
+    char(len=*) <in> :: string
+    real <in> :: font_size_in_pixel
+    char(len=*) <in> :: text_anchor   ! start/ middle / end
+    type(clor_t) <optin> :: color
+
+    type(screen_pos_t) :: pos
+    char(len=SVGLIB__BSL) :: str_text_anchor
+
+    pos = this.to_screen_pos( sketch_pos_t(u,v) )
+    
+    if ( present(text_anchor) ) then
+      str_text_anchor = text_anchor
+    else 
+      str_text_anchor = 'middle'  ! default
+    end if
+
+    if ( present(color) ) then
+      color_code = color.to_code()
+      call this.svglib.text( pos.u, pos.v,        &
+                             string,              &
+                             font_size_in_pixel,  &
+                             color_code )
+    else
+      call this.svglib.text( pos.u, pos.v,        &
+                             string,              &
+                             font_size_in_pixel )
+    end if
+  end subroutine sketch__text
 
   subroutine sketch__line( this, u1, v1,  &
                                  u2, v2,  &

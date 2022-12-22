@@ -359,7 +359,7 @@ contains
     char(len=*) <in> :: attribute
 
     write(this.file_unit, *) ''
-    write(this.file_unit, *) '<g '//trim(attribute)//'>'
+    write(this.file_unit, *) '<g' // SPACE // trim(attribute) // '>'
     call indent_push( this )
   end subroutine svglib__group_begin
 
@@ -467,8 +467,12 @@ integer :: i
   end subroutine svglib__open
 
 
-  subroutine svglib__text( this, x, y, string, font_size,  &
-                           color, text_anchor, stroke_width )
+  subroutine svglib__text( this, x, y,          &
+                                 string,        &
+                                 font_size,     &
+                                 color,         &
+                                 text_anchor,   &
+                                 stroke_width )
     class(svglib_t) <in> :: this
     real <in> :: x, y
     char(len=*) <in> :: string
@@ -477,32 +481,31 @@ integer :: i
     char(len=*) <optin> :: text_anchor
     real <optin> :: stroke_width
 
-    char(len=SVGLIB__BSL) :: str_text_pos,    &
-                             str_font_size,   &
-                             str_fill_color
+    integer :: n, nopt   ! number of options
+    integer :: MAX_NOP = 10  ! max
+    char(len=SVGLIB__BSL), dimension(NAX_NOP) :: str
+    char(len=SVGLIB__BSL*MAX_NOP) :: str_all
 
-    str_text_pos  = svglib__text_line( 'x=', x, 'y=', y )
-    str_font_size = svglib__text_line( 'font-size=', font_size )
+    str(1) = svglib__text_line( 'x=', x, 'y=', y )
+    str(2) = svglib__text_line( 'font-size=', font_size )
+    nopt = 2
+
     if ( present(color) ) then
-      ! call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'   &
-      !                                  //' font-size="'//trim(r2s(font_size))//'"'  &
-      !                                  //' fill="'//trim(color)//'">' )
-      str_fill_color = 'fill=' // QUOTE // trim(color) // QUOTE
-      call write_out( this, '<text'                            &
-                             // SPACE // trim(str_text_pos)    &
-                             // SPACE // trim(str_font_size)   &
-                             // SPACE // trim(str_fill_color)  &
-                             // SPACE // '>' )
-    else
-      str_fill_color = 'fill=' // QUOTE // 'black' // QUOTE
-      call write_out( this, '<text'                            &
-                             // SPACE // trim(str_text_pos)    &
-                             // SPACE // trim(str_font_size)   &
-                             // SPACE // trim(str_fill_color)  &
-                             // SPACE // '>' )                                       
-
+      nopt += 1
+      str(nopt) = 'fill=' // QUOTE // trim(color) // QUOTE
     end if
-    call write_out( this, trim(string) )
+
+    if ( present(text_anchor) ) then
+      nopt += 1
+      str(nopt) = 'ftext-anchor=' // QUOTE // trim(text_anchor) // QUOTE
+    end if
+
+    str_all = ''
+    do n = 1, nopt
+      str_all = trim(str_all) // trim(str(n)) // ' '
+    end do
+
+    call write_out( this, '<text ' // trim(str_all) // '>' )
     call write_out( this, '</text>' )
 
   end subroutine svglib__text
