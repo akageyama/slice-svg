@@ -1,11 +1,16 @@
 program main
   use const_base_m
   use svglib_m
+  use sketch_m
   use slice_m
   implicit none
 
   type(svglib_t) :: fig01, fig02, fig03
   type(slice__scalar_t) :: prs
+
+  type(sketch_t) :: fig1
+  type(sketch_pos_t) :: cross_section_lower_left
+  type(sketch_pos_t) :: cross_section_upper_right
 
   real :: window_width = 1200.0
   real :: window_height = 1000.0
@@ -30,6 +35,23 @@ program main
 
   call const_base__check
 
+  cross_section_lower_left.u = umin
+  cross_section_lower_left.v = vmin
+  cross_section_upper_right.u = umax
+  cross_section_upper_right.v = vmax
+
+  call fig1.initialize( cross_section_lower_left,     &
+                        cross_section_upper_right,    &
+                        screen_width_in_pixel=800.0,           &
+                        title='fig1',                 &
+                        filename='test1.svg' )
+
+  call fig1.group_begin( line_width_in_pixel=2.0 )
+  call fig1.group_end
+
+  call fig1.finalize
+
+  
   du = (umax-umin)/(NU-1)
   dv = (vmax-vmin)/(NV-1)
 
@@ -41,6 +63,7 @@ program main
     end do
   end do
 
+  
   
   xmin = 0.0
   ymin = 0.0

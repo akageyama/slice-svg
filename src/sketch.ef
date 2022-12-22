@@ -27,28 +27,100 @@ module sketch_m
     type(svglib_t) :: svglib
   contains
     procedure :: initialize => sketch__initialize
+    procedure :: finalize => sketch__finalize
     procedure :: to_screen_pos => sketch__to_screen_pos
-    procedure :: open => sketch__open
+    procedure :: group_begin => sketch__group_begin
+    procedure :: group_end => sketch__group_end
   end type sketch_t
 
 
 contains
 
-  subroutine sketch__open( this )
+
+
+  subroutine sketch__group_begin( this, line_type,            &
+                                        line_width_in_pixel,  &
+                                        line_color,           &
+                                        line_opacity,         &
+                                        fill_color,           &
+                                        fill_opacity )
+    class(sketch_t) <io> :: this
+    char(len=6) <optin> :: line_type  ! 'dotted' or
+                                      ! 'dashed'
+    real <optin> :: line_width_in_pixel
+    real <optin> :: line_opacity
+    type(color_t) <optin> :: line_color
+    type(color_t) <optin> :: fill_color
+    real <optin> :: fill_opacity
+
+    integer :: nop ! number of options
+    integer <const> :: MAX_NOP = 20
+    char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
+    char(len=SVGLIB__BSL*MAX_NOP) :: str_long
+    integer :: n
+
+    call iClear_str
+
+    if ( present(line_color) ) then
+      nop += 1
+      str(nop) = ' line-color=' // line_color.to_code()
+    end if
+
+    if ( present(fill_color) ) then
+      nop += 1
+      str(nop) = ' fill-color=' // fill_color.to_code()
+    end if
+
+    if ( present(line_width_in_pixel) ) then
+      nop += 1
+      str(nop) = svglib__text_line( ' line-width=', line_width_in_pixel )
+    end if
+
+    if ( present(line_opacity) ) then
+      nop += 1
+      str(nop) = svglib__text_line( ' line-opacity=', line_opacity )
+    end if    
+
+    if ( present(fill_opacity) ) then
+      nop += 1
+      str(nop) = svglib__text_line( ' fill-opacity=', fill_opacity )
+    end if    
+
+    if ( present(line_type) ) then
+      nop += 1
+      select case (line_type)
+        case ('dotted')
+          str(nop) = ' stroke-width="5 5"'
+        case ('dashed')
+          str(nop) = ' stroke-width="10 5"'
+        case default
+          call ut__fatal( '__MODFUNC__: case error.' )
+      end select
+    end if    
+
+    if ( nop > 0 ) then
+      str_long = ''
+      do n = 1, nop
+        str_long = trim(str_long) // str(n)
+      end do
+      call this.svglib.group_begin( trim(str_long) )
+    end if
+
+  contains
+
+    subroutine iClear_str
+      nop = 0
+      str(:) = ''
+    end subroutine iClear_str
+
+  end subroutine sketch__group_begin
+
+
+  subroutine sketch__group_end( this )
     class(sketch_t) <io> :: this
 
-    call this.svglib.open( this.filename,  &
-                           this.screen_size.width,  &
-                           this.screen_size.height )
-
-  end subroutine sketch__open
-
-
-  subroutine sketch__close( this )
-    class(sketch_t) <in> :: this
-
-    call this.svglib.close
-  end subroutine sketch__close
+    call this.svglib.group_end
+  end subroutine sketch__group_end
 
 
   subroutine sketch__line( this, u1, v1,  &
@@ -190,12 +262,24 @@ contains
     this.screen_size.height = draw_area_height_in_pixel  &
                             + 2*this.screen_size.margin_y
 
-    this.dxdu = this.screen_size.width / draw_area_width_in_phys   
+    this.dxdu = this.screen_size.width  / draw_area_width_in_phys   
     this.dydv = this.screen_size.height / draw_area_height_in_phys
 
     call ut__assert( this.dxdu > 0.0 .and. &
                      this.dydv > 0.0,      &
                      '__MODFUNC__: Something is strange.' )
+
+    call this.svglib.open( this.filename,           &
+                           this.screen_size.width,  &
+                           this.screen_size.height )
+
   end subroutine sketch__initialize
+
+
+  subroutine sketch__finalize( this )
+    class(sketch_t) <in> :: this
+
+    call this.svglib.close
+  end subroutine sketch__finalize
 
 end module sketch_m

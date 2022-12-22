@@ -7,6 +7,8 @@ module svglib_m
   use fileut_m
   implicit none
   private
+  public :: svglib__text_line
+  public :: SVGLIB__BSL
 
   type, public :: svglib_t
     char(len=300) :: file_name
@@ -25,16 +27,18 @@ module svglib_m
 
 
 
-  interface text_line
+  interface svglib__text_line
      module procedure text_line_str_i,                  &
                       text_line_str_r,                  &
                       text_line_s1_r1_s2_r2,            &
                       text_line_str_r1_r2_r3_r4,        &
                       text_line_s1_r1_s2_r2_s3_r3_s4_r4
-  end interface text_line
+  end interface svglib__text_line
 
   char(len=1) <const> :: QUOTE = '"'
   char(len=1) <const> :: SPACE = ' '
+  integer <const> :: SVGLIB__BSL = 100  ! Basic text string length
+                                        ! e.g., '<line = "... >'
 
 contains
 
@@ -52,7 +56,7 @@ contains
   function text_line_str_r( string, r ) result(line)
     char(len=*) <in> :: string
     real <in> :: r  ! real value
-    char(len=200) :: line
+    char(len=SVGLIB__BSL) :: line
 
     write(line, "(a)") trim(string)//QUOTE//trim(r2s(r))//QUOTE
   end function text_line_str_r
@@ -62,7 +66,7 @@ contains
                                   s2, r2) result(line)
     char(len=*) <in> :: s1, s2
     real <in> :: r1, r2
-    char(len=200) :: line
+    char(len=SVGLIB__BSL) :: line
 
     write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
               //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE
@@ -75,7 +79,7 @@ contains
                                               s4, r4 ) result(line)
     char(len=*) <in> :: s1, s2, s3, s4
     real <in> :: r1, r2, r3, r4
-    char(len=200) :: line
+    char(len=SVGLIB__BSL) :: line
 
     write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
               //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE   &
@@ -88,7 +92,7 @@ contains
   function text_line_str_r1_r2_r3_r4( string, r1, r2, r3, r4 ) result(line)
     char(len=*) <in> :: string
     real <in> :: r1, r2, r3, r4
-    char(len=200) :: line
+    char(len=SVGLIB__BSL) :: line
 
     write(line, "(a)") trim(string)//QUOTE//trim(r2s(r1))   &
                                    //SPACE//trim(r2s(r2))   &
@@ -101,7 +105,7 @@ contains
   function text_line_str_i( string, val ) result(line)
     char(len=*) <in> :: string
     integer <in> :: val
-    char(len=200) :: line
+    char(len=SVGLIB__BSL) :: line
 
     write(line, "(a,a,i0,a)") trim(string), QUOTE, val, QUOTE
   end function text_line_str_i
@@ -164,11 +168,13 @@ contains
     real <in> :: width,  height
 
     char(len=*) <const> :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
-    char(len=200) :: str_width, str_height, str_viewbox
+    char(len=SVGLIB__BSL) :: str_width,   &
+                             str_height,  &
+                             str_viewbox
 
-    str_width   = text_line( 'width=',  width )
-    str_height  = text_line( 'height=', height )
-    str_viewbox = text_line( 'viewBox=', 0.0, 0.0, width, height )
+    str_width   = svglib__text_line( 'width=',  width )
+    str_height  = svglib__text_line( 'height=', height )
+    str_viewbox = svglib__text_line( 'viewBox=', 0.0, 0.0, width, height )
 
     call write_out( this, '<svg ' // STR_XMLNS          &
                          // SPACE // trim(str_width)    &
@@ -190,10 +196,11 @@ contains
     real :: viewbox_lowerright_x, viewbox_lowerright_y
     real :: viewbox_width, viewbox_height
 
-    char(len=200) :: str_viewbox, str_markerWidth, str_markerHeight
-    char(len=200) :: str_refX = 'refX="0.0"'
-    char(len=200) :: str_refY = 'refY="0.0"'
-    char(len=200) :: str_line_start_finish, str_stroke_width
+    char(len=SVGLIB__BSL) :: str_viewbox
+    char(len=SVGLIB__BSL) :: str_markerWidth, str_markerHeight
+    char(len=SVGLIB__BSL) :: str_line_start_finish, str_stroke_width
+    char(len=SVGLIB__BSL) :: str_refX = 'refX="0.0"'
+    char(len=SVGLIB__BSL) :: str_refY = 'refY="0.0"'
 
     !!>
 
@@ -229,12 +236,12 @@ contains
     viewbox_width = viewbox_lowerright_x - viewbox_upperleft_x
     viewbox_height = viewbox_lowerright_y - viewbox_upperleft_y
 
-    str_viewbox = text_line( 'viewBox=', viewbox_upperleft_x,   &
-                                         viewbox_upperleft_y,   &
-                                         viewbox_width,         &
-                                         viewbox_height )
-    str_markerWidth  = text_line(' markerWidth=',  viewbox_width )
-    str_markerHeight = text_line(' markerHeight=', viewbox_height )
+    str_viewbox = svglib__text_line( 'viewBox=', viewbox_upperleft_x,   &
+                                                 viewbox_upperleft_y,   &
+                                                 viewbox_width,         &
+                                                 viewbox_height )
+    str_markerWidth  = svglib__text_line(' markerWidth=',  viewbox_width )
+    str_markerHeight = svglib__text_line(' markerHeight=', viewbox_height )
 
     call write_out( this, '<marker'                             &
                           // SPACE // trim(str_viewbox)         &
@@ -248,11 +255,11 @@ contains
                           // SPACE // 'orient="auto"'           &
                           // SPACE // '>' )                        
 
-    str_line_start_finish = text_line( 'x1=', px,  &
-                                       'y1=', py,  &
-                                       'x2=', qx,  &
-                                       'y2=', qy )
-    str_stroke_width = text_line( 'stroke-width=', 2 )
+    str_line_start_finish = svglib__text_line( 'x1=', px,  &
+                                               'y1=', py,  &
+                                               'x2=', qx,  &
+                                               'y2=', qy )
+    str_stroke_width = svglib__text_line( 'stroke-width=', 2 )
 
     ! memo: indent
     call write_out( this, '  <line'                                  &
@@ -344,7 +351,6 @@ contains
 
     call print_footer( this )
     call fileut__close( this.file_unit )
-
   end subroutine svglib__close
 
 
@@ -378,9 +384,9 @@ contains
     real <in> :: stroke_width
     char(len=*) <optin> :: marker_start, marker_end
 
-    char(len=200) :: str_line_start_finish
-    char(len=200) :: str_line_stroke, str_line_stroke_width
-    char(len=200) :: str_marker_start, str_marker_end
+    char(len=SVGLIB__BSL) :: str_line_start_finish
+    char(len=SVGLIB__BSL) :: str_line_stroke, str_line_stroke_width
+    char(len=SVGLIB__BSL) :: str_marker_start, str_marker_end
     integer :: unit
 
     unit = this.file_unit
@@ -391,12 +397,12 @@ contains
           marker-end="url(#arrow-blue)" />  
     !!<          
 
-    str_line_start_finish = text_line( 'x1=', x1,  &
-                                       'y1=', y1,  &
-                                       'x2=', x2,  &
-                                       'y2=', y2 )
+    str_line_start_finish = svglib__text_line( 'x1=', x1,  &
+                                               'y1=', y1,  &
+                                               'x2=', x2,  &
+                                               'y2=', y2 )
     str_line_stroke = 'stroke=' // QUOTE // trim(stroke) // QUOTE
-    str_line_stroke_width = text_line( 'stroke-width=', stroke_width )
+    str_line_stroke_width = svglib__text_line( 'stroke-width=', stroke_width )
 
     if ( present(marker_start) ) then
       str_marker_start = 'marker-start=' // QUOTE               &
@@ -471,10 +477,12 @@ integer :: i
     char(len=*) <optin> :: text_anchor
     real <optin> :: stroke_width
 
-    char(len=200) :: str_text_pos, str_font_size, str_fill_color
+    char(len=SVGLIB__BSL) :: str_text_pos,    &
+                             str_font_size,   &
+                             str_fill_color
 
-    str_text_pos = text_line( 'x=', x, 'y=', y )
-    str_font_size = text_line( 'font-size=', font_size )
+    str_text_pos  = svglib__text_line( 'x=', x, 'y=', y )
+    str_font_size = svglib__text_line( 'font-size=', font_size )
     if ( present(color) ) then
       ! call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'   &
       !                                  //' font-size="'//trim(r2s(font_size))//'"'  &
