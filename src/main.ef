@@ -3,21 +3,20 @@ program main
   use svglib_m
   implicit none
 
-  type(svglib_fig_t) :: fig01, fig02, fig03
+  type(svglib_t) :: fig01, fig02, fig03
 
-  integer :: window_width = 1200
-  integer :: window_height = 1000
+  real :: window_width = 1200.0
+  real :: window_height = 1000.0
   integer :: i, j ,k ,l
   real :: x, y, z ,a,b,xmin, ymin, xmax, ymax
   integer <const> :: nverts = 3
-  real, dimension(nverts) :: path_data_x, path_data_y
-
+  real, dimension(nverts) :: path_data_x
+  real, dimension(nverts) :: path_data_y
   xmin = 0.0
   ymin = 0.0
   xmax = window_width
   ymax = window_height
-  
-  
+
   path_data_x(1) = 0.0
   path_data_x(2) = 100.0
   path_data_x(3) = 150.0
@@ -41,11 +40,12 @@ program main
     y = window_height/10.0*j
     call fig01.line( xmin, y, xmax, y, stroke="black", stroke_width=1.0 )
   end do
+  !!>
    call fig01.text( 750.0, 250.0,"width12 arrow if k10= (xy)(100or0).0*(a+1),(100or0).0*a,(vxvy)25.0," ,&
                             font_size=10.0, color = "red",text_anchor = "start", stroke_width = 25.0 )
    call fig01.text( 800.0, 350.0,"green square" ,&
                             font_size=10.0, color = "red",text_anchor = "start", stroke_width = 25.0 )  
-  
+  !!<
   do k = 0,10
    a = real(k)
    if (mod(k,2)==1) then
@@ -54,6 +54,8 @@ program main
    call fig01.arrow( 0.0,100.0*a,25.0,25.0)
    end if
  end do
+
+ !!>
  do l = 0,3
  b = real(l)
  if (mod(l,4)==0) then
@@ -67,6 +69,7 @@ program main
 
  end if
  end do
+ !!<
 
 !call fig01.polygon()
 ! subroutine svglib__polygon2( this,  &
@@ -77,7 +80,7 @@ program main
   !                              stroke_width,  &
   !                              fill, &
   !                              fill_opacity )
- call fig01.polygon2(nverts, path_data_x, path_data_y, "yellow", 1.0 ,"yellow", 0.25)
+ call fig01.polygon(nverts, path_data_x, path_data_y, "yellow", 10.0 ,"yellow", 0.25)
 
   call fig01.group_end()
   call fig01.close
