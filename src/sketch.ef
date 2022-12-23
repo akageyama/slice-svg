@@ -378,4 +378,11 @@ contains
     call this.svglib.close
   end subroutine sketch__finalize
 
+
+  ! subroutine sketch__rectangle( this, lower_left,   &
+  !                                     upper_right )
+  !   class(sketch_t) <in> :: this
+  !   type(sketch_pos_t) <in> :: lower_left, upper_right
+
+  ! end subroutine sketch__rectangle
 end module sketch_m
