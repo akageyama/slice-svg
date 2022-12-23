@@ -81,7 +81,8 @@ program main
   !                              stroke_width,  &
   !                              fill, &
   !                              fill_opacity )
- call fig01.polygon(nverts, path_data_x, path_data_y, "yellow", 10.0 ,"yellow", 0.25)
+ !call fig01.path(nverts, path_data_x, path_data_y, "yellow", 10.0 ,"yellow", 0.25)
+ call fig01.polygon(nverts, path_data_x, path_data_y, "green", 10.0 ,"yellow")
 
   call fig01.group_end()
   call fig01.close
