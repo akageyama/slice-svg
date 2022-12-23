@@ -40,11 +40,12 @@ program main
     y = window_height/10.0*j
     call fig01.line( xmin, y, xmax, y, stroke="black", stroke_width=1.0 )
   end do
+
+   call fig01.text( 750.0, 250.0,"aa" ,&
+                            font_size = 25.0, color = "red")
   !!>
-   call fig01.text( 750.0, 250.0,"width12 arrow if k10= (xy)(100or0).0*(a+1),(100or0).0*a,(vxvy)25.0," ,&
-                            font_size=10.0, color = "red",text_anchor = "start", stroke_width = 25.0 )
    call fig01.text( 800.0, 350.0,"green square" ,&
-                            font_size=10.0, color = "red",text_anchor = "start", stroke_width = 25.0 )  
+                            10.0,"red","start",  25.0 )  
   !!<
   do k = 0,10
    a = real(k)
