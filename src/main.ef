@@ -1,11 +1,10 @@
 program main
+  use color_m
   use const_base_m
-  use svglib_m
   use sketch_m
   use slice_m
   implicit none
 
-  type(svglib_t) :: fig01, fig02, fig03
   type(slice__scalar_t) :: prs
 
   type(sketch_t) :: fig1
@@ -42,16 +41,36 @@ program main
 
   call fig1.initialize( cross_section_lower_left,     &
                         cross_section_upper_right,    &
-                        screen_width_in_pixel=800.0,           &
+                        screen_width_in_pixel=800.0,  &
                         title='fig1',                 &
                         filename='test1.svg' )
 
   call fig1.group_begin( line_width_in_pixel=2.0 )
   call fig1.group_end
 
+  call fig1.text( (umin+umax)/2, vmax,          &
+                  'Hello, world!',              &
+                  font_size_in_pixel=50.0,      &
+                  text_anchor='middle',         &
+                  color=COLOR__CONST.blue )
+
+!  call fig1.line( umin, vmin,   &
+!                  umax, vmax,   &
+!                  width=2.0,    &
+!                  color=COLOR__CONST.magenta )
+
+  call fig1.line( cross_section_upper_right, &
+                  cross_section_lower_left,  &
+                  width=2.0,    &
+                  color=COLOR__CONST.black )
+
+  ! call fig1.rectangle( cross_section_lower_left,  &
+  !                      cross_section_upper_right, &
+  !                      line_width='1.0',          &
+  !                      line_color=COLOR__CONST.gray(0.5)
+  !                      line_type='dashed' )
   call fig1.finalize
 
-  
   du = (umax-umin)/(NU-1)
   dv = (vmax-vmin)/(NV-1)
 
@@ -64,18 +83,10 @@ program main
   end do
 
   
-  
-  xmin = 0.0
-  ymin = 0.0
-  xmax = window_width
-  ymax = window_height
-
-  call fig01.open( 'test.svg', width=window_width, height=window_height )
-  call fig01.group_begin( 'color="blue"' )
-
   call pres.initialize( NU, NV, umin, umax, vmin, vmax, pressure )
   call pres.vis_contour( 1.0 )
 
+!!>
   ! East
   do j = 1, NV
     do i = 1, NU-1
@@ -149,26 +160,5 @@ program main
   end do         
   call pres.finalize
 
-!   do i = 0, 10
-!     x = window_width/10.0 * i
-!     call fig01.line( x, ymin, x, ymax, stroke="black", stroke_width=1.0 )
-!   end do
-!   do j = 0, 10
-!     y = window_height/10.0*j
-!     call fig01.line( xmin, y, xmax, y, stroke="black", stroke_width=1.0 )
-!   end do
-
-
-!   do i = 0, 10
-!   do j = 0, 10
-!     theta += PI/10
-!     x = window_width/10.0 * i
-!     y = window_height/10.0 * j
-!     call fig01.arrow( x, y, 10*cos(theta), 10*sin(theta) )
-! !    call fig01.text( x, y, "test", 40.0, color="red" )
-!     call fig01.text( x, y, "test", 40.0 )
-!   end do
-!   end do
-  call fig01.group_end()
-  call fig01.close
+!!<
 end program main

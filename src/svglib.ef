@@ -340,8 +340,8 @@ contains
     call svglib__line( this, x, y,          &
                        slightly_shifted_x,  &
                        slightly_shifted_y,  &
-                       stroke="none",       &
-                       stroke_width=amaf,   &
+                       width=amaf,          &
+                       color="none",        &
                        marker_start="arrow" )
   end subroutine svglib__arrow
 
@@ -371,22 +371,27 @@ contains
   end subroutine svglib__group_end
 
 
-  subroutine svglib__line( this, x1, y1,  &
-                                 x2, y2,  &
-                                 stroke,  &
-                                 stroke_width,  &
+  subroutine svglib__line( this, x1, y1,        &
+                                 x2, y2,        &
+                                 width,         &
+                                 color,         &
                                  marker_start,  &
                                  marker_end )
     class(svglib_t) <in> :: this
 
     real <in> :: x1, y1, x2, y2
-    char(len=*) <in> :: stroke
-    real <in> :: stroke_width
+    real <in> :: width
+    char(len=*) <optin> :: color
     char(len=*) <optin> :: marker_start, marker_end
 
-    char(len=SVGLIB__BSL) :: str_line_start_finish
-    char(len=SVGLIB__BSL) :: str_line_stroke, str_line_stroke_width
-    char(len=SVGLIB__BSL) :: str_marker_start, str_marker_end
+!    char(len=SVGLIB__BSL) :: str_line_start_finish
+!    char(len=SVGLIB__BSL) :: str_line_stroke, str_line_stroke_width
+!    char(len=SVGLIB__BSL) :: str_marker_start, str_marker_end
+
+    integer :: n, nopt  ! number of options
+    integer <const> :: MAX_NOP = 10
+    char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
+    char(len=SVGLIB__BSL*MAX_NOP) :: str_all
     integer :: unit
 
     unit = this.file_unit
@@ -397,44 +402,43 @@ contains
           marker-end="url(#arrow-blue)" />  
     !!<          
 
-    str_line_start_finish = svglib__text_line( 'x1=', x1,  &
-                                               'y1=', y1,  &
-                                               'x2=', x2,  &
-                                               'y2=', y2 )
-    str_line_stroke = 'stroke=' // QUOTE // trim(stroke) // QUOTE
-    str_line_stroke_width = svglib__text_line( 'stroke-width=', stroke_width )
+    str(1) = svglib__text_line( 'x1=', x1,  &
+                                'y1=', y1,  &
+                                'x2=', x2,  &
+                                'y2=', y2 )
+    str(2) = svglib__text_line( 'stroke-width=', width )
+    
+    nopt = 2
+
+    if ( present( color) ) then
+      nopt += 1
+      str(nopt) = 'stroke=' // QUOTE // trim(color) // QUOTE
+    end if
 
     if ( present(marker_start) ) then
-      str_marker_start = 'marker-start=' // QUOTE               &
-                                         // 'url(#'             &
-                                         // trim(marker_start)  &
-                                         // ')'                 &
-                                         // QUOTE 
-      call write_out( this, '<line'                                   &
-                            // SPACE // trim(str_line_start_finish)   &
-                            // SPACE // trim(str_line_stroke)         &
-                            // SPACE // trim(str_line_stroke_width)   &
-                            // SPACE // trim(str_marker_start)        &
-                            // SPACE // '/>' )
-    else if ( present(marker_end) ) then
-      str_marker_end = 'marker-end=' // QUOTE               &
-                                     // 'url(#'             &
-                                     // trim(marker_end)    &
-                                     // ')'                 &
-                                     // QUOTE 
-      call write_out( this, '<line'                                   &
-                            // SPACE // trim(str_line_start_finish)   &
-                            // SPACE // trim(str_line_stroke)         &
-                            // SPACE // trim(str_line_stroke_width)   &
-                            // SPACE // trim(str_marker_end)          &
-                            // SPACE // '/>' )
-    else
-      call write_out( this, '<line'                                   &
-                            // SPACE // trim(str_line_start_finish)   &
-                            // SPACE // trim(str_line_stroke)         &
-                            // SPACE // trim(str_line_stroke_width)   &
-                            // SPACE // '/>' )
+      nopt += 1
+      str(nopt) = 'marker-start=' // QUOTE               &
+                                  // 'url(#'             &
+                                  // trim(marker_start)  &
+                                  // ')'                 &
+                                  // QUOTE 
     end if
+
+    if ( present(marker_end) ) then
+      nopt += 1
+      str(nopt) = 'marker-end=' // QUOTE               &
+                                // 'url(#'             &
+                                // trim(marker_end)    &
+                                // ')'                 &
+                                // QUOTE 
+    end if
+
+    str_all = ''
+    do n = 1, nopt
+      str_all = trim(str_all) // SPACE // str(n)
+    end do
+
+    call write_out( this, '<line ' // trim(str_all) // '/>' )
 
   end subroutine svglib__line
 
@@ -467,27 +471,28 @@ integer :: i
   end subroutine svglib__open
 
 
-  subroutine svglib__text( this, x, y,          &
-                                 string,        &
-                                 font_size,     &
-                                 color,         &
-                                 text_anchor,   &
+  subroutine svglib__text( this, x, y,                &
+                                 string,              &
+                                 font_size_in_pixel,  &
+                                 color,               &
+                                 text_anchor,         &
                                  stroke_width )
-    class(svglib_t) <in> :: this
+    class(svglib_t) <io> :: this
     real <in> :: x, y
     char(len=*) <in> :: string
-    real <in> :: font_size
+    real <in> :: font_size_in_pixel
     char(len=*) <optin> :: color
     char(len=*) <optin> :: text_anchor
     real <optin> :: stroke_width
 
     integer :: n, nopt   ! number of options
-    integer :: MAX_NOP = 10  ! max
-    char(len=SVGLIB__BSL), dimension(NAX_NOP) :: str
+    integer <const> :: MAX_NOP = 10  ! max
+    char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
     char(len=SVGLIB__BSL*MAX_NOP) :: str_all
 
     str(1) = svglib__text_line( 'x=', x, 'y=', y )
-    str(2) = svglib__text_line( 'font-size=', font_size )
+    str(2) = svglib__text_line( 'font-size=',       &
+                                 font_size_in_pixel )
     nopt = 2
 
     if ( present(color) ) then
@@ -497,15 +502,18 @@ integer :: i
 
     if ( present(text_anchor) ) then
       nopt += 1
-      str(nopt) = 'ftext-anchor=' // QUOTE // trim(text_anchor) // QUOTE
+      str(nopt) = 'text-anchor=' // QUOTE // trim(text_anchor) // QUOTE
     end if
 
     str_all = ''
     do n = 1, nopt
-      str_all = trim(str_all) // trim(str(n)) // ' '
+      str_all = trim(str_all) // SPACE // trim(str(n))
     end do
 
-    call write_out( this, '<text ' // trim(str_all) // '>' )
+    call write_out( this, '<text' // trim(str_all) // '>' )
+      call indent_push( this )
+        call write_out( this, string )
+      call indent_pop( this )
     call write_out( this, '</text>' )
 
   end subroutine svglib__text

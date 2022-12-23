@@ -101,10 +101,10 @@ endif
 
 # default target
 
-view: test.svg
-	open test.svg
+view: test1.svg
+	open test1.svg
 
-test.svg: test
+test1.svg: test
 	./test
 
 rumme: test

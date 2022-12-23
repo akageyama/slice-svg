@@ -31,10 +31,94 @@ module sketch_m
     procedure :: to_screen_pos => sketch__to_screen_pos
     procedure :: group_begin => sketch__group_begin
     procedure :: group_end => sketch__group_end
+    procedure :: text => sketch__text
+    procedure, private :: line_r4
+    procedure, private :: line_pos2
+    generic :: line => line_r4, line_pos2
   end type sketch_t
 
 
 contains
+
+
+  subroutine line_r4( this, u1, v1,  &
+                            u2, v2,  &
+                            width,   &
+                            color,   &
+                            no_draw )
+    class(sketch_t) <in> :: this
+    real <in> :: u1, v1 ! line start in simulation coords.
+    real <in> :: u2, v2 ! line finish in simulation coords.
+    real <in> :: width
+    type(color_t) <optin> :: color
+    logical <optin> :: no_draw
+
+    char(len=7) :: color_code
+
+    type(screen_pos_t) :: start, finish
+
+    start  = this.to_screen_pos( sketch_pos_t(u1,v1) )
+    finish = this.to_screen_pos( sketch_pos_t(u2,v2) )
+
+    color_code = ''  ! Initialization. Will be used below.
+
+    if ( present(no_draw) ) then
+      if ( no_draw ) then
+        color_code = 'none'
+      end if
+    else if ( present(color) ) then
+      color_code = color.to_code()
+    end if
+
+    if ( color_code /= '' ) then
+      call this.svglib.line( start.x,  start.y,   &
+                             finish.x, finish.y,  &
+                             color=color_code,    &
+                             width=width )
+    else 
+      call this.svglib.line( start.x,  start.y,   &
+                             finish.x, finish.y,  &
+                             width=width )
+    end if
+
+  end subroutine line_r4
+
+
+  subroutine line_pos2( this, pos1,    &
+                              pos2,    &
+                              width,   &
+                              color,   &
+                              no_draw )
+    class(sketch_t) <in> :: this
+    type(sketch_pos_t) <in> :: pos1 ! line start in simulation coords.
+    type(sketch_pos_t) <in> :: pos2 ! line finish in simulation coords.
+    real <in> :: width
+    type(color_t) <optin> :: color
+    logical <optin> :: no_draw
+
+    if ( present(color) .and. present(no_draw) ) then
+      call line_r4( this, pos1.u, pos1.v,  &
+                          pos2.u, pos2.v,  &
+                          width=width,     &
+                          color=color,     &
+                          no_draw=no_draw )
+    else if ( present(color) ) then
+      call line_r4( this, pos1.u, pos1.v,  &
+                          pos2.u, pos2.v,  &
+                          width=width,     &
+                          color=color )
+    else if ( present(no_draw) ) then
+      call line_r4( this, pos1.u, pos1.v,  &
+                          pos2.u, pos2.v,  &
+                          width=width,     &
+                          no_draw=no_draw )
+    else 
+      call line_r4( this, pos1.u, pos1.v,  &
+                          pos2.u, pos2.v,  &
+                          width=width )
+    end if
+
+  end subroutine line_pos2
 
 
   subroutine sketch__group_begin( this, line_type,            &
@@ -128,64 +212,37 @@ contains
                                  text_anchor,         &
                                  color )
 
+    class(sketch_t) <io> :: this
     real <in> :: u, v
     char(len=*) <in> :: string
     real <in> :: font_size_in_pixel
     char(len=*) <in> :: text_anchor   ! start/ middle / end
-    type(clor_t) <optin> :: color
-
-    type(screen_pos_t) :: pos
-    char(len=SVGLIB__BSL) :: str_text_anchor
-
-    pos = this.to_screen_pos( sketch_pos_t(u,v) )
-    
-    if ( present(text_anchor) ) then
-      str_text_anchor = text_anchor
-    else 
-      str_text_anchor = 'middle'  ! default
-    end if
-
-    if ( present(color) ) then
-      color_code = color.to_code()
-      call this.svglib.text( pos.u, pos.v,        &
-                             string,              &
-                             font_size_in_pixel,  &
-                             color_code )
-    else
-      call this.svglib.text( pos.u, pos.v,        &
-                             string,              &
-                             font_size_in_pixel )
-    end if
-  end subroutine sketch__text
-
-  subroutine sketch__line( this, u1, v1,  &
-                                 u2, v2,  &
-                                 width,   &
-                                 color )
-    class(sketch_t) <in> :: this
-    real <in> :: u1, v1 ! line start position in simulation coords.
-    real <in> :: u2, v2 ! line finish position in simulation coords.
-    real <in> :: width
     type(color_t) <optin> :: color
 
+    type(screen_pos_t) :: pos
     char(len=7) :: color_code
 
-    type(screen_pos_t) :: start, finish
+    call ut__assert( text_anchor == 'start'  .or.     &
+                     text_anchor == 'middle' .or.     &
+                     text_anchor == 'end',            &
+                     '__MODFUNC__: text_anchor error.' )
 
-    start  = this.to_screen_pos( sketch_pos_t(u1,v1) )
-    finish = this.to_screen_pos( sketch_pos_t(u2,v2) )
-
+    pos = this.to_screen_pos( sketch_pos_t(u,v) )
+   
     if ( present(color) ) then
       color_code = color.to_code()
+      call this.svglib.text( pos.x, pos.y,            &
+                             string,                  &
+                             font_size_in_pixel,      &
+                             color=color_code,        &
+                             text_anchor=text_anchor )
     else
-      color_code = COLOR__CONST.black.to_code()
+      call this.svglib.text( pos.x, pos.y,        &
+                             string,              &
+                             font_size_in_pixel,  &
+                             text_anchor=text_anchor )
     end if
-    call this.svglib.line( start.x,  start.y,   &
-                           finish.x, finish.y,  &
-                           color_code,          &
-                           width )
-
-  end subroutine sketch__line
+  end subroutine sketch__text
 
 
   function sketch__to_screen_pos( this, sketch_pos ) result(screen_pos)
@@ -219,6 +276,11 @@ contains
     my = this.screen_size.margin_y
     screen_pos.x = mx + this.dxdu*delta_u
     screen_pos.y = my + this.dydv*delta_v
+!debugp this.v_max, sketch_pos.v
+!debugp mx, my
+!debugp this.dxdu, this.dydv
+!debugp delta_u, delta_v
+!debugp screen_pos.x, screen_pos.y
   end function sketch__to_screen_pos
 
 
@@ -240,15 +302,14 @@ contains
     real :: draw_area_width_in_pixel,  &
             draw_area_height_in_pixel
     real :: aspect_ratio
-    real :: u_max, u_min, v_max, v_min
 
-    u_max = upper_right_in_phys.u
-    u_min =  lower_left_in_phys.u
-    v_max = upper_right_in_phys.v
-    v_min =  lower_left_in_phys.v
+    this.u_max = upper_right_in_phys.u
+    this.u_min =  lower_left_in_phys.u
+    this.v_max = upper_right_in_phys.v
+    this.v_min =  lower_left_in_phys.v
 
-    call ut__assert( u_max > u_min .and.  &
-                     v_max > v_min,       &
+    call ut__assert( this.u_max > this.u_min .and.  &
+                     this.v_max > this.v_min,       &
                      '__MODFUNC__: size error.' )
 
     this.title = title
@@ -280,8 +341,8 @@ contains
                       (in pixels)
     !!<
 
-    draw_area_width_in_phys = u_max - u_min
-    draw_area_height_in_phys = v_max - v_min
+    draw_area_width_in_phys  = this.u_max - this.u_min
+    draw_area_height_in_phys = this.v_max - this.v_min
     aspect_ratio = draw_area_height_in_phys  &
                  / draw_area_width_in_phys
 
@@ -297,8 +358,8 @@ contains
     this.screen_size.height = draw_area_height_in_pixel  &
                             + 2*this.screen_size.margin_y
 
-    this.dxdu = this.screen_size.width  / draw_area_width_in_phys   
-    this.dydv = this.screen_size.height / draw_area_height_in_phys
+    this.dxdu = draw_area_width_in_pixel / draw_area_width_in_phys
+    this.dydv = this.dxdu
 
     call ut__assert( this.dxdu > 0.0 .and. &
                      this.dydv > 0.0,      &
