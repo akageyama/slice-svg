@@ -1,20 +1,16 @@
+!!>
+    Note: svglib_fig_t ==> svglib_t
+!!<
 module svglib_m
+  use color_m
   use const_base_m
   use fileut_m
   implicit none
   private
 
-  type color_rgb_t
-    real :: r, g, b
-  end type color_rgb_t
-
-  type color_hsv_t
-    real :: hue, sat, val
-  end type color_hsv_t
-
-  type, public :: svglib_fig_t
+  type, public :: svglib_t
     char(len=300) :: file_name
-    integer :: width, height
+    real :: width, height
     integer :: file_unit
     integer :: indent_level
   contains
@@ -25,10 +21,22 @@ module svglib_m
     procedure :: line => svglib__line
     procedure :: arrow => svglib__arrow
     procedure :: text => svglib__text
-    !procedure :: polygon => svglib__polygon
-    procedure :: polygon2 => svglib__polygon2
-  end type svglib_fig_t
+    procedure :: polygon => svglib__polygon
+  end type svglib_t
 
+
+
+  interface text_line
+     module procedure text_line_str_i,                   &
+                      text_line_str_r,                   &
+                      text_line_s1_r1_s2_r2,             &
+                      text_line_str_r1_r2_r3_r4,         &
+                      text_line_s1_r1_s2_r2_s3_r3_s4_r4, &
+                      text_line_s1_r1_r2
+  end interface text_line
+
+  char(len=1) <const> :: QUOTE = '"'
+  char(len=1) <const> :: SPACE = ' '
 
 contains
 
@@ -42,87 +50,73 @@ contains
     end if
   end subroutine assert
   
-
-  function normalized_value_to_color_code( value ) result(color_code)
-    real <in> :: value
-    type(color_rgb_t) :: rgb
-    type(color_hsv_t) :: hsv
-    char(len=7) :: color_code ! '#FFFFFF' for white
-
-    call assert( value >= 0.0 .and. value <= 1.0,  &
-                 'Normalized value out of range.' )
-
-    hsv.hue = 0.7 * value
-    hsv.sat = 1.0
-    hsv.val = 1.0
-
-   rgb = iConvert_hsv_to_rgb( hsv )
-   color_code = iConvert_rgb_to_code( rgb )
-
-  contains
-
-    function iConvert_hsv_to_rgb( hsv ) result (rgb)
-      type(color_hsv_t) <in> :: hsv
-      type(color_rgb_t) :: rgb
-      !!>
-          Copied from VFIVE.
-      !!<
-      integer :: hue_
-      real :: local_, diff_, m, n, k;
-
-      local_ = hsv.hue * 360.0;
-      local_ = mod(local_,360.0)
-      local_ = local_ - 360.0;
-      local_ = local_ / 60.0;
-      hue_ = int(local_);
-      diff_ = local_ - hue_;
-      m = hsv.val * (1.0 - hsv.sat);
-      n = hsv.val * (1.0 - hsv.sat * diff_);
-      k = hsv.val * (1.0 - hsv.sat * (1.0 - diff_));
-
-      select case (hue_) 
-        case (0)
-	        rgb.r = hsv.val
-	        rgb.g = k
-	        rgb.b = m
-        case (1)
-          rgb.r = n
-          rgb.g = hsv.val
-          rgb.b = m
-        case (2)
-          rgb.r = m
-          rgb.g = hsv.val
-          rgb.b = k
-        case (3)
-          rgb.r = m
-          rgb.g = n
-          rgb.b = hsv.val
-        case (4)
-          rgb.r = k
-          rgb.g = m
-          rgb.b = hsv.val
-        case (5)
-          rgb.r = hsv.val
-          rgb.g = m
-          rgb.b = n
-      end select
-    end function iConvert_hsv_to_rgb
-
-    function iConvert_rgb_to_code( rgb ) result(code) 
-      type(color_rgb_t) <in> :: rgb
-      char(len=7) :: code
-
-      integer :: r, g, b
-
-      r = nint(255*rgb.r)
-      g = nint(255*rgb.g)
-      b = nint(255*rgb.b)
-
-      write(code,"('#'3(Z2.2))") r, g, b
-    end function iConvert_rgb_to_code
-
-  end function normalized_value_to_color_code
   
+  function text_line_str_r( string, r ) result(line)
+    char(len=*) <in> :: string
+    real <in> :: r  ! real value
+    char(len=200) :: line
+
+    write(line, "(a)") trim(string)//QUOTE//trim(r2s(r))//QUOTE
+  end function text_line_str_r
+
+  
+  function text_line_s1_r1_s2_r2( s1, r1,   &
+                                  s2, r2) result(line)
+    char(len=*) <in> :: s1, s2
+    real <in> :: r1, r2
+    char(len=200) :: line
+
+    write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
+              //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE
+  end function text_line_s1_r1_s2_r2
+
+  
+  function text_line_s1_r1_s2_r2_s3_r3_s4_r4( s1, r1,   &
+                                              s2, r2,   &
+                                              s3, r3,   &
+                                              s4, r4 ) result(line)
+    char(len=*) <in> :: s1, s2, s3, s4
+    real <in> :: r1, r2, r3, r4
+    char(len=200) :: line
+
+    write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
+              //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE   &
+              //SPACE//trim(s3)//QUOTE//trim(r2s(r3))//QUOTE   &
+              //SPACE//trim(s4)//QUOTE//trim(r2s(r4))//QUOTE
+  end function text_line_s1_r1_s2_r2_s3_r3_s4_r4
+
+
+
+  function text_line_str_r1_r2_r3_r4( string, r1, r2, r3, r4 ) result(line)
+    char(len=*) <in> :: string
+    real <in> :: r1, r2, r3, r4
+    char(len=200) :: line
+
+    write(line, "(a)") trim(string)//QUOTE//trim(r2s(r1))   &
+                                   //SPACE//trim(r2s(r2))   &
+                                   //SPACE//trim(r2s(r3))   &
+                                   //SPACE//trim(r2s(r4))   &
+                                   //QUOTE
+  end function text_line_str_r1_r2_r3_r4
+
+  function text_line_s1_r1_r2( s1, r1, r2) result(line)
+    char(len=*) <in> :: s1
+    real <in> :: r1, r2
+    char(len=200) :: line
+
+    write(line, "(a)") trim(s1)//SPACE//trim(r2s(r1))  &
+                       //SPACE//trim(r2s(r2))
+  end function text_line_s1_r1_r2
+
+  
+  function text_line_str_i( string, val ) result(line)
+    char(len=*) <in> :: string
+    integer <in> :: val
+    char(len=200) :: line
+
+    write(line, "(a,a,i0,a)") trim(string), QUOTE, val, QUOTE
+  end function text_line_str_i
+
 
   function get_date_and_time() result(string)
     ! copied from ut.ef
@@ -150,7 +144,7 @@ contains
 
 
   subroutine indent_pop( this )
-    type(svglib_fig_t) <io> :: this
+    type(svglib_t) <io> :: this
 
     if ( this.indent_level > 0 ) then
       this.indent_level -= 1
@@ -161,49 +155,56 @@ contains
 
 
   subroutine indent_push( this )
-    type(svglib_fig_t) <io> :: this
+    type(svglib_t) <io> :: this
 
     this.indent_level += 1
   end subroutine indent_push
 
 
-
   subroutine print_footer( this )
-    type(svglib_fig_t) <in> :: this
+    type(svglib_t) <in> :: this
 
     call write_out( this, ' ' )
     call write_out( this, '</svg>' )
   end subroutine print_footer
 
 
+
   subroutine print_header( this, width, height )
-    type(svglib_fig_t) <in> :: this
-    integer <in> :: width,  height
+    type(svglib_t) <in> :: this
+    real <in> :: width,  height
 
-    char(len=*), parameter :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
-    char(len=100) :: str_width, str_height, str_viewbox
+    char(len=*) <const> :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
+    char(len=200) :: str_width, str_height, str_viewbox
 
-    write(str_width, "(a, i0, a)") 'width="', width, '"'
-    write(str_height, "(a, i0, a)") 'height="', height, '"'
-    write(str_viewbox, "(a, i0, 1x, i0, 1x, i0, 1x, i0, a)") 'viewBox="', 0, 0, width, height, '">'
+    str_width   = text_line( 'width=',  width )
+    str_height  = text_line( 'height=', height )
+    str_viewbox = text_line( 'viewBox=', 0.0, 0.0, width, height )
 
-    call write_out( this, '<svg '//STR_XMLNS//' '//trim(str_width)//' '//trim(str_height)//' '//trim(str_viewbox) )
-    call write_out( this, '<!--' )
-    call write_out( this, '   SVG file generated by __MODULE__' )
-    call write_out( this, '                      on '//get_date_and_time() )
-    call write_out( this, '-->' )
+    call write_out( this, '<svg ' // STR_XMLNS          &
+                         // SPACE // trim(str_width)    &
+                         // SPACE // trim(str_height)   &
+                         // SPACE // trim(str_viewbox)  &
+                         // SPACE // '>' )
+    call write_out( this, '<!-- SVG file generated by __MODULE__ on ' &
+                           // get_date_and_time()                     &
+                           // '-->' )
   end subroutine print_header
 
 
-
   subroutine print_marker_arrow( this, scale )
-    type(svglib_fig_t) <in> :: this
+    type(svglib_t) <in> :: this
     integer <in> :: scale
 
     real :: buffer, px, py, qx, qy, rx, ry, sx, sy, tx, ty
     real :: viewbox_upperleft_x, viewbox_upperleft_y
     real :: viewbox_lowerright_x, viewbox_lowerright_y
     real :: viewbox_width, viewbox_height
+
+    char(len=200) :: str_viewbox, str_markerWidth, str_markerHeight
+    char(len=200) :: str_refX = 'refX="0.0"'
+    char(len=200) :: str_refY = 'refY="0.0"'
+    char(len=200) :: str_line_start_finish, str_stroke_width
 
     !!>
 
@@ -239,25 +240,55 @@ contains
     viewbox_width = viewbox_lowerright_x - viewbox_upperleft_x
     viewbox_height = viewbox_lowerright_y - viewbox_upperleft_y
 
+    str_viewbox = text_line( 'viewBox=', viewbox_upperleft_x,   &
+                                         viewbox_upperleft_y,   &
+                                         viewbox_width,         &
+                                         viewbox_height )
+    str_markerWidth  = text_line(' markerWidth=',  viewbox_width )
+    str_markerHeight = text_line(' markerHeight=', viewbox_height )
 
-    call write_out( this, '<marker'//' viewBox="'  &
-                        //trim(r2s(viewbox_upperleft_x))//' '  &
-                        //trim(r2s(viewbox_upperleft_y))//' '  &
-                        //trim(r2s(viewbox_width))//' '  &
-                        //trim(r2s(viewbox_height))//'"'  &
-                        //' markerWidth="'//trim(r2s(viewbox_width))//'"' &
-                        //' markerHeight="'//trim(r2s(viewbox_height))//'"' &
-                        //' refX="'//trim("0.0")//'"'  &
-                        //' refY="'//trim("0.0")//'"'  &
-                        //' stroke="currentcolor"' &
-                        //' fill="currentcolor"' &
-                        //' id="arrow"' &
-                        //' orient="auto">' )
-    call write_out( this, '  <line x1="'//trim(r2s(px))  &
-                              //'" y1="'//trim(r2s(py))  &
-                              //'" x2="'//trim(r2s(qx))  &
-                              //'" y2="'//trim(r2s(qy))  &
-                              //'" stroke-width="2" />' )
+    ! call write_out( this, '<marker'//' viewBox="'  &
+    !                     //trim(r2s(viewbox_upperleft_x))//' '  &
+    !                     //trim(r2s(viewbox_upperleft_y))//' '  &
+    !                     //trim(r2s(viewbox_width))//' '  &
+    !                     //trim(r2s(viewbox_height))//'"'  &
+    !                     //' markerWidth="'//trim(r2s(viewbox_width))//'"' &
+    !                     //' markerHeight="'//trim(r2s(viewbox_height))//'"' &
+    !                     //' refX="'//trim("0.0")//'"'  &
+    !                     //' refY="'//trim("0.0")//'"'  &
+    !                     //' stroke="currentcolor"' &
+    !                     //' fill="currentcolor"' &
+    !                     //' id="arrow"' &
+    !                     //' orient="auto">' )
+    call write_out( this, '<marker'                             &
+                          // SPACE // trim(str_viewbox)         &
+                          // SPACE // trim(str_markerWidth)     &
+                          // SPACE // trim(str_markerHeight)    &
+                          // SPACE // trim(str_refX)            &
+                          // SPACE // trim(str_refY)            &
+                          // SPACE // 'stroke="currentcolor"'   &
+                          // SPACE // 'fill="currentcolor"'     &
+                          // SPACE // 'id="arrow"'              &
+                          // SPACE // 'orient="auto"'           &
+                          // SPACE // '>' )                        
+
+    str_line_start_finish = text_line( 'x1=', px,  &
+                                       'y1=', py,  &
+                                       'x2=', qx,  &
+                                       'y2=', qy )
+    str_stroke_width = text_line( 'stroke-width=', 2 )
+    ! call write_out( this, '  <line x1="'//trim(r2s(px))  &
+    !                           //'" y1="'//trim(r2s(py))  &
+    !                           //'" x2="'//trim(r2s(qx))  &
+    !                           //'" y2="'//trim(r2s(qy))  &
+    !                           //'" stroke-width="2" />' )
+
+    ! memo: indent
+    call write_out( this, '  <line'                                  &
+                             // SPACE // trim(str_line_start_finish) &
+                             // SPACE // trim(str_stroke_width)      &
+                             // SPACE //                             &
+                             '/>' )
     call write_out( this, '  <polygon points="'//trim(r2s(rx))  &
                                           //','//trim(r2s(ry))  &
                                           //' '//trim(r2s(sx))  &
@@ -274,12 +305,12 @@ contains
     real <in> :: val
     char(len=100) :: str
 
-    write(str,"(f0.3)") val
+    write(str,"(f0.2)") val
   end function r2s
 
 
   subroutine write_out( this, line, new_line )
-    type(svglib_fig_t) <in> :: this
+    type(svglib_t) <in> :: this
     char(len=*) <in> :: line
     logical <optin> :: new_line
 
@@ -302,7 +333,7 @@ contains
 
 
   subroutine svglib__arrow( this, x, y, vx, vy )
-    class(svglib_fig_t) <in> :: this
+    class(svglib_t) <in> :: this
     real <in> :: x, y, vx, vy
 
     real <const> :: VERY_SHORT = 0.1 
@@ -312,7 +343,7 @@ contains
     real :: amaf ! arrow_marker_amplification_factor
 
     logical :: first_time_call = .true.
-    integer <const> :: ASCALE=100 ! arrow glyph length scale
+    integer <const> :: ASCALE=10 ! arrow glyph length scale
 
     if (first_time_call) then
       call print_marker_arrow( this, scale=ASCALE )
@@ -346,14 +377,14 @@ contains
     call svglib__line( this, x, y,          &
                        slightly_shifted_x,  &
                        slightly_shifted_y,  &
-                       stroke="none",  &
-                       stroke_width=amaf, &
+                       stroke="none",       &
+                       stroke_width=amaf,   &
                        marker_start="arrow" )
   end subroutine svglib__arrow
 
 
   subroutine svglib__close( this )
-    class(svglib_fig_t) <in> :: this
+    class(svglib_t) <in> :: this
 
     call print_footer( this )
     call fileut__close( this.file_unit )
@@ -362,7 +393,7 @@ contains
 
 
   subroutine svglib__group_begin( this, attribute )
-    class(svglib_fig_t) <io> :: this
+    class(svglib_t) <io> :: this
     char(len=*) <in> :: attribute
 
     write(this.file_unit, *) ''
@@ -372,8 +403,13 @@ contains
 
 
   subroutine svglib__group_end( this )
-    class(svglib_fig_t) <io> :: this
+    class(svglib_t) <io> :: this
+    write(this.file_unit, *) ''
     write(this.file_unit, *) '</g>'
+    !!>
+    call write_out( this, '</g>', new_line = .true.)
+    call write_out( this, '</g>')
+    !!<
     call indent_pop( this )
   end subroutine svglib__group_end
 
@@ -384,13 +420,16 @@ contains
                                  stroke_width,  &
                                  marker_start,  &
                                  marker_end )
-    class(svglib_fig_t) <in> :: this
+    class(svglib_t) <in> :: this
 
     real <in> :: x1, y1, x2, y2
     char(len=*) <in> :: stroke
     real <in> :: stroke_width
     char(len=*) <optin> :: marker_start, marker_end
 
+    char(len=200) :: str_line_start_finish
+    char(len=200) :: str_line_stroke, str_line_stroke_width
+    char(len=200) :: str_marker_start, str_marker_end
     integer :: unit
 
     unit = this.file_unit
@@ -401,56 +440,90 @@ contains
           marker-end="url(#arrow-blue)" />  
     !!<          
 
+    str_line_start_finish = text_line( 'x1=', x1,  &
+                                       'y1=', y1,  &
+                                       'x2=', x2,  &
+                                       'y2=', y2 )
+    str_line_stroke = 'stroke=' // QUOTE // trim(stroke) // QUOTE
+    str_line_stroke_width = text_line( 'stroke-width=', stroke_width )
+
     if ( present(marker_start) ) then
-      call write_out( this,                                     &
-                      '<line'                                   &
-                    //' x1="'//trim(r2s(x1))//'"'               &
-                    //' y1="'//trim(r2s(y1))//'"'               &
-                    //' x2="'//trim(r2s(x2))//'"'               &
-                    //' y2="'//trim(r2s(y2))//'"'               &
-                    //' stroke="'//trim(stroke)//'"'            &
-                    //' stroke-width="'                         &
-                                 //trim(r2s(stroke_width))//'"' &
-                    //' marker-start='                          &
-                          //'"url(#'//trim(marker_start)//')"'  &
-                    //' />' )
+      str_marker_start = 'marker-start=' // QUOTE               &
+                                         // 'url(#'             &
+                                         // trim(marker_start)  &
+                                         // ')'                 &
+                                         // QUOTE 
+      ! call write_out( this,                                     &
+      !                 '<line'                                   &
+      !               //' x1="'//trim(r2s(x1))//'"'               &
+      !               //' y1="'//trim(r2s(y1))//'"'               &
+      !               //' x2="'//trim(r2s(x2))//'"'               &
+      !               //' y2="'//trim(r2s(y2))//'"'               &
+      !               //' stroke="'//trim(stroke)//'"'            &
+      !               //' stroke-width="'                         &
+      !                            //trim(r2s(stroke_width))//'"' &
+      !               //' marker-start='                          &
+      !                     //'"url(#'//trim(marker_start)//')"'  &
+      !               //' />' )
+      call write_out( this, '<line'                                   &
+                            // SPACE // trim(str_line_start_finish)   &
+                            // SPACE // trim(str_line_stroke)         &
+                            // SPACE // trim(str_line_stroke_width)   &
+                            // SPACE // trim(str_marker_start)        &
+                            // SPACE // '/>' )
     else if ( present(marker_end) ) then
-      call write_out( this,                                     &
-                      '<line'                                   &
-                    //' x1="'//trim(r2s(x1))//'"'               &
-                    //' y1="'//trim(r2s(y1))//'"'               &
-                    //' x2="'//trim(r2s(x2))//'"'               &
-                    //' y2="'//trim(r2s(y2))//'"'               &
-                    //' stroke="'//trim(stroke)//'"'            &
-                    //' stroke-width="'                         &
-                                 //trim(r2s(stroke_width))//'"' &
-                    //' marker-end='                            &
-                          //'"url(#'//trim(marker_end)//')"'    &
-                    //' />' )
+      str_marker_end = 'marker-end=' // QUOTE               &
+                                     // 'url(#'             &
+                                     // trim(marker_end)    &
+                                     // ')'                 &
+                                     // QUOTE 
+      ! call write_out( this,                                     &
+      !                 '<line'                                   &
+      !               //' x1="'//trim(r2s(x1))//'"'               &
+      !               //' y1="'//trim(r2s(y1))//'"'               &
+      !               //' x2="'//trim(r2s(x2))//'"'               &
+      !               //' y2="'//trim(r2s(y2))//'"'               &
+      !               //' stroke="'//trim(stroke)//'"'            &
+      !               //' stroke-width="'                         &
+      !                            //trim(r2s(stroke_width))//'"' &
+      !               //' marker-end='                            &
+      !                     //'"url(#'//trim(marker_end)//')"'    &
+      !               //' />' )
+      call write_out( this, '<line'                                   &
+                            // SPACE // trim(str_line_start_finish)   &
+                            // SPACE // trim(str_line_stroke)         &
+                            // SPACE // trim(str_line_stroke_width)   &
+                            // SPACE // trim(str_marker_end)          &
+                            // SPACE // '/>' )
     else
-      call write_out( this,                                     &
-                      '<line'                                   &
-                    //' x1="'//trim(r2s(x1))//'"'               &
-                    //' y1="'//trim(r2s(y1))//'"'               &
-                    //' x2="'//trim(r2s(x2))//'"'               &
-                    //' y2="'//trim(r2s(y2))//'"'               &
-                    //' stroke="'//trim(stroke)//'"'            &
-                    //' stroke-width="'                         &
-                                 //trim(r2s(stroke_width))//'"' &
-                    //' />' )
+      ! call write_out( this,                                     &
+      !                 '<line'                                   &
+      !               //' x1="'//trim(r2s(x1))//'"'               &
+      !               //' y1="'//trim(r2s(y1))//'"'               &
+      !               //' x2="'//trim(r2s(x2))//'"'               &
+      !               //' y2="'//trim(r2s(y2))//'"'               &
+      !               //' stroke="'//trim(stroke)//'"'            &
+      !               //' stroke-width="'                         &
+      !                            //trim(r2s(stroke_width))//'"' &
+      !               //' />' )
+      call write_out( this, '<line'                                   &
+                            // SPACE // trim(str_line_start_finish)   &
+                            // SPACE // trim(str_line_stroke)         &
+                            // SPACE // trim(str_line_stroke_width)   &
+                            // SPACE // '/>' )
     end if
 
   end subroutine svglib__line
 
 
   subroutine svglib__open( this, file_name, width, height )
-    class(svglib_fig_t) <io> :: this
+    class(svglib_t) <io> :: this
     char(len=*) <in> :: file_name
-    integer <in> :: width, height
+    real <in> :: width, height
 
 real :: v
 integer :: i
- char(len=7) :: sgks
+ char(len=7) :: color_code
 
     this.file_name = trim(file_name)
     this.indent_level = 0
@@ -464,8 +537,8 @@ integer :: i
 
     do i = 0, 100
       v = 0.01*i
-      sgks(1:7) = normalized_value_to_color_code( v )
-      print *, sgks
+      color_code = color__norm_real_to_color_code( v )
+      print *, color_code
     end do
 
   end subroutine svglib__open
@@ -473,7 +546,7 @@ integer :: i
 
   subroutine svglib__text( this, x, y, string, font_size,  &
                            color, text_anchor, stroke_width )
-    class(svglib_fig_t) <in> :: this
+    class(svglib_t) <in> :: this
     real <in> :: x, y
     char(len=*) <in> :: string
     real <in> :: font_size
@@ -481,69 +554,42 @@ integer :: i
     char(len=*) <optin> :: text_anchor
     real <optin> :: stroke_width
 
-    call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'  &
-                                     //' font-size="'//trim(r2s(font_size))//'"'  &
-                                     //' fill="'//trim(color)//'">' )
-             ! text_anchor and stroke_width is nothing
+    char(len=200) :: str_text_pos, str_font_size, str_fill_color
+
+    str_text_pos = text_line( 'x=', x, 'y=', y )
+    str_font_size = text_line( 'font-size=', font_size )
+    if ( present(color) ) then
+      ! call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'   &
+      !                                  //' font-size="'//trim(r2s(font_size))//'"'  &
+      !                                  //' fill="'//trim(color)//'">' )
+      str_fill_color = 'fill=' // QUOTE // trim(color) // QUOTE
+      call write_out( this, '<text'                            &
+                             // SPACE // trim(str_text_pos)    &
+                             // SPACE // trim(str_font_size)   &
+                             // SPACE // trim(str_fill_color)  &
+                             // SPACE // '>' )
+    else
+      ! call write_out( this, '<text x="'//trim(r2s(x))//'" y="'//trim(r2s(y))//'"'   &
+      !                                  //' font-size="'//trim(r2s(font_size))//'"'  &
+      !                                  //' fill="black">' )
+      str_fill_color = 'fill=' // QUOTE // 'black' // QUOTE
+      call write_out( this, '<text'                            &
+                             // SPACE // trim(str_text_pos)    &
+                             // SPACE // trim(str_font_size)   &
+                             // SPACE // trim(str_fill_color)  &
+                             // SPACE // '>' )                                       
+
+    end if
     call write_out( this, trim(string) )
     call write_out( this, '</text>' )
 
   end subroutine svglib__text
-  !!>
-  subroutine svglib__polygon( this ,infile)
-
-  class(svglib_fig_t) <io> :: this
-  char(len=*) <optin> :: infile
-  integer :: data_num = 0 ,i
-  real :: a ,b
-  real :: x(1000),y(1000)
-  integer ::ios = 1
 
   
-  open(10,file ='test.txt',status ='old')
-
-  do i = 1,100
-  read(10,*,iostat = ios) a ,b
-  x(i) = a
-  y(i) = b
-  if(ios<0) exit
-  data_num = data_num + 1
-  end do
-
-  close(10)
-  print *, data_num
-
-  do i = 1, (data_num-1)
-  call svglib__line( this, x(i), y(i),&
-                       x(i+1),&
-                       y(i+1),&
-                       stroke="red",&
-                       stroke_width=1.0 )
-
-  end do
-  call svglib__line( this, x(data_num), y(data_num),&
-                       x(1),&
-                       y(1),&
-                       stroke= "red",&
-                       stroke_width=1.0 )
-
-  end subroutine svglib__polygon
-  !!<
-
-  ! subroutine svglib__polygon2( this,  &
-  !                              nverts,   &  ! 点の数
-  !                              path_data_x, & ! real, dimension(nverts) 
-  !                              path_data_y, & ! real, dimension(nverts)
-  !                              stroke,  &
-  !                              stroke_width,  &
-  !                              fill, &
-  !                              fill_opacity )
-  !!<
-
-  subroutine svglib__polygon2( this, nverts, path_data_x, path_data_y, &
-                               stroke, stroke_width, &
+  subroutine svglib__polygon( this, nverts, path_data_x, path_data_y, &
+                               stroke, stroke_width,                  &
                                fill, fill_opacity )
-   class(svglib_fig_t) <io> :: this
+   class(svglib_t) <io> :: this
    integer <in> :: nverts
    real, dimension(nverts) :: path_data_x
    real, dimension(nverts) :: path_data_y 
@@ -551,13 +597,19 @@ integer :: i
    real <in> :: stroke_width
    char(len=*) <in> :: fill
    real <in> :: fill_opacity
+
+   char(len=1000), dimension(nverts) :: l_string
+   integer :: i
+   char(len=200) :: str_stroke, str_stroke_width, str_fill, str_fill_opacity
+   str_stroke = 'stroke=' // QUOTE // trim(stroke) // QUOTE
+   str_stroke_width = text_line_str_r( 'stroke-width = ', stroke_width )
+   str_fill = 'fill=' // QUOTE // trim(fill) // QUOTE
+   str_fill_opacity = text_line_str_r( 'fill-opacity = ', fill_opacity )
    
 
-   integer :: i
    !real :: x, y
    !real :: x(nverts), y(nverts)
-   char(len=300), dimension(nverts) :: l_string
-
+   
    !do i = 1, nverts
     ! read(path_data_x(i-1),*) x
     ! read(path_data_y(i-1),*) y
@@ -565,26 +617,31 @@ integer :: i
     ! y(i) = y
   ! end do
 
-  ! call write_out(this,'<path d = "M '//trim(r2s(e(1)))//' '//trim(r2s(f(1))))
+  ! call write_out(this,'<path d = "M '//trim(r2s(e(1)))//' '//trim(r2s(f(1)))
 
                       
    do i = 1, nverts
     if(i == 1) then
-     l_string(i) = '<path d = "M '//trim(r2s(path_data_x(i)))//' '//trim(r2s(path_data_y(i)))
+     l_string(i) = '<path d = "'//trim(text_line( 'M', path_data_x(1),  path_data_y(1)))
     else if(i == nverts) then
-     l_string(i) = ' L '//trim(r2s(path_data_x(i)))//' '//trim(r2s(path_data_y(i)))//'  Z"' &
-                    //' stroke="'//trim(stroke)//'" stroke-width = "'//trim(r2s(stroke_width))//'"' &
-                    //' fill="'//trim(fill)//'" fill-opacity = "'//trim(r2s(fill_opacity))//'" />'
+     l_string(i) = trim(text_line( 'L', path_data_x(nverts), path_data_y(nverts)))            &
+                    //SPACE//'Z'//QUOTE                                                       &
+                    //SPACE//trim(str_stroke)                                                 &
+                    //SPACE//trim(str_stroke_width)                                           &
+                    //SPACE//trim(str_fill)                                                   &
+                    //SPACE//trim(str_fill_opacity)                                           &
+                    //' />'
     else
-     l_string(i) = ' L '//trim(r2s(path_data_x(i)))//' '//trim(r2s(path_data_y(i)))
+     l_string(i) = trim(text_line( 'L', path_data_x(i), path_data_y(i)))
     end if
    end do 
   
    do i = 1, nverts
-    call write_out(this, l_string(i), new_line=.false.)
+    call write_out( this, trim(l_string(i)), new_line=.false.)
+    print *, trim(l_string(i))
    end do
 
-  end subroutine svglib__polygon2
- 
+  end subroutine svglib__polygon
+  
 
 end module svglib_m
