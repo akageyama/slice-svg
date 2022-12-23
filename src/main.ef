@@ -63,7 +63,7 @@ program main
                   cross_section_lower_left,  &
                   width=2.0,    &
                   color=COLOR__CONST.black )
-
+  call iTest_polygon
   ! call fig1.rectangle( cross_section_lower_left,  &
   !                      cross_section_upper_right, &
   !                      line_width='1.0',          &
@@ -165,12 +165,12 @@ program main
 contains
 
   subroutine iTest_polygon
-    integer <const> :: N = 100
+    integer <const> :: N = 3
     integer :: i
     real :: theta
-    type(sketch_pos_t), dimension(0:N) :: verts
+    type(sketch_pos_t), dimension(N) :: verts
 
-    do i = 0, N
+    do i = 1, N
       theta = (2*PI/N) * i
       verts(i).u = 0.5*umax*cos(theta)
       verts(i).v = 0.5*umax*sin(theta)

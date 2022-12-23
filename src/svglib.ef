@@ -30,7 +30,9 @@ module svglib_m
 
   interface svglib__text_line
      module procedure text_line_str_i,                  &
+                      text_line_str_str,                &
                       text_line_str_r,                  &
+                      text_line_r1_comma_r2,            &
                       text_line_s1_r1_s2_r2,            &
                       text_line_str_r1_r2_r3_r4,        &
                       text_line_s1_r1_s2_r2_s3_r3_s4_r4
@@ -38,6 +40,7 @@ module svglib_m
 
   char(len=1) <const> :: QUOTE = '"'
   char(len=1) <const> :: SPACE = ' '
+  char(len=1) <const> :: COMMA = ','
   integer <const> :: SVGLIB__BSL = 100  ! Basic text string length
                                         ! e.g., '<line = "... >'
 
@@ -62,6 +65,22 @@ contains
     write(line, "(a)") trim(string)//QUOTE//trim(r2s(r))//QUOTE
   end function text_line_str_r
 
+
+  function text_line_r1_comma_r2( r1, r2 ) result(line)
+    real <in> :: r1, r2  ! real value
+    char(len=SVGLIB__BSL) :: line
+
+    write(line, "(a)") trim(r2s(r1)) // COMMA // SPACE // trim(r2s(r2))
+  end function text_line_r1_comma_r2
+  
+  
+  function text_line_str_str( string, str ) result(line)
+    char(len=*) <in> :: string
+    char(len=*) <in> :: str
+    char(len=SVGLIB__BSL) :: line
+
+    write(line, "(a)") trim(string)//QUOTE//trim(str)//QUOTE
+  end function text_line_str_str
   
   function text_line_s1_r1_s2_r2( s1, r1,   &
                                   s2, r2) result(line)
@@ -288,6 +307,21 @@ contains
   end function r2s
 
 
+  subroutine string_concatenate( n, str_array, str_concat )
+    integer <in> :: n
+    char(len=*), dimension(:) <in> :: str_array
+    char(len=*) <out> :: str_concat
+
+    integer :: i
+
+    str_concat = ''
+    do i = 1, n
+      str_concat = trim(str_concat) // SPACE // trim(str_array(i))
+    end do
+
+  end subroutine string_concatenate
+      
+
   subroutine write_out( this, line )
     type(svglib_t) <in> :: this
     char(len=*) <in> :: line
@@ -506,10 +540,7 @@ integer :: i
       str(nopt) = 'text-anchor=' // QUOTE // trim(text_anchor) // QUOTE
     end if
 
-    str_all = ''
-    do n = 1, nopt
-      str_all = trim(str_all) // SPACE // trim(str(n))
-    end do
+    call string_concatenate( nopt, str, str_all )
 
     call write_out( this, '<text' // trim(str_all) // '>' )
       call indent_push( this )
@@ -521,52 +552,54 @@ integer :: i
 
 
   subroutine svglib__polygon( this, nverts,       &
-                                    path_data_x,  &
-                                    path_data_y,  &
-                                    stroke,       &
-                                    stroke_width, &
-                                    fill )
+                                    verts_x,      &
+                                    verts_y,      &
+                                    line_width,   &
+                                    line_color,   &
+                                    fill_color )
     class(svglib_t) <io> :: this
     integer <in> :: nverts
-    real, dimension(nverts) :: path_data_x
-    real, dimension(nverts) :: path_data_y 
-    char(len=*) <in> :: stroke
-    real <in> :: stroke_width
-    char(len=*) <optin> :: fill
+    real, dimension(nverts) :: verts_x
+    real, dimension(nverts) :: verts_y 
+    real <in> :: line_width
+    char(len=*) <optin> :: line_color
+    char(len=*) <optin> :: fill_color
 
-    char(len=2*SVGLIB__BSL), dimension(nverts) :: l_string
-    integer :: i
     integer :: n, nopt   ! number of options
     integer <const> :: MAX_NOP = 10  ! max
+    char(len=SVGLIB__BSL) :: str_coords
     char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
     char(len=SVGLIB__BSL*MAX_NOP) :: str_all
 
-    str(1) = 'stroke=' // QUOTE // trim(stroke) // QUOTE
-    str(2) = text_line_str_r( 'stroke-width = ', stroke_width )
-    str(3) = 'fill=' // QUOTE // trim(fill) // QUOTE
-    nopt = 3
+    str(1) = '<polygon' 
+    str(2) = svglib__text_line( 'stroke-width=', line_width )
+    nopt = 2
 
-    str_all = ''
-    do n = 1, nopt
-       str_all = trim(str_all) // SPACE // trim(str(n)) 
-    end do
+    if ( present(line_color) ) then
+      nopt += 1
+      str(nopt) = svglib__text_line( 'stroke=', line_color )
+    end if
 
-    do i = 1, nverts
-     if(i == 1) then
-      l_string(i) = '<polygon points = "'//trim(r2s(path_data_x(1)))//','// trim(r2s(path_data_y(1)))
-     else if(i == nverts) then
-      l_string(i) = trim(r2s( path_data_x(i)))//','//trim(r2s(path_data_y(i)))//'"'             &
-                    //SPACE                                                                     &
-                    //trim(str_all)                                                             &
-                    //' />'
-     else
-      l_string(i) = trim(r2s( path_data_x(i)))//','//trim(r2s(path_data_y(i)))
-     end if
-    end do 
+    if ( present(fill_color) ) then
+      nopt += 1
+      str(nopt) = svglib__text_line( 'fill=', fill_color )
+    end if
 
-    do i = 1, nverts
-      call write_out( this, trim(l_string(i)) )
-    end do
+    nopt += 1
+    str(nopt) = 'points=' // QUOTE
+
+    call string_concatenate( nopt, str, str_all )
+
+    call write_out( this, trim(str_all) )
+
+    call indent_push( this )
+      do n = 1, nverts
+        str_coords = svglib__text_line( verts_x(n), verts_y(n) )
+        call write_out( this, trim(str_coords) )
+      end do
+    call indent_pop( this )
+
+    call write_out( this, QUOTE // '/>' )
 
   end subroutine svglib__polygon
 

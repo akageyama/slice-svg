@@ -403,11 +403,11 @@ contains
 
     color_code = color.to_code()
 
-    call this.svglib.polygon( nverts, &
-                              verts_screen_x, &
-                              verts_screen_y, &
-                              color_code,     &
-                              width_in_pixels )
+    call this.svglib.polygon( nverts,           &
+                              verts_screen_x,   &
+                              verts_screen_y,   &
+                              width_in_pixels,  &
+                              color_code )
   end subroutine sketch__polygon
 
 
