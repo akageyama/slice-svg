@@ -161,4 +161,22 @@ program main
   call pres.finalize
 
 !!<
+
+contains
+
+  subroutine iTest_polygon
+    integer <const> :: N = 100
+    integer :: i
+    real :: theta
+    type(sketch_pos_t), dimension(0:N) :: verts
+
+    do i = 0, N
+      theta = (2*PI/N) * i
+      verts(i).u = 0.5*umax*cos(theta)
+      verts(i).v = 0.5*umax*sin(theta)
+    end do
+
+    call fig1.polygon( N, verts, COLOR__CONST.cyan, 3.0 )
+  end subroutine iTest_polygon
+
 end program main

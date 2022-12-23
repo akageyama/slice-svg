@@ -23,6 +23,7 @@ module svglib_m
     procedure :: line => svglib__line
     procedure :: arrow => svglib__arrow
     procedure :: text => svglib__text
+    procedure :: polygon => svglib__polygon
   end type svglib_t
 
 
@@ -517,5 +518,56 @@ integer :: i
     call write_out( this, '</text>' )
 
   end subroutine svglib__text
+
+
+  subroutine svglib__polygon( this, nverts,       &
+                                    path_data_x,  &
+                                    path_data_y,  &
+                                    stroke,       &
+                                    stroke_width, &
+                                    fill )
+    class(svglib_t) <io> :: this
+    integer <in> :: nverts
+    real, dimension(nverts) :: path_data_x
+    real, dimension(nverts) :: path_data_y 
+    char(len=*) <in> :: stroke
+    real <in> :: stroke_width
+    char(len=*) <optin> :: fill
+
+    char(len=2*SVGLIB__BSL), dimension(nverts) :: l_string
+    integer :: i
+    integer :: n, nopt   ! number of options
+    integer <const> :: MAX_NOP = 10  ! max
+    char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
+    char(len=SVGLIB__BSL*MAX_NOP) :: str_all
+
+    str(1) = 'stroke=' // QUOTE // trim(stroke) // QUOTE
+    str(2) = text_line_str_r( 'stroke-width = ', stroke_width )
+    str(3) = 'fill=' // QUOTE // trim(fill) // QUOTE
+    nopt = 3
+
+    str_all = ''
+    do n = 1, nopt
+       str_all = trim(str_all) // SPACE // trim(str(n)) 
+    end do
+
+    do i = 1, nverts
+     if(i == 1) then
+      l_string(i) = '<polygon points = "'//trim(r2s(path_data_x(1)))//','// trim(r2s(path_data_y(1)))
+     else if(i == nverts) then
+      l_string(i) = trim(r2s( path_data_x(i)))//','//trim(r2s(path_data_y(i)))//'"'             &
+                    //SPACE                                                                     &
+                    //trim(str_all)                                                             &
+                    //' />'
+     else
+      l_string(i) = trim(r2s( path_data_x(i)))//','//trim(r2s(path_data_y(i)))
+     end if
+    end do 
+
+    do i = 1, nverts
+      call write_out( this, trim(l_string(i)) )
+    end do
+
+  end subroutine svglib__polygon
 
 end module svglib_m
