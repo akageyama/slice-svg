@@ -101,7 +101,8 @@ program main
   call fig1.line( cross_section_upper_right, &
                   cross_section_lower_left,  &
                   color=COLOR__CONST.gray(0.3) ) 
-  
+  call fig1.arrow( 0.0, vmax/2, 3.14, 0.0,   &
+                   pixel_size_for_unit_vect=10.0 )
   call fig1.finalize
 
 end program main
