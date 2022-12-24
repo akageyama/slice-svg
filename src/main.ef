@@ -49,8 +49,8 @@ program main
     call fig1.text( (umin+umax)/2, vmax,          &
                     'Hello, world!',              &
                     font_size_in_pixel=50.0,      &
-                    text_anchor='middle',         &
-                    color=COLOR__CONST.blue )
+                    text_anchor='middle' ) !,         &
+!                    color=COLOR__CONST.blue )
 
     call fig1.line( cross_section_upper_right, &
                     cross_section_lower_left,  &
@@ -79,11 +79,18 @@ program main
   
   call pres.initialize( NU, NV, umin, umax, vmin, vmax, pressure )
   call fig1.group_begin( line_color=COLOR__CONST.blue )
-  call pres.vis_contour( fig1, 1.0 )
+  call pres.vis_contour( fig1, 1.0, line_color=COLOR__CONST.red )
   call pres.finalize
   call fig1.group_end
 
-
+  cross_section_lower_left.u = 0.0
+  cross_section_lower_left.v = 0.0
+  cross_section_upper_right.u = PI/2
+  cross_section_upper_right.v = PI/2
+  call fig1.line( cross_section_upper_right, &
+                  cross_section_lower_left,  &
+                  color=COLOR__CONST.gray(0.3) ) 
+  
   call fig1.finalize
 
 end program main

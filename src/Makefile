@@ -18,7 +18,7 @@ objlist := $(addsuffix .o, $(filebase)) # => example.o
        # .SECONDARY: obj/%.F90 does not work (GNU Make 3.81).
 
 
-.PHONY: clean line list
+.PHONY: clean line list test
 
 
 %.F90: %.ef
@@ -101,13 +101,10 @@ endif
 
 # default target
 
-view: test1.svg
-	open test1.svg
+view: test.svg
+	open test.svg
 
-test1.svg: test
-	./test
-
-rumme: test
+test.svg: test
 	./test
 
 test: $(objlist)
@@ -147,7 +144,6 @@ list:
 
 line:
 	@echo "="{1..100} | sed 's/[ 0-9]//g' # bash one-liner for a line
-
 
 
 clean:
