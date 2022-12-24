@@ -154,7 +154,7 @@ contains
     char(len=10) :: status
     integer :: li, lj
     real :: u_sim, v_sim
-    type(sketch_pos_t), dimension(:), allocatable :: verts_sim
+    type(sketch__sim_pos_t), dimension(:), allocatable :: verts_sim
 
     ==<just_once>==
       call contour_path.initialize( this.mesh_vert.nu,  &
@@ -190,7 +190,7 @@ contains
           lj = contour_path.list_j(i)
           u_sim = this.mesh_vert.pos_u(li)
           v_sim = this.mesh_vert.pos_v(lj)
-          verts_sim(i) = sketch_pos_t(u_sim,v_sim)
+          verts_sim(i) = sketch__sim_pos_t(u_sim,v_sim)
         end do
         call sketch.polygon( contour_path.num,          &
                              verts_sim,              &

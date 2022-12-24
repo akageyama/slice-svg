@@ -5,9 +5,9 @@ module sketch_m
   implicit none
   private
 
-  type, public :: sketch_pos_t
+  type, public :: sketch__sim_pos_t
     real :: u, v
-  end type sketch_pos_t
+  end type sketch__sim_pos_t
 
   type :: screen_pos_t
     real :: x, y
@@ -60,8 +60,8 @@ contains
 
     type(screen_pos_t) :: start, finish
 
-    start  = this.to_screen_pos( sketch_pos_t(u1,v1) )
-    finish = this.to_screen_pos( sketch_pos_t(u2,v2) )
+    start  = this.to_screen_pos( sketch__sim_pos_t(u1,v1) )
+    finish = this.to_screen_pos( sketch__sim_pos_t(u2,v2) )
 
     color_code = ''  ! Initialization. Will be used below.
 
@@ -103,8 +103,8 @@ contains
                               color,   &
                               no_draw )
     class(sketch_t) <in> :: this
-    type(sketch_pos_t) <in> :: pos1 ! line start in simulation coords.
-    type(sketch_pos_t) <in> :: pos2 ! line finish in simulation coords.
+    type(sketch__sim_pos_t) <in> :: pos1 ! line start in simulation coords.
+    type(sketch__sim_pos_t) <in> :: pos2 ! line finish in simulation coords.
     real <optin> :: line_width_in_pixel
     type(color_t) <optin> :: color
     logical <optin> :: no_draw
@@ -268,7 +268,7 @@ contains
                      text_anchor == 'end',            &
                      '__MODFUNC__: text_anchor error.' )
 
-    pos = this.to_screen_pos( sketch_pos_t(u,v) )
+    pos = this.to_screen_pos( sketch__sim_pos_t(u,v) )
    
     if ( present(color) ) then
       color_code = color.to_code()
@@ -288,7 +288,7 @@ contains
 
   function sketch__to_screen_pos( this, sketch_pos ) result(screen_pos)
     class(sketch_t) <in> :: this
-    type(sketch_pos_t) <in> :: sketch_pos
+    type(sketch__sim_pos_t) <in> :: sketch_pos
     type(screen_pos_t) :: screen_pos
 
     !!>
@@ -327,7 +327,7 @@ contains
                                  title,                 &
                                  filename )
     class(sketch_t) <out> :: this
-    type(sketch_pos_t) <in> :: lower_left_in_phys,  &
+    type(sketch__sim_pos_t) <in> :: lower_left_in_phys,  &
                                upper_right_in_phys
     real <in> :: screen_width_in_pixel
     char(len=*) <in> :: title
@@ -422,7 +422,7 @@ contains
                                     fill_color )
     class(sketch_t) <io> :: this
     integer <in> :: nverts
-    type(sketch_pos_t), dimension(nverts) <in> :: verts_sim
+    type(sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
     type(color_t) <in> :: color
     real <in> :: width_in_pixels
     type(color_t) <optin> :: fill_color
@@ -462,7 +462,7 @@ contains
                                       line_color,           &
                                       fill_color  )
     class(sketch_t) <io> :: this
-    type(sketch_pos_t) <in> :: lower_left, upper_right
+    type(sketch__sim_pos_t) <in> :: lower_left, upper_right
     real <in> :: line_width_in_pixel
     type(color_t) <in> :: line_color
     type(color_t) <optin> :: fill_color

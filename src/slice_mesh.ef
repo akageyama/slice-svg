@@ -1,6 +1,5 @@
 module slice_mesh_m
   use ut_m
-  use sketch_m
   implicit none
   private
   public :: SLICE_MESH__NORTH,  &

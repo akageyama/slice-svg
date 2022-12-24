@@ -8,8 +8,8 @@ program main
   type(slice__scalar_t) :: prs
 
   type(sketch_t) :: fig1
-  type(sketch_pos_t) :: cross_section_lower_left
-  type(sketch_pos_t) :: cross_section_upper_right
+  type(sketch__sim_pos_t) :: cross_section_lower_left
+  type(sketch__sim_pos_t) :: cross_section_upper_right
 
   real :: window_width = 1200.0
   real :: window_height = 1000.0

@@ -204,8 +204,10 @@ contains
     type(slice_mesh_ivect_t) <io> :: vpos_now
 
     logical :: moved_one_step, path_is_closed
+    type(slice_mesh_ivect_t) :: vpos_prev
 
-    do 
+    do
+      vpos_prev = vpos_now
       call turn( 'left',          &
                  this,            &
                  mesh_edge,       &
@@ -214,7 +216,8 @@ contains
                  moved_one_step,  &
                  path_is_closed )
       if ( moved_one_step ) then
-        call register( this, vpos_now )
+        call register( this, vpos_prev )
+        vpos_prev = vpos_now
       end if
       if ( path_is_closed ) return
 
@@ -227,7 +230,8 @@ contains
                  moved_one_step,  &
                  path_is_closed )
       if ( moved_one_step ) then
-        call register( this, vpos_now )
+        call register( this, vpos_prev )
+        vpos_prev = vpos_now
       end if
       if ( path_is_closed ) return
 
