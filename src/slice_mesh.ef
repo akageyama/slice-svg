@@ -32,7 +32,7 @@ module slice_mesh_m
   end type slice_mesh_ivect_t
 
 
-  type, public :: slice_mesh_vert_t
+  type, public :: slice_mesh__vert_t
     !!>  
         v: vertex
             |       |       |       |       |
@@ -53,9 +53,9 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh_vert__initialize
     procedure :: finalize => slice_mesh_vert__finalize
-  end type slice_mesh_vert_t  
+  end type slice_mesh__vert_t  
 
-  type, public :: slice_mesh_cell_t
+  type, public :: slice_mesh__cell_t
     !!>  
         v: vertex
         c: cell
@@ -78,9 +78,9 @@ module slice_mesh_m
     procedure :: initialize => slice_mesh_cell__initialize
     procedure :: finalize => slice_mesh_cell__finalize
     procedure :: set_meanval => slice_mesh_cell__set_meanval
-  end type slice_mesh_cell_t  
+  end type slice_mesh__cell_t  
 
-  type, public :: slice_mesh_edge_t
+  type, public :: slice_mesh__edge_t
     !!>                            
                                  edge_v                                    
         v: vertex                   |
@@ -110,7 +110,7 @@ module slice_mesh_m
     procedure :: apply_stokes => slice_mesh_edge__apply_stokes
     procedure :: erase => slice_mesh_edge__erase
     procedure :: can_turn_to => slice_mesh_edge__can_turn_to
-  end type slice_mesh_edge_t    
+  end type slice_mesh__edge_t    
 
 
 contains
@@ -168,7 +168,7 @@ contains
 
 
   subroutine slice_mesh_edge__erase( this, vert_pos, direction )
-    class(slice_mesh_edge_t) <io> :: this
+    class(slice_mesh__edge_t) <io> :: this
     type(slice_mesh_ivect_t) <in> :: vert_pos
     integer <in> :: direction
 
@@ -190,7 +190,7 @@ contains
   subroutine slice_mesh_vert__initialize( this, nu, nv,  &
                                           u_min, u_max,  &
                                           v_min, v_max )
-    class(slice_mesh_vert_t) <out> :: this
+    class(slice_mesh__vert_t) <out> :: this
     integer <in> :: nu, nv
     real <in> :: u_min, u_max
     real <in> :: v_min, v_max
@@ -228,7 +228,7 @@ contains
 
 
   subroutine slice_mesh_vert__finalize( this )
-    class(slice_mesh_vert_t) <io> :: this
+    class(slice_mesh__vert_t) <io> :: this
 
     deallocate(this.pos_u)
     deallocate(this.pos_v)
@@ -236,8 +236,8 @@ contains
 
 
   subroutine slice_mesh_cell__initialize( this, mesh_vert )
-    class(slice_mesh_cell_t) <out> :: this
-    class(slice_mesh_vert_t) <in> :: mesh_vert
+    class(slice_mesh__cell_t) <out> :: this
+    class(slice_mesh__vert_t) <in> :: mesh_vert
     !!>
             v: vertex          
             c: cell            
@@ -269,15 +269,15 @@ contains
 
 
   subroutine slice_mesh_cell__finalize( this )
-    class(slice_mesh_cell_t) <io> :: this
+    class(slice_mesh__cell_t) <io> :: this
 
     deallocate(this.mean_val)
   end subroutine slice_mesh_cell__finalize
 
 
   subroutine slice_mesh_edge__initialize( this, mesh_vert )
-    class(slice_mesh_edge_t) <out> :: this
-    class(slice_mesh_vert_t) <in> :: mesh_vert
+    class(slice_mesh__edge_t) <out> :: this
+    class(slice_mesh__vert_t) <in> :: mesh_vert
     !!>
                             edgev                                    
                               |
@@ -312,7 +312,7 @@ contains
 
 
   subroutine slice_mesh_edge__finalize( this )
-    class(slice_mesh_edge_t) <io> :: this
+    class(slice_mesh__edge_t) <io> :: this
 
     deallocate(this.u_ternary)
     deallocate(this.v_ternary)
@@ -320,8 +320,8 @@ contains
 
 
   subroutine slice_mesh_cell__set_meanval( this, vert, val_on_vert )
-    class(slice_mesh_cell_t) <io> :: this
-    type(slice_mesh_vert_t) <in> :: vert
+    class(slice_mesh__cell_t) <io> :: this
+    type(slice_mesh__vert_t) <in> :: vert
     real, dimension(:,:) <in> :: val_on_vert
 
     integer :: i, j
@@ -344,8 +344,8 @@ contains
 
 
   subroutine slice_mesh_edge__apply_stokes( this, mesh_cell, level )
-    class(slice_mesh_edge_t) <io> :: this
-    type(slice_mesh_cell_t) <in> :: mesh_cell
+    class(slice_mesh__edge_t) <io> :: this
+    type(slice_mesh__cell_t) <in> :: mesh_cell
     real <in> :: level
     !!>
         Applying Stokes thereom, we get the boundary curve 
@@ -385,7 +385,7 @@ contains
 
 
   function slice_mesh_edge__has_nonzero_ternary( this ) result(ans)
-    class(slice_mesh_edge_t) <in> :: this
+    class(slice_mesh__edge_t) <in> :: this
     logical :: ans
 
     ans = maxval(this.u_ternary(:,:)) == 1
@@ -395,7 +395,7 @@ contains
   function slice_mesh_edge__can_turn_to( this,          &
                                          vpos_now,      &
                                          direct_turned ) result(ans)
-    class(slice_mesh_edge_t) <in> :: this
+    class(slice_mesh__edge_t) <in> :: this
     type(slice_mesh_ivect_t) <in> :: vpos_now
     type(slice_mesh_direct_t) <in> :: direct_turned
     logical :: ans

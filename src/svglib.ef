@@ -394,8 +394,6 @@ contains
     char(len=SVGLIB__BSL) :: str
 
     str = '<g' // SPACE // trim(attribute) // ' >'
-!debugp attribute
-!debugp str
     call write_out( this, str )
     call indent_push( this )
   end subroutine svglib__group_begin
@@ -485,10 +483,6 @@ contains
     char(len=*) <in> :: file_name
     real <in> :: width, height
 
-real :: v
-integer :: i
- char(len=7) :: color_code
-
     this.file_name = trim(file_name)
     this.indent_level = 0
 
@@ -498,13 +492,6 @@ integer :: i
     this.width = width
     this.height = height
     call print_header( this, this.width, this.height )
-
-    do i = 0, 100
-      v = 0.01*i
-      color_code = color__norm_real_to_color_code( v )
-      print *, color_code
-    end do
-
   end subroutine svglib__open
 
 

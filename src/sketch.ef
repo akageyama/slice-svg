@@ -417,14 +417,14 @@ contains
 
   subroutine sketch__polygon( this, nverts,          &
                                     verts_sim,       &
-                                    color,           &
                                     width_in_pixels, &
+                                    color,           &
                                     fill_color )
     class(sketch_t) <io> :: this
     integer <in> :: nverts
     type(sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
+    real <optin> :: width_in_pixels
     type(color_t) <in> :: color
-    real <in> :: width_in_pixels
     type(color_t) <optin> :: fill_color
 
     type(screen_pos_t) :: vert_on_screen

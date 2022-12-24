@@ -31,11 +31,9 @@ contains
 
     integer :: u
     do u = UNIT_MIN, UNIT_MAX
-!debugp u
       if ( List(u) == 'open' ) then
         unit = u
         List(u) = 'used'
-!debugp List(unit)        
         return
       end if
     end do
