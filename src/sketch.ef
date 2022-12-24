@@ -32,12 +32,12 @@ module sketch_m
     procedure :: group_begin => sketch__group_begin
     procedure :: group_end => sketch__group_end
     procedure :: text => sketch__text
+    procedure :: polygon => sketch__polygon
+    procedure :: rectangle => sketch__rectangle
     ! line
     procedure, private :: line_r4
     procedure, private :: line_pos2
     generic :: line => line_r4, line_pos2
-    ! polygon
-    procedure :: polygon => sketch__polygon
   end type sketch_t
 
 
@@ -46,13 +46,13 @@ contains
 
   subroutine line_r4( this, u1, v1,  &
                             u2, v2,  &
-                            width,   &
+                            line_width_in_pixel,   &
                             color,   &
                             no_draw )
     class(sketch_t) <in> :: this
     real <in> :: u1, v1 ! line start in simulation coords.
     real <in> :: u2, v2 ! line finish in simulation coords.
-    real <in> :: width
+    real <optin> :: line_width_in_pixel
     type(color_t) <optin> :: color
     logical <optin> :: no_draw
 
@@ -73,52 +73,90 @@ contains
       color_code = color.to_code()
     end if
 
-    if ( color_code /= '' ) then
-      call this.svglib.line( start.x,  start.y,   &
-                             finish.x, finish.y,  &
-                             color=color_code,    &
-                             width=width )
-    else 
-      call this.svglib.line( start.x,  start.y,   &
-                             finish.x, finish.y,  &
-                             width=width )
+    if ( present(line_width_in_pixel) ) then
+      if ( color_code /= '' ) then
+        call this.svglib.line( start.x,  start.y,   &
+                              finish.x, finish.y,   &
+                              color=color_code,     &
+                              width=line_width_in_pixel )
+      else 
+        call this.svglib.line( start.x,  start.y,   &
+                              finish.x, finish.y,   &
+                              width=line_width_in_pixel )
+      end if
+    else
+      if ( color_code /= '' ) then
+        call this.svglib.line( start.x,  start.y,   &
+                              finish.x, finish.y,   &
+                              color=color_code )
+      else 
+        call this.svglib.line( start.x,  start.y,   &
+                              finish.x, finish.y )
+      end if
     end if
-
   end subroutine line_r4
 
 
   subroutine line_pos2( this, pos1,    &
                               pos2,    &
-                              width,   &
+                              line_width_in_pixel,   &
                               color,   &
                               no_draw )
     class(sketch_t) <in> :: this
     type(sketch_pos_t) <in> :: pos1 ! line start in simulation coords.
     type(sketch_pos_t) <in> :: pos2 ! line finish in simulation coords.
-    real <in> :: width
+    real <optin> :: line_width_in_pixel
     type(color_t) <optin> :: color
     logical <optin> :: no_draw
 
-    if ( present(color) .and. present(no_draw) ) then
-      call line_r4( this, pos1.u, pos1.v,  &
-                          pos2.u, pos2.v,  &
-                          width=width,     &
-                          color=color,     &
-                          no_draw=no_draw )
-    else if ( present(color) ) then
-      call line_r4( this, pos1.u, pos1.v,  &
-                          pos2.u, pos2.v,  &
-                          width=width,     &
-                          color=color )
-    else if ( present(no_draw) ) then
-      call line_r4( this, pos1.u, pos1.v,  &
-                          pos2.u, pos2.v,  &
-                          width=width,     &
-                          no_draw=no_draw )
-    else 
-      call line_r4( this, pos1.u, pos1.v,  &
-                          pos2.u, pos2.v,  &
-                          width=width )
+    if ( present( no_draw) ) then
+      if ( present(color) ) then
+        if ( present( line_width_in_pixel) ) then
+          call line_r4( this, pos1.u, pos1.v,                           &
+                              pos2.u, pos2.v,                           &
+                              line_width_in_pixel=line_width_in_pixel,  &
+                              color=color,                              &
+                              no_draw=no_draw)
+        else ! no line_width_in_pixel
+          call line_r4( this, pos1.u, pos1.v,                           &
+                              pos2.u, pos2.v,                           &
+                              color=color,                              &
+                              no_draw=no_draw)
+        end if
+      else ! no color
+        if ( present( line_width_in_pixel) ) then
+          call line_r4( this, pos1.u, pos1.v,                           &
+                              pos2.u, pos2.v,                           &
+                              line_width_in_pixel=line_width_in_pixel,  &
+                              no_draw=no_draw)
+        else ! no line_width_in_pixel
+          call line_r4( this, pos1.u, pos1.v,                           &
+                              pos2.u, pos2.v,                           &
+                              no_draw=no_draw)
+        end if
+      end if
+    else ! no no_draw
+      if ( present(color) ) then
+        if ( present( line_width_in_pixel) ) then
+          call line_r4( this, pos1.u, pos1.v,                           &
+                              pos2.u, pos2.v,                           &
+                              line_width_in_pixel=line_width_in_pixel,  &
+                              color=color )
+        else ! no line_width_in_pixel
+          call line_r4( this, pos1.u, pos1.v,                           &
+                              pos2.u, pos2.v,                           &
+                              color=color )
+        end if
+      else ! no color
+        if ( present( line_width_in_pixel) ) then
+          call line_r4( this, pos1.u, pos1.v,                           &
+                              pos2.u, pos2.v,                           &
+                              line_width_in_pixel=line_width_in_pixel )
+        else ! no line_width_in_pixel
+          call line_r4( this, pos1.u, pos1.v,                           &
+                              pos2.u, pos2.v )
+        end if
+      end if
     end if
 
   end subroutine line_pos2
@@ -149,22 +187,22 @@ contains
 
     if ( present(line_color) ) then
       nop += 1
-      str(nop) = 'line-color=' // line_color.to_code()
+      str(nop) = svglib__text_line( 'stroke=', line_color.to_code() )
     end if
 
     if ( present(fill_color) ) then
       nop += 1
-      str(nop) = 'fill-color=' // fill_color.to_code()
+      str(nop) = svglib__text_line( 'fill=', fill_color.to_code() )
     end if
 
     if ( present(line_width_in_pixel) ) then
       nop += 1
-      str(nop) = svglib__text_line( 'line-width=', line_width_in_pixel )
+      str(nop) = svglib__text_line( 'stroke-width=', line_width_in_pixel )
     end if
 
     if ( present(line_opacity) ) then
       nop += 1
-      str(nop) = svglib__text_line( 'line-opacity=', line_opacity )
+      str(nop) = svglib__text_line( 'stroke-opacity=', line_opacity )
     end if    
 
     if ( present(fill_opacity) ) then
@@ -176,9 +214,9 @@ contains
       nop += 1
       select case (line_type)
         case ('dotted')
-          str(nop) = 'stroke-width="5 5"'
+          str(nop) = 'stroke-dasharray="5 5"'
         case ('dashed')
-          str(nop) = 'stroke-width="10 5"'
+          str(nop) = 'stroke-dasharray="10 5"'
         case default
           call ut__fatal( '__MODFUNC__: case error.' )
       end select
@@ -187,9 +225,9 @@ contains
     if ( nop > 0 ) then
       str_long = ''
       do n = 1, nop
-        str_long = trim(str_long) // trim(str(n)) // ' '
+        str_long = trim(str_long) // ' ' // trim(str(n))
       end do
-      call this.svglib.group_begin( trim(str_long) )
+      call this.svglib.group_begin( trim(adjustl(str_long)) )
     end if
 
   contains
@@ -392,7 +430,7 @@ contains
     type(screen_pos_t) :: vert_on_screen
     real, dimension(nverts) :: verts_screen_x,  &
                                verts_screen_y
-    char(len=7) :: color_code 
+    char(len=7) :: color_code , fill_color_code
     integer :: i
 
     do i = 1, nverts
@@ -403,18 +441,64 @@ contains
 
     color_code = color.to_code()
 
-    call this.svglib.polygon( nverts,           &
-                              verts_screen_x,   &
-                              verts_screen_y,   &
-                              width_in_pixels,  &
-                              color_code )
+    if ( present(fill_color) ) then
+      fill_color_code = fill_color.to_code()
+    else
+      fill_color_code = 'none'
+    end if
+
+    call this.svglib.polygon( nverts,                     &
+                              verts_screen_x,             &
+                              verts_screen_y,             &
+                              width_in_pixels,            &
+                              line_color=color_code,      &
+                              fill_color=fill_color_code )
   end subroutine sketch__polygon
 
 
-  ! subroutine sketch__rectangle( this, lower_left,   &
-  !                                     upper_right )
-  !   class(sketch_t) <in> :: this
-  !   type(sketch_pos_t) <in> :: lower_left, upper_right
+  subroutine sketch__rectangle( this, lower_left,           &
+                                      upper_right,          &
+                                      line_width_in_pixel,  &
+                                      line_color,           &
+                                      fill_color  )
+    class(sketch_t) <io> :: this
+    type(sketch_pos_t) <in> :: lower_left, upper_right
+    real <in> :: line_width_in_pixel
+    type(color_t) <in> :: line_color
+    type(color_t) <optin> :: fill_color
 
-  ! end subroutine sketch__rectangle
+    type(screen_pos_t) :: screen_ll, screen_ur
+    char(len=7) :: line_color_code , fill_color_code
+    real, dimension(4) :: screen_verts_x,   &
+                          screen_verts_y
+
+    line_color_code = line_color.to_code()
+
+    if ( present(fill_color) ) then
+      fill_color_code = fill_color.to_code()
+    else
+      fill_color_code = 'none'
+    end if
+
+    screen_ll  = this.to_screen_pos( lower_left )
+    screen_ur  = this.to_screen_pos( upper_right )
+
+    screen_verts_x(1) = screen_ll.x
+    screen_verts_y(1) = screen_ll.y
+    screen_verts_x(2) = screen_ur.x
+    screen_verts_y(2) = screen_ll.y
+    screen_verts_x(3) = screen_ur.x
+    screen_verts_y(3) = screen_ur.y
+    screen_verts_x(4) = screen_ll.x
+    screen_verts_y(4) = screen_ur.y
+
+    call this.svglib.polygon( 4,                    &
+                              screen_verts_x,       &
+                              screen_verts_y,       &
+                              line_width_in_pixel,  &
+                              line_color_code,      &
+                              fill_color_code )
+
+
+  end subroutine sketch__rectangle
 end module sketch_m

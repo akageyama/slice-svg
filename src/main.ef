@@ -45,30 +45,29 @@ program main
                         title='fig1',                 &
                         filename='test1.svg' )
 
-  call fig1.group_begin( line_width_in_pixel=2.0 )
+  call fig1.group_begin( line_width_in_pixel=10.0,  &
+                         line_type='dashed' )
+
+    call fig1.text( (umin+umax)/2, vmax,          &
+                    'Hello, world!',              &
+                    font_size_in_pixel=50.0,      &
+                    text_anchor='middle',         &
+                    color=COLOR__CONST.blue )
+
+    call fig1.line( cross_section_upper_right, &
+                    cross_section_lower_left,  &
+  !                  width=2.0,    &
+                    color=COLOR__CONST.black )
+    call fig1.group_begin( line_color=COLOR__CONST.magenta )
+    call fig1.line( cross_section_upper_right, &
+                    cross_section_lower_left) 
+    call fig1.group_end
   call fig1.group_end
+  call fig1.rectangle( cross_section_lower_left,      &
+                       cross_section_upper_right,     &
+                       line_width_in_pixel=1.0,       &
+                       line_color=COLOR__CONST.black )
 
-  call fig1.text( (umin+umax)/2, vmax,          &
-                  'Hello, world!',              &
-                  font_size_in_pixel=50.0,      &
-                  text_anchor='middle',         &
-                  color=COLOR__CONST.blue )
-
-!  call fig1.line( umin, vmin,   &
-!                  umax, vmax,   &
-!                  width=2.0,    &
-!                  color=COLOR__CONST.magenta )
-
-  call fig1.line( cross_section_upper_right, &
-                  cross_section_lower_left,  &
-                  width=2.0,    &
-                  color=COLOR__CONST.black )
-  call iTest_polygon
-  ! call fig1.rectangle( cross_section_lower_left,  &
-  !                      cross_section_upper_right, &
-  !                      line_width='1.0',          &
-  !                      line_color=COLOR__CONST.gray(0.5)
-  !                      line_type='dashed' )
   call fig1.finalize
 
   du = (umax-umin)/(NU-1)
