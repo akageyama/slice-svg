@@ -112,12 +112,10 @@ contains
   subroutine sketch__arrow( this, u,        &
                                   v,        &
                                   vect_u,   &
-                                  vect_v,   &
-                                  pixel_size_for_unit_vect )
+                                  vect_v )
     class(sketch_t) <io> :: this
     real <in> :: u, v   ! position of the arrow in sim coords
     real <in> :: vect_u, vect_v  ! vector components in sim 
-    real <in> :: pixel_size_for_unit_vect
 
     type(screen_pos_t) screen_pos, screen_vec
     real :: vect_amp, factor
@@ -126,17 +124,12 @@ contains
     vect_amp = sqrt( vect_u**2 + vect_v**2 )
     if ( vect_amp < TOO_SMALL ) return
 
-    factor = pixel_size_for_unit_vect / vect_amp
-!debugp u
-!debugp v
-!debugp vect_u
-!debugp vect_v
+    factor = SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
     screen_pos = this.to_screen_pos( sketch__sim_pos_t(u,v) )
+!debugp vect_u, vect_v    
     screen_vec.x =  vect_u * factor
     screen_vec.y = -vect_v * factor
-!debugp screen_pos.x, screen_pos.y
 !debugp screen_vec.x, screen_vec.y
-
     call this.svglib.arrow( screen_pos.x,     &
                             screen_pos.y,     &
                             screen_vec.x,     &

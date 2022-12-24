@@ -42,6 +42,7 @@ module slice_m
     procedure :: initialize => slice__vector_initialize
     procedure :: finalize => slice__vector_finalize    
     procedure :: set_val => slice__vector_set_val
+    procedure :: vis_arrows => slice__vector_vis_arrows
   end type slice__vector_t
 
 
@@ -273,8 +274,12 @@ contains
     end if
 
     if ( present(vect_v) ) then
+!debugp 'aaaaaaa'
       this.vect_v(:,:) = vect_v(:,:)
+!debugp vect_v(10,20)
+!debugp this.vect_v(10,20)
     else
+!debugp 'bbbbbbb'
       this.vect_v(:,:) = 0.0
     end if
 
@@ -301,6 +306,25 @@ contains
     this.vect_u(:,:) = vect_u(:,:)
     this.vect_v(:,:) = vect_v(:,:)
   end subroutine slice__vector_set_val
+
+
+  subroutine slice__vector_vis_arrows( this, sketch )
+    class(slice__vector_t) <io> :: this
+    type(sketch_t) <io> :: sketch
+
+    integer :: i, j
+    real :: u, v
+
+    do j = 1, this.mesh_vert.nv
+      do i = 1, this.mesh_vert.nu
+        u = this.mesh_vert.pos_u(i)
+        v = this.mesh_vert.pos_v(j)
+        call sketch.arrow( u, v, &
+                           this.vect_u(i,j), &
+                           this.vect_v(i,j) )
+      end do
+    end do
+  end subroutine slice__vector_vis_arrows
 
 end module slice_m
 

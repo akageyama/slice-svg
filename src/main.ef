@@ -25,6 +25,7 @@ program main
   real :: du, dv, u, v
   real :: u2, v2, x2, y2
 
+  real :: max_flow_amp
   real, dimension(NU,NV) :: pressure
   real, dimension(NU,NV) :: velocity_u, velocity_v
 
@@ -40,15 +41,15 @@ program main
 
   call fig1.initialize( cross_section_lower_left,     &
                         cross_section_upper_right,    &
-                        screen_width_in_pixel=800.0,  &
-                        title='fig1',                 &
+                        screen_width_in_pixel=1200.0,  &
+                        title='Cross Section',         &
                         filename='test.svg' )
 
   call fig1.group_begin( line_width_in_pixel=10.0,  &
                          line_type='dashed' )
 
-    call fig1.text( (umin+umax)/2, vmax,          &
-                    'Hello, world!',              &
+    call fig1.text( (umin+umax)/2, vmax+0.3,          &
+                    string=fig1.title,            &
                     font_size_in_pixel=50.0,      &
                     text_anchor='middle' ) !,         &
 !                    color=COLOR__CONST.blue )
@@ -74,15 +75,28 @@ program main
     do i = 1, NU
       u = umin + du*(i-1)
       v = vmin + dv*(j-1)
-      pressure(i,j) = u**2+v**2
-      velocity_u(i,j) = u / sqrt(umax**2+vmax**2)
-      velocity_v(i,j) = v / sqrt(umax**2+vmax**2)
+      pressure(i,j) = exp(-3*(u**2+v**2)/(umax**2))
+      velocity_u(i,j) = u
+      velocity_v(i,j) = v
     end do
   end do
+ 
+  max_flow_amp = maxval( sqrt( velocity_u**2 + velocity_v**2 ) )
+  velocity_u(:,:) = velocity_u(:,:) / max_flow_amp
+  velocity_v(:,:) = velocity_v(:,:) / max_flow_amp
   
   call pres.initialize( NU, NV, umin, umax, vmin, vmax, pressure )
   call fig1.group_begin( line_color=COLOR__CONST.blue )
-  call pres.vis_contour( fig1, 1.0, line_color=COLOR__CONST.red )
+!  call pres.vis_contour( fig1, 0.5, line_color=COLOR__CONST.red )
+  call pres.vis_contour( fig1, 0.1 )
+  call pres.vis_contour( fig1, 0.2 )
+  call pres.vis_contour( fig1, 0.3 )
+  call pres.vis_contour( fig1, 0.4 )
+  call pres.vis_contour( fig1, 0.5 )
+  call pres.vis_contour( fig1, 0.6 )
+  call pres.vis_contour( fig1, 0.7 )
+  call pres.vis_contour( fig1, 0.8 )
+  call pres.vis_contour( fig1, 0.9 )
   call pres.finalize
   call fig1.group_end
 
@@ -92,7 +106,7 @@ program main
                         vmin, vmax,  &
                         velocity_u,    &
                         velocity_v )
-
+  call flow.vis_arrows( fig1 )
 
   cross_section_lower_left.u = 0.0
   cross_section_lower_left.v = 0.0
@@ -101,8 +115,7 @@ program main
   call fig1.line( cross_section_upper_right, &
                   cross_section_lower_left,  &
                   color=COLOR__CONST.gray(0.3) ) 
-  call fig1.arrow( 0.0, vmax/2, 3.14, 0.0,   &
-                   pixel_size_for_unit_vect=10.0 )
+!  call fig1.arrow( 0.0, vmax/2, 3.14, 0.0 )
   call fig1.finalize
 
 end program main
