@@ -29,8 +29,8 @@ module sketch_m
     procedure :: initialize => sketch__initialize
     procedure :: finalize => sketch__finalize
     procedure :: to_screen_pos => sketch__to_screen_pos
-    procedure :: group_begin => sketch__group_begin
-    procedure :: group_end => sketch__group_end
+    procedure :: group_push => sketch__group_push
+    procedure :: group_pop => sketch__group_pop
     procedure :: text => sketch__text
     procedure :: polygon => sketch__polygon
     procedure :: rectangle => sketch__rectangle
@@ -135,7 +135,7 @@ contains
   end subroutine sketch__arrow
 
 
-  subroutine sketch__group_begin( this, line_type,            &
+  subroutine sketch__group_push( this, line_type,            &
                                         line_width_in_pixel,  &
                                         line_color,           &
                                         line_opacity,         &
@@ -200,7 +200,7 @@ contains
       do n = 1, nop
         str_long = trim(str_long) // ' ' // trim(str(n))
       end do
-      call this.svglib.group_begin( trim(adjustl(str_long)) )
+      call this.svglib.group_push( trim(adjustl(str_long)) )
     end if
 
   contains
@@ -210,14 +210,14 @@ contains
       str(:) = ''
     end subroutine iClear_str
 
-  end subroutine sketch__group_begin
+  end subroutine sketch__group_push
 
 
-  subroutine sketch__group_end( this )
+  subroutine sketch__group_pop( this )
     class(sketch_t) <io> :: this
 
-    call this.svglib.group_end
-  end subroutine sketch__group_end
+    call this.svglib.group_pop
+  end subroutine sketch__group_pop
 
 
   subroutine sketch__text( this, u, v,                &

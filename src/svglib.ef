@@ -16,8 +16,8 @@ module svglib_m
     integer :: file_unit
     integer :: indent_level
   contains
-    procedure :: group_begin => svglib__group_begin
-    procedure :: group_end => svglib__group_end
+    procedure :: group_push => svglib__group_push
+    procedure :: group_pop => svglib__group_pop
     procedure :: open => svglib__open
     procedure :: close => svglib__close
     procedure :: line => svglib__line
@@ -425,7 +425,7 @@ contains
   end subroutine svglib__close
 
 
-  subroutine svglib__group_begin( this, attribute )
+  subroutine svglib__group_push( this, attribute )
     class(svglib_t) <io> :: this
     char(len=*) <in> :: attribute
 
@@ -434,15 +434,15 @@ contains
     str = '<g' // SPACE // trim(attribute) // ' >'
     call write_out( this, str )
     call indent_push( this )
-  end subroutine svglib__group_begin
+  end subroutine svglib__group_push
 
 
-  subroutine svglib__group_end( this )
+  subroutine svglib__group_pop( this )
     class(svglib_t) <io> :: this
 
     call indent_pop( this )
     call write_out( this, '</g>' )
-  end subroutine svglib__group_end
+  end subroutine svglib__group_pop
 
 
   subroutine svglib__line( this, x1, y1,        &

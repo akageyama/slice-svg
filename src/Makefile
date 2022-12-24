@@ -98,13 +98,17 @@ ifeq ($(HOME),$(ES3_HOME)) # JAMSTEC
          #FFLAGS += -eR
 endif
 
+svglist := sample_line.svg \
+           sample_scalar.svg \
+           sample_text_color.svg \
+           sample_vector.svg
 
 # default target
 
-view: test.svg
-	open test.svg
+view: $(svglist)
+	open $(svglist)
 
-test.svg: test
+$(svglist): test
 	./test
 
 test: $(objlist)
@@ -148,6 +152,7 @@ line:
 
 clean:
 	rm -rf list.ps list.pdf
+	rm -rf *.svg
 	rm -rf depend_list.mk
 	rm -rf *.o *.lst *.F90 *.mod *.L
 	rm -rf test

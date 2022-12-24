@@ -287,7 +287,7 @@ contains
 
   
   subroutine slice__vector_finalize( this )
-    class(slice__vector_t) <out> :: this
+    class(slice__vector_t) <io> :: this
 
     deallocate(this.vect_u)
     deallocate(this.vect_v)
