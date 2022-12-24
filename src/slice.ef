@@ -25,8 +25,8 @@ module slice_m
 
   type, public :: slice__vector_t
     type(slice_mesh__vert_t) :: mesh_vert
-    real, dimension(:,:), allocatable :: vect_x
-    real, dimension(:,:), allocatable :: vect_y
+    real, dimension(:,:), allocatable :: vect_u
+    real, dimension(:,:), allocatable :: vect_v
     real :: amp_max, amp_min
   contains
     procedure :: initialize => slice__vector_initialize
@@ -220,10 +220,10 @@ contains
         verts_sim(i) = sketch__sim_pos_t(u_sim,v_sim)
       end do
 
-      call sketch.polygon( contour_path.num,            &
-                           verts_sim,                   &
+      call sketch.polygon( contour_path.num,    &
+                           verts_sim,           &
                            width_in_pixels,     &
-                           line_color,    &
+                           line_color,          &
                            fill_color )
     end subroutine iDraw_contour
 
@@ -237,13 +237,13 @@ contains
                                        vert_u_max,  &
                                        vert_v_min,  &
                                        vert_v_max,  &
-                                       vect_x,      &
-                                       vect_y )
+                                       vect_u,      &
+                                       vect_v )
     class(slice__vector_t) <out> :: this
     integer <in> :: vert_nu, vert_nv
     real <in> :: vert_u_min, vert_u_max
     real <in> :: vert_v_min, vert_v_max
-    real, dimension(vert_nu,vert_nv) <optin> :: vect_x, vect_y
+    real, dimension(vert_nu,vert_nv) <optin> :: vect_u, vect_v
 
     real, dimension(vert_nu,vert_nv) :: amp_vect
 
@@ -253,22 +253,22 @@ contains
                                     vert_u_max,  &
                                     vert_v_min,  &
                                     vert_v_max )
-    allocate(this.vect_x(vert_nu,vert_nv))
-    allocate(this.vect_y(vert_nu,vert_nv))
+    allocate(this.vect_u(vert_nu,vert_nv))
+    allocate(this.vect_v(vert_nu,vert_nv))
 
-    if ( present(vect_x) ) then
-      this.vect_x(:,:) = vect_x(:,:)
+    if ( present(vect_u) ) then
+      this.vect_u(:,:) = vect_u(:,:)
     else
-      this.vect_x(:,:) = 0.0
+      this.vect_u(:,:) = 0.0
     end if
 
-    if ( present(vect_y) ) then
-      this.vect_y(:,:) = vect_y(:,:)
+    if ( present(vect_v) ) then
+      this.vect_v(:,:) = vect_v(:,:)
     else
-      this.vect_y(:,:) = 0.0
+      this.vect_v(:,:) = 0.0
     end if
 
-    amp_vect = sqrt(vect_x**2+vect_y**2)
+    amp_vect = sqrt(vect_u**2+vect_v**2)
 
     this.amp_max = maxval(amp_vect)
     this.amp_min = minval(amp_vect)
@@ -278,18 +278,18 @@ contains
   subroutine slice__vector_finalize( this )
     class(slice__vector_t) <out> :: this
 
-    deallocate(this.vect_x)
-    deallocate(this.vect_y)
+    deallocate(this.vect_u)
+    deallocate(this.vect_v)
     call this.mesh_vert.finalize
   end subroutine slice__vector_finalize
 
 
-  subroutine slice__vector_set_val( this, vect_x, vect_y )
+  subroutine slice__vector_set_val( this, vect_u, vect_v )
     class(slice__vector_t) <io> :: this
-    real, dimension(this.mesh_vert.nu,this.mesh_vert.nv) <in> :: vect_x, vect_y
+    real, dimension(this.mesh_vert.nu,this.mesh_vert.nv) <in> :: vect_u, vect_v
 
-    this.vect_x(:,:) = vect_x(:,:)
-    this.vect_y(:,:) = vect_y(:,:)
+    this.vect_u(:,:) = vect_u(:,:)
+    this.vect_v(:,:) = vect_v(:,:)
   end subroutine slice__vector_set_val
 
 end module slice_m

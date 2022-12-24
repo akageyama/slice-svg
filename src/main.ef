@@ -5,7 +5,6 @@ program main
   use slice_m
   implicit none
 
-  type(slice__scalar_t) :: prs
 
   type(sketch_t) :: fig1
   type(sketch__sim_pos_t) :: cross_section_lower_left
@@ -27,7 +26,9 @@ program main
   real :: u2, v2, x2, y2
 
   real, dimension(NU,NV) :: pressure
+  real, dimension(NU,NV) :: velocity_u, velocity_v
 
+  type(slice__vector_t) :: flow
   type(slice__scalar_t) :: pres
 
   call const_base__check
@@ -41,7 +42,7 @@ program main
                         cross_section_upper_right,    &
                         screen_width_in_pixel=800.0,  &
                         title='fig1',                 &
-                        filename='test1.svg' )
+                        filename='test.svg' )
 
   call fig1.group_begin( line_width_in_pixel=10.0,  &
                          line_type='dashed' )
@@ -74,6 +75,8 @@ program main
       u = umin + du*(i-1)
       v = vmin + dv*(j-1)
       pressure(i,j) = u**2+v**2
+      velocity_u(i,j) = u / sqrt(umax**2+vmax**2)
+      velocity_v(i,j) = v / sqrt(umax**2+vmax**2)
     end do
   end do
   
@@ -82,6 +85,14 @@ program main
   call pres.vis_contour( fig1, 1.0, line_color=COLOR__CONST.red )
   call pres.finalize
   call fig1.group_end
+
+
+  call flow.initialize( NU, NV,   &
+                        umin, umax, &
+                        vmin, vmax,  &
+                        velocity_u,    &
+                        velocity_v )
+
 
   cross_section_lower_left.u = 0.0
   cross_section_lower_left.v = 0.0
