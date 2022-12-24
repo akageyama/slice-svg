@@ -274,12 +274,8 @@ contains
     end if
 
     if ( present(vect_v) ) then
-!debugp 'aaaaaaa'
       this.vect_v(:,:) = vect_v(:,:)
-!debugp vect_v(10,20)
-!debugp this.vect_v(10,20)
     else
-!debugp 'bbbbbbb'
       this.vect_v(:,:) = 0.0
     end if
 

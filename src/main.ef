@@ -5,13 +5,10 @@ program main
   use slice_m
   implicit none
 
-
   type(sketch_t) :: fig1
   type(sketch__sim_pos_t) :: cross_section_lower_left
   type(sketch__sim_pos_t) :: cross_section_upper_right
 
-  real :: window_width = 1200.0
-  real :: window_height = 1000.0
   integer :: i, j
   real :: x, y, xmin, ymin, xmax, ymax
 
@@ -48,20 +45,20 @@ program main
   call fig1.group_begin( line_width_in_pixel=10.0,  &
                          line_type='dashed' )
 
-    call fig1.text( (umin+umax)/2, vmax+0.3,          &
-                    string=fig1.title,            &
-                    font_size_in_pixel=50.0,      &
-                    text_anchor='middle' ) !,         &
+  call fig1.text( (umin+umax)/2, vmax+0.3,          &
+                  string=fig1.title,            &
+                  font_size_in_pixel=50.0,      &
+                  text_anchor='middle' ) !,         &
 !                    color=COLOR__CONST.blue )
 
-    call fig1.line( cross_section_upper_right, &
-                    cross_section_lower_left,  &
-  !                  width=2.0,    &
-                    color=COLOR__CONST.black )
-    call fig1.group_begin( line_color=COLOR__CONST.magenta )
-    call fig1.line( cross_section_upper_right, &
-                    cross_section_lower_left) 
-    call fig1.group_end
+  call fig1.line( cross_section_upper_right, &
+                  cross_section_lower_left,  &
+!                  width=2.0,    &
+                  color=COLOR__CONST.black )
+  call fig1.group_begin( line_color=COLOR__CONST.magenta )
+  call fig1.line( cross_section_upper_right, &
+                  cross_section_lower_left) 
+  call fig1.group_end
   call fig1.group_end
   call fig1.rectangle( cross_section_lower_left,      &
                        cross_section_upper_right,     &
@@ -112,10 +109,124 @@ program main
   cross_section_lower_left.v = 0.0
   cross_section_upper_right.u = PI/2
   cross_section_upper_right.v = PI/2
-  call fig1.line( cross_section_upper_right, &
-                  cross_section_lower_left,  &
-                  color=COLOR__CONST.gray(0.3) ) 
+  call fig1.line( 0.0, vmin-0.2, 0.5, vmin-0.2,  &
+                  color=COLOR__CONST.green )
+  ! call fig1.line( cross_section_upper_right, &
+  !                 cross_section_lower_left,  &
+  !                 color=COLOR__CONST.gray(0.3) ) 
 !  call fig1.arrow( 0.0, vmax/2, 3.14, 0.0 )
   call fig1.finalize
 
+  call iSample_lines
+  call iSample_text_and_colors
+
+contains
+
+  subroutine iSample_lines
+    type(sketch_t) :: fig
+    type(sketch__sim_pos_t) :: ll ! lower left
+    type(sketch__sim_pos_t) :: ur ! upper right
+    type(color_t) :: black, gray
+    
+    black = COLOR__CONST.black
+    gray = COLOR__CONST.gray(0.7)
+
+    ll = sketch__sim_pos_t(0.0, 0.0)
+    ur = sketch__sim_pos_t(1.0, 1.0)
+
+    call fig.initialize( ll, ur, &
+                         screen_width_in_pixel=1000.0,  &
+                         title='Line Samples',  &
+                         filename='line_sample.svg' )
+
+    call fig.line( ll, ur,  &
+                   line_width_in_pixel=2.0,  &
+                   color=black )
+
+    call fig.group_begin( line_width_in_pixel=1.0,  &
+                          line_color=gray )
+      call fig.line( ll.u, ll.v,  &
+                     ur.u, ll.v )
+      call fig.line( ll.u, ur.v,  &
+                     ur.u, ll.v )
+    call fig.group_end
+    call fig.finalize()                   
+  end subroutine iSample_lines
+
+  subroutine iSample_text_and_colors
+    type(sketch_t) :: fig
+    type(sketch__sim_pos_t) :: ll ! lower left
+    type(sketch__sim_pos_t) :: ur ! upper right
+
+    ll = sketch__sim_pos_t(0.0, 0.0)
+    ur = sketch__sim_pos_t(1.0, 1.6)
+    call fig.initialize( ll, ur, &
+                         screen_width_in_pixel=1000.0,  &
+                         title='Text and Color Samples',  &
+                         filename='text_color_sample.svg' )
+
+    call fig.text( 0.5, 1.5,  &
+                   fig.title,  &
+                   font_size_in_pixel=50.0,  &
+                   text_anchor='middle', &
+                   color=COLOR__CONST.black )
+    call fig.text( 0.1, 1.4,  &
+                   'black',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.black )
+    call fig.text( 0.1, 1.3,  &
+                   'red',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.red )
+    call fig.text( 0.1, 1.2,  &
+                   'green',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.green )
+    call fig.text( 0.1, 1.1,  &
+                   'blue',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.blue )
+    call fig.text( 0.1, 1.0,  &
+                   'magenta',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.magenta )
+    call fig.text( 0.1, 0.9,  &
+                   'yellow',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.yellow )
+    call fig.text( 0.1, 0.8,  &
+                   'cyan',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.cyan )
+    call fig.text( 0.1, 0.7,  &
+                   'gray(0.9)',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.gray(0.9) )
+    call fig.text( 0.1, 0.6,  &
+                   'gray(0.8)',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.gray(0.8) )
+    call fig.text( 0.1, 0.5,  &
+                   'gray(0.6)',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.gray(0.6) )
+    call fig.text( 0.1, 0.4,  &
+                   'gray(0.4)',  &
+                   font_size_in_pixel=40.0,  &
+                   text_anchor='start', &
+                   color=COLOR__CONST.gray(0.4) )
+    call fig.finalize()                   
+
+  end subroutine iSample_text_and_colors
+  
 end program main

@@ -407,8 +407,7 @@ contains
     slightly_shifted_y = y + SLIGHTLY_SHIFT*vy_norm
 
     amp_factor = vector_amp / SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
-!debugp vx, vy
-!debugp amp_factor
+
     call svglib__line( this, x, y,          &
                        slightly_shifted_x,  &
                        slightly_shifted_y,  &

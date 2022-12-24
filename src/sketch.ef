@@ -126,10 +126,8 @@ contains
 
     factor = SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
     screen_pos = this.to_screen_pos( sketch__sim_pos_t(u,v) )
-!debugp vect_u, vect_v    
     screen_vec.x =  vect_u * factor
     screen_vec.y = -vect_v * factor
-!debugp screen_vec.x, screen_vec.y
     call this.svglib.arrow( screen_pos.x,     &
                             screen_pos.y,     &
                             screen_vec.x,     &
