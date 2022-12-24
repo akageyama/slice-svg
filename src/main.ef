@@ -68,8 +68,6 @@ program main
                        line_width_in_pixel=1.0,       &
                        line_color=COLOR__CONST.black )
 
-  call fig1.finalize
-
   du = (umax-umin)/(NU-1)
   dv = (vmax-vmin)/(NV-1)
 
@@ -80,10 +78,13 @@ program main
       pressure(i,j) = u**2+v**2
     end do
   end do
-
   
   call pres.initialize( NU, NV, umin, umax, vmin, vmax, pressure )
-  call pres.vis_contour( 1.0 )
+  call pres.vis_contour( fig1, 1.0 )
+  call pres.finalize
+
+
+  call fig1.finalize
 
 !!>
   ! East
@@ -157,25 +158,7 @@ program main
       end if
     end do
   end do         
-  call pres.finalize
 
 !!<
-
-contains
-
-  subroutine iTest_polygon
-    integer <const> :: N = 3
-    integer :: i
-    real :: theta
-    type(sketch_pos_t), dimension(N) :: verts
-
-    do i = 1, N
-      theta = (2*PI/N) * i
-      verts(i).u = 0.5*umax*cos(theta)
-      verts(i).v = 0.5*umax*sin(theta)
-    end do
-
-    call fig1.polygon( N, verts, COLOR__CONST.cyan, 3.0 )
-  end subroutine iTest_polygon
 
 end program main

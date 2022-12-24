@@ -206,9 +206,6 @@ contains
     logical :: moved_one_step, path_is_closed
 
     do 
-!debugp 'do loop.'    
-!debugp direct_now
-      !
       call turn( 'left',          &
                  this,            &
                  mesh_edge,       &
@@ -220,11 +217,8 @@ contains
         call register( this, vpos_now )
       end if
       if ( path_is_closed ) return
-!debugp 'done turn_right'
 
-      !
       ! right
-      !
       call turn( 'right',         &
                  this,            &
                  mesh_edge,       &
@@ -236,11 +230,8 @@ contains
         call register( this, vpos_now )
       end if
       if ( path_is_closed ) return
-!debugp 'done turn_right'
 
-      !
       ! straight
-      !
       call turn( 'forward',       &
                  this,            &
                  mesh_edge,       &
@@ -248,7 +239,7 @@ contains
                  vpos_now,        &
                  moved_one_step,  &
                  path_is_closed )
-!debugp 'done go forward'
+
       !!>
           We do not need to register the forward-stepped point,
           because the path

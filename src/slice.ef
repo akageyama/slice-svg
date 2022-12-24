@@ -2,9 +2,11 @@
     In physical coordinate system.
 !!< 
 module slice_m
+  use color_m
   use ut_m
   use slice_mesh_m
   use contour_path_m
+  use sketch_m
   implicit none
   private
 
@@ -88,8 +90,9 @@ contains
   end subroutine slice__scalar_finalize
 
 
-  subroutine slice__scalar_vis_contour( this, level )
+  subroutine slice__scalar_vis_contour( this, sketch, level )
     class(slice__scalar_t) <io> :: this
+    type(sketch_t) <io> :: sketch
     real <in> :: level
     
     !!>
@@ -149,11 +152,16 @@ contains
     integer :: i
     type(slice_mesh_direct_t) :: direct_now
     char(len=10) :: status
+    integer :: li, lj
+    type(sketch_pos_t), dimension(:), allocatable :: contour_verts
 
     ==<just_once>==
       call contour_path.initialize( this.mesh_vert.nu,  &
                                     this.mesh_vert.nv )
     ==</just_once>==
+
+    allocate( contour_verts( this.mesh_vert.nu  &
+                            *this.mesh_vert.nv) ) ! overkill...
 
     call this.mesh_edge.apply_stokes( this.mesh_cell, level )
 
@@ -176,6 +184,17 @@ contains
                             i, contour_path.list_i(i),  &
                                contour_path.list_j(i) )
         end do
+        do i = 1, contour_path.num
+          li = contour_path.list_i(i)
+          lj = contour_path.list_j(i)
+          contour_verts(i).u = this.mesh_vert.pos_u(li)
+          contour_verts(i).v = this.mesh_vert.pos_u(lj)
+!debugp contour_verts(i).u
+        end do
+        call sketch.polygon( contour_path.num,          &
+                             contour_verts,             &
+                             color=COLOR__CONST.black,  &
+                             width_in_pixels=1.0 )
       ! </check>
       !!>
           Generally, more contours exist for this level.
@@ -187,6 +206,8 @@ contains
                                            status,          &
                                            vpos_now )
     end do
+
+    deallocate( contour_verts )
 
   end subroutine slice__scalar_vis_contour
 
