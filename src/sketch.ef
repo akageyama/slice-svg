@@ -9,7 +9,7 @@ module sketch_m
     real :: u, v
   end type sketch_pos_t
 
-  type screen_pos_t
+  type :: screen_pos_t
     real :: x, y
   end type screen_pos_t
 
