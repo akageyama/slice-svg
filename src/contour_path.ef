@@ -67,21 +67,10 @@ contains
     logical <out> :: moved_one_step
     logical <out> :: path_is_closed
     !!>
-               ^        
-               |      You are now (i,j)=(i_now,j_now),
-          E--> + --   at '+' point, and moving eastward.
-               |      Check if you can turn left (northward) or not.
-
-               |       
-           <-- + --   There are other cases such as north-to-west,
-               ^
-               | 
-               N
-
-               | 
-            -- + <---W  and from east-to-south.
-               |  
-               v
+               ^      When direct_now = 'East' and the current
+               |      vertex position (i,j)=(i_now,j_now), which is
+          E--> + --   denoted by '+'. If which_way = 'left', you 
+               |      are trying to turn left (northward).
     !!<
     type(slice_mesh_direct_t) :: direct_turned
 

@@ -1,5 +1,15 @@
 !!>
-    In physical coordinate system.
+    slice: Visualize 2-dimensional cross sections 
+    of 3- (or more) dimensional simulation data.
+
+    Draw contour lines for scalar fields.
+
+    Draw vector arrow glyphs for vector fields.
+    
+    In this module, positions are specified by the
+    simulation coordinates (u,v) with simulation unit
+    such as meters.
+
 !!< 
 module slice_m
   use color_m
