@@ -1,6 +1,3 @@
-!!>
-    Note: svglib_fig_t ==> svglib_t
-!!<
 module svglib_m
   use color_m
   use const_base_m
@@ -207,9 +204,38 @@ contains
   end subroutine print_header
 
 
-  subroutine print_marker_arrow( this, scale )
+
+  subroutine print_a_comment( this, message )
+    type(svglib_t) <in> :: this
+    char(len=*) <in> :: message
+    call write_out( this, '<!-- ' // trim(adjustl(message)) // ' -->' )
+  end subroutine print_a_comment  
+
+
+  subroutine print_decorated_comment( this, message )
+    type(svglib_t) <in> :: this
+    char(len=*) <in> :: message
+    !!>
+        e.g., 
+                <!-- ============ -->
+                <!-- Arrow Marker -->
+                <!-- ============ -->       
+    !!<
+    char(len=SVGLIB__BSL) :: str_deco
+    str_deco = repeat('=', len_trim(adjustl(message)))
+    call print_a_comment( this, str_deco )
+    call print_a_comment( this, message )
+    call print_a_comment( this, str_deco )
+  end subroutine print_decorated_comment
+
+
+  subroutine print_marker_arrow( this )
     type(svglib_t) <io> :: this
-    real <in> :: scale
+
+    real <const> :: ARROW_LENGTH_PIXEL_FOR_UNIT_VECT = 40.0
+    real <const> :: ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT = 4.0
+
+    real :: scale = ARROW_LENGTH_PIXEL_FOR_UNIT_VECT / 4
 
     real :: buffer, px, py, qx, qy, rx, ry, sx, sy, tx, ty
     real :: viewbox_upperleft_x, viewbox_upperleft_y
@@ -255,31 +281,35 @@ contains
     viewbox_width = viewbox_lowerright_x - viewbox_upperleft_x
     viewbox_height = viewbox_lowerright_y - viewbox_upperleft_y
 
-    str(1) = '<marker'
-    str(2) = svglib__text_line( 'viewBox=', viewbox_upperleft_x,   &
+    call write_out( this, '' )
+    call print_decorated_comment( this, 'Arrow Marker' )
+
+    nop = 0
+    nop += 1; str(nop) = '<marker'
+    nop += 1; str(nop) = svglib__text_line( 'viewBox=', viewbox_upperleft_x,   &
                                             viewbox_upperleft_y,   &
                                             viewbox_width,         &
                                             viewbox_height )
-    str(3) = svglib__text_line('markerWidth=',  viewbox_width )
-    str(4) = svglib__text_line('markerHeight=', viewbox_height )
-    str(5) = 'refX="0.0"'
-    str(6) = 'refY="0.0"'
-    str(7) = 'stroke="currentcolor"'
-    str(8) = 'fill="currentcolor"'
-    str(9) = 'id="arrow"' 
-    str(10) = 'orient="auto"'
-    str(11) = '>'
-    nop = 11
+    nop += 1; str(nop) = svglib__text_line('markerWidth=',  viewbox_width )
+    nop += 1; str(nop) = svglib__text_line('markerHeight=', viewbox_height )
+    nop += 1; str(nop) = 'refX="0.0"'
+    nop += 1; str(nop) = 'refY="0.0"'
+    nop += 1; str(nop) = 'stroke="currentcolor"'
+    nop += 1; str(nop) = 'fill="currentcolor"'
+    nop += 1; str(nop) = 'id="arrow"' 
+    nop += 1; str(nop) = 'orient="auto"'
+    nop += 1; str(nop) = '>'
 
     call string_concatenate( nop, str, str_all )
-    call write_out( this, trim(str_all) )
+    call write_out( this, str_all)
       call indent_push( this )
         str(1) = '<line'
         str(2) = svglib__text_line( 'x1=', px,  &
                                     'y1=', py,  &
                                     'x2=', qx,  &
                                     'y2=', qy )
-        str(3) = svglib__text_line( 'stroke-width=', 1 )
+        str(3) = svglib__text_line( 'stroke-width=',  &
+                                    ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT )
         str(4) = '/>'
         str(5) = '<polygon points=' // QUOTE // trim(r2s(rx))  &
                                     // COMMA // trim(r2s(ry))  &
@@ -329,7 +359,7 @@ contains
 
     num_spaces = this.indent_level*NUM_SPACES_PER_INDENT
 
-    write(this.file_unit, *) BLANK_LINE(1:num_spaces)//trim(line)
+    write(this.file_unit, *) BLANK_LINE(1:num_spaces)//trim(adjustl(line))
   end subroutine write_out
 
 
@@ -348,7 +378,7 @@ contains
     real <const> :: ASCALE=1.0 ! arrow glyph length scale
 
     ==<just_once>==
-      call print_marker_arrow( this, scale=ASCALE )
+      call print_marker_arrow( this )
     ==</just_once>==
 
     vector_amp = sqrt(vx**2+vy**2)
@@ -368,9 +398,31 @@ contains
     slightly_shifted_y = y + SLIGHTLY_SHIFT*vy_norm
 
     amaf = vector_amp / real(ASCALE)
+    amaf = 1.0
     call svglib__line( this, x, y,          &
                        slightly_shifted_x,  &
                        slightly_shifted_y,  &
+                       width=amaf,          &
+                       color="none",        &
+                       marker_start="arrow" )
+    amaf = 2.0
+    call svglib__line( this, x, y+20,          &
+                       slightly_shifted_x,  &
+                       slightly_shifted_y+20,  &
+                       width=amaf,          &
+                       color="none",        &
+                       marker_start="arrow" )
+    amaf = 0.5
+    call svglib__line( this, x, y-20,          &
+                       slightly_shifted_x,  &
+                       slightly_shifted_y-20,  &
+                       width=amaf,          &
+                       color="none",        &
+                       marker_start="arrow" )
+    amaf = 0.25
+    call svglib__line( this, x, y-40,          &
+                       slightly_shifted_x,  &
+                       slightly_shifted_y-40,  &
                        width=amaf,          &
                        color="none",        &
                        marker_start="arrow" )
@@ -581,7 +633,7 @@ contains
       call indent_push( this )
        do n = 1, nverts
           str_coords = svglib__text_line( verts_x(n), verts_y(n) )
-          call write_out( this, trim(str_coords) )
+          call write_out( this, str_coords )
         end do
       call indent_pop( this )
     call write_out( this, QUOTE // '/>' )
