@@ -220,7 +220,7 @@ contains
     !!>
         e.g., 
                 <!-- ============ -->
-                <!-- Arrow Marker -->
+                <!-- Comment text -->
                 <!-- ============ -->       
     !!<
     char(len=SVGLIB__BSL) :: str_deco
@@ -311,25 +311,29 @@ contains
     call string_concatenate( nop, str, str_all )
     call write_out( this, str_all)
       call indent_push( this )
-        str(1) = '<line'
-        str(2) = svglib__text_line( 'x1=', px,  &
-                                    'y1=', py,  &
-                                    'x2=', qx,  &
-                                    'y2=', qy )
-        str(3) = svglib__text_line( 'stroke-width=',  &
-                                    ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT )
-        str(4) = '/>'
-        nop = 4
-        call string_concatenate( nop, str, str_all )
-        call write_out( this, str_all )
-        str_all = '<polygon points=' // QUOTE // trim(r2s(rx))  &
-                                     // COMMA // trim(r2s(ry))  &
-                                     // SPACE // trim(r2s(sx))  &
-                                     // COMMA // trim(r2s(sy))  &
-                                     // SPACE // trim(r2s(tx))  &
-                                     // COMMA // trim(r2s(ty))  &
-                                     // QUOTE // ' />'
-        call write_out( this, str_all )
+        call write_out( this, '<g transform="scale(1.0)">' )
+        call indent_push( this )
+          str(1) = '<line'
+          str(2) = svglib__text_line( 'x1=', px,  &
+                                      'y1=', py,  &
+                                      'x2=', qx,  &
+                                      'y2=', qy )
+          str(3) = svglib__text_line( 'stroke-width=',  &
+                                      ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT )
+          str(4) = '/>'
+          nop = 4
+          call string_concatenate( nop, str, str_all )
+          call write_out( this, str_all )
+          str_all = '<polygon points=' // QUOTE // trim(r2s(rx))  &
+                                       // COMMA // trim(r2s(ry))  &
+                                       // SPACE // trim(r2s(sx))  &
+                                       // COMMA // trim(r2s(sy))  &
+                                       // SPACE // trim(r2s(tx))  &
+                                       // COMMA // trim(r2s(ty))  &
+                                       // QUOTE // ' />'
+          call write_out( this, str_all )
+        call indent_pop( this )
+        call write_out( this, '</g>' )
       call indent_pop( this )
     call write_out( this, '</marker>' )
     call write_decorated_comment( this, 'End Arrow Marker' )
