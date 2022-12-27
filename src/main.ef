@@ -9,7 +9,8 @@ program main
   type(sketch__sim_pos_t) :: cross_section_upper_right
 
   integer <const> :: NU_VECTOR = 41,   NV_VECTOR = 21
-  integer <const> :: NU_SCALAR = 1001, NV_SCALAR = 501
+  ! integer <const> :: NU_SCALAR = 1001, NV_SCALAR = 501
+  integer <const> :: NU_SCALAR = 101, NV_SCALAR = 51
   integer :: i, j
   real :: u, v
   real :: du_vector, dv_vector
