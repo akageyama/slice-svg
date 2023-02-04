@@ -383,9 +383,11 @@ contains
 
     real <const> :: TOO_SMALL = 1.e-10  ! a tiny value.
     real :: vector_amp, vx_norm, vy_norm
-    real <const> :: SLIGHTLY_SHIFT = 0.1
-    real :: slightly_shifted_x
-    real :: slightly_shifted_y
+    real <const> :: SLIGHT_SHIFT = 0.1
+    real :: slightly_shifted_x0
+    real :: slightly_shifted_y0
+    real :: slightly_shifted_x1
+    real :: slightly_shifted_y1
     real :: amp_factor
 
     logical :: just_once = .true.
@@ -407,14 +409,18 @@ contains
     vx_norm = vx / vector_amp
     vy_norm = vy / vector_amp
 
-    slightly_shifted_x = x + SLIGHTLY_SHIFT*vx_norm
-    slightly_shifted_y = y + SLIGHTLY_SHIFT*vy_norm
+    slightly_shifted_x0 = x - SLIGHT_SHIFT*vx_norm
+    slightly_shifted_y0 = y - SLIGHT_SHIFT*vy_norm
+    slightly_shifted_x1 = x + SLIGHT_SHIFT*vx_norm
+    slightly_shifted_y1 = y + SLIGHT_SHIFT*vy_norm
 
     amp_factor = vector_amp / SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
 
-    call svglib__line( this, x, y,          &
-                       slightly_shifted_x,  &
-                       slightly_shifted_y,  &
+    call svglib__line( this,                &
+                       slightly_shifted_x0, &
+                       slightly_shifted_y0, &
+                       slightly_shifted_x1, &
+                       slightly_shifted_y1, &
                        width=amp_factor,    &
                        color="none",        &
                        marker_start="arrow" )
