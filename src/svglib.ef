@@ -311,7 +311,8 @@ contains
     call string_concatenate( nop, str, str_all )
     call write_out( this, str_all)
       call indent_push( this )
-        call write_out( this, '<g transform="scale(1.0)">' )
+        ! call write_out( this, '<g transform="scale(1.0)">' )
+        call write_out( this, '<g transform="scale(0.1)">' )
         call indent_push( this )
           str(1) = '<line'
           str(2) = svglib__text_line( 'x1=', px,  &

@@ -10,7 +10,7 @@ program main
   type(sketch__sim_pos_t) :: cross_section_upper_right
 
   ! integer <const> :: NU_VECTOR = 60,   NV_VECTOR = 30
-  integer <const> :: NU_VECTOR = 30,   NV_VECTOR = 15
+  integer <const> :: NU_VECTOR = 240,   NV_VECTOR = 120
   ! integer <const> :: NU_SCALAR = 1001, NV_SCALAR = 501
   integer <const> :: NU_SCALAR = 101, NV_SCALAR = 51
   integer :: i, j
@@ -62,8 +62,7 @@ program main
 
   monopole_charge_qa = 1.0
 
-  voi_radius_a = (vmax-vmin)/10
-  voi_radius_a = (vmax-vmin)/2
+  voi_radius_a = (vmax-vmin)/6
   voi_radius_a_cubed = voi_radius_a**3
   voi_radius_b0 = 2.0**(1.0/3.0) * voi_radius_a
   voi_radius_b1 = 2.0**(1.0/2.0) * voi_radius_a
@@ -74,7 +73,7 @@ program main
   !   dipole_moment = monopole_charge_qa * (b1/a)**3
 
   dipole_moment_p_amp = monopole_charge_qa * (voi_radius_b1/voi_radius_a)**3
-  dipole_moment_angle_from_v_axis = 0.0
+  dipole_moment_angle_from_v_axis = PI/6
     !   dipole_moment = (pu, pv)
   dipole_moment_p_u = dipole_moment_p_amp * sin(dipole_moment_angle_from_v_axis)
   dipole_moment_p_v = dipole_moment_p_amp * cos(dipole_moment_angle_from_v_axis)
@@ -89,29 +88,27 @@ program main
       pos_r_sq = pos_u**2+pos_v**2
       pos_r = sqrt(pos_r_sq)
       pos_r_cubed = pos_r**3
+      p_dot_r = dipole_moment_p_u*pos_u   &
+              + dipole_moment_p_v*pos_v
 
-      if ( voi_radius_b0 <= pos_r ) then
-        p_dot_r = dipole_moment_p_u*pos_u   &
-                + dipole_moment_p_v*pos_v
-        factor = - 1.0/(4*PI*pos_r_sq)
-        velocity_u(i,j) = factor * ( dipole_moment_p_u - 2*(p_dot_r/pos_r_sq)*pos_u )
-        velocity_v(i,j) = factor * ( dipole_moment_p_v - 2*(p_dot_r/pos_r_sq)*pos_v )
-        if ( pos_r < voi_radius_b1 ) then
-          attenuation = ( pos_r - voi_radius_b0 ) / ( voi_radius_b1 - voi_radius_b0 )
-          velocity_u(i,j) *= attenuation
-          velocity_v(i,j) *= attenuation
-        end if
-      else if ( voi_radius_a < pos_r .and. pos_r <= voi_radius_b0 ) then
+      if ( pos_r < voi_radius_a ) then
+        factor = - monopole_charge_qa / (4*PI*voi_radius_a_cubed)
+        velocity_u(i,j) = factor * pos_u
+        velocity_v(i,j) = factor * pos_v
+      else if ( pos_r <= voi_radius_b0 ) then
         factor = monopole_charge_qa / (4*PI*voi_radius_a_cubed) &
                * ( 1.0 - 2*voi_radius_a_cubed/pos_r_cubed )
         velocity_u(i,j) = factor * pos_u
         velocity_v(i,j) = factor * pos_v
-      else if ( pos_r < voi_radius_a ) then
-        factor = - monopole_charge_qa / (4*PI*voi_radius_a_cubed)
-        velocity_u(i,j) = factor * pos_u
-        velocity_v(i,j) = factor * pos_v
-      else
-        print *, ' ???what???'
+      else if ( pos_r <= voi_radius_b1 ) then
+        factor = - 1.0/(4*PI*pos_r_sq)
+        attenuation = ( pos_r - voi_radius_b0 ) / ( voi_radius_b1 - voi_radius_b0 )
+        velocity_u(i,j) = attenuation * factor * ( dipole_moment_p_u - 2*(p_dot_r/pos_r_sq)*pos_u )
+        velocity_v(i,j) = attenuation * factor * ( dipole_moment_p_v - 2*(p_dot_r/pos_r_sq)*pos_v )
+      else 
+        factor = - 1.0/(4*PI*pos_r_sq)
+        velocity_u(i,j) = factor * ( dipole_moment_p_u - 2*(p_dot_r/pos_r_sq)*pos_u )
+        velocity_v(i,j) = factor * ( dipole_moment_p_v - 2*(p_dot_r/pos_r_sq)*pos_v )
       end if  
 
     end do
