@@ -1,3 +1,4 @@
+
 program main
   use color_m
   use const_base_m
@@ -8,20 +9,28 @@ program main
   type(sketch__sim_pos_t) :: cross_section_lower_left
   type(sketch__sim_pos_t) :: cross_section_upper_right
 
-  integer <const> :: NU_VECTOR = 20,   NV_VECTOR = 10
+  ! integer <const> :: NU_VECTOR = 60,   NV_VECTOR = 30
+  integer <const> :: NU_VECTOR = 30,   NV_VECTOR = 15
   ! integer <const> :: NU_SCALAR = 1001, NV_SCALAR = 501
   integer <const> :: NU_SCALAR = 101, NV_SCALAR = 51
   integer :: i, j
   real :: pos_u, pos_v
-  real :: pos_r, pos_r_sq
+  real :: pos_r, pos_r_sq, pos_r_cubed
   real :: dipole_moment_p_u, dipole_moment_p_v
   real :: dipole_moment_p_amp
   real :: p_dot_r, factor
   real :: du_vector, dv_vector
   real :: du_scalar, dv_scalar
   real :: vector_normalization_factor
+  real :: attenuation
+  real :: monopole_charge_qa
+  real :: dipole_moment_angle_from_v_axis 
   real, dimension(NU_SCALAR,NV_SCALAR) :: pressure
   real, dimension(NU_VECTOR,NV_VECTOR) :: velocity_u, velocity_v
+
+  real :: voi_radius_a, voi_radius_a_cubed
+  real :: voi_radius_b0
+  real :: voi_radius_b1
 
   real :: umin = -2*PI
   real :: umax = +2*PI
@@ -49,34 +58,110 @@ program main
   call iSample_scalar( pressure )
 
   ! sample vector field
-  ! we are setting a dipole field
-  !   dipole_moment = (pu, pv)
-  dipole_moment_p_u = 1.0
-  dipole_moment_p_v = 1.0
-  dipole_moment_p_amp = sqrt(dipole_moment_p_u**2   &
-                           + dipole_moment_p_v**2)
+  ! we are setting a dipole field with a monopole in side of it
+
+  monopole_charge_qa = 1.0
+
+  voi_radius_a = (vmax-vmin)/10
+  voi_radius_a = (vmax-vmin)/2
+  voi_radius_a_cubed = voi_radius_a**3
+  voi_radius_b0 = 2.0**(1.0/3.0) * voi_radius_a
+  voi_radius_b1 = 2.0**(1.0/2.0) * voi_radius_a
+
+  !
+  !   monopole_charge_qa/(4*pi*a_cubed) = dipole_moment/(4*pi*b1_cubed))
+  !
+  !   dipole_moment = monopole_charge_qa * (b1/a)**3
+
+  dipole_moment_p_amp = monopole_charge_qa * (voi_radius_b1/voi_radius_a)**3
+  dipole_moment_angle_from_v_axis = 0.0
+    !   dipole_moment = (pu, pv)
+  dipole_moment_p_u = dipole_moment_p_amp * sin(dipole_moment_angle_from_v_axis)
+  dipole_moment_p_v = dipole_moment_p_amp * cos(dipole_moment_angle_from_v_axis)
 
   du_vector = (umax-umin)/(NU_VECTOR-1)
   dv_vector = (vmax-vmin)/(NV_VECTOR-1)  
+
   do j = 1, NV_VECTOR
     do i = 1, NU_VECTOR
       pos_u = umin + du_vector*(i-1)
       pos_v = vmin + dv_vector*(j-1)
       pos_r_sq = pos_u**2+pos_v**2
       pos_r = sqrt(pos_r_sq)
-      p_dot_r = dipole_moment_p_u*pos_u   &
-              + dipole_moment_p_v*pos_v
-      factor = - 1.0/(4*PI*pos_r_sq)
-      velocity_u(i,j) = factor * ( dipole_moment_p_u - 2*(p_dot_r/pos_r_sq)*pos_u )
-      velocity_v(i,j) = factor * ( dipole_moment_p_v - 2*(p_dot_r/pos_r_sq)*pos_v )
+      pos_r_cubed = pos_r**3
+
+      if ( voi_radius_b0 <= pos_r ) then
+        p_dot_r = dipole_moment_p_u*pos_u   &
+                + dipole_moment_p_v*pos_v
+        factor = - 1.0/(4*PI*pos_r_sq)
+        velocity_u(i,j) = factor * ( dipole_moment_p_u - 2*(p_dot_r/pos_r_sq)*pos_u )
+        velocity_v(i,j) = factor * ( dipole_moment_p_v - 2*(p_dot_r/pos_r_sq)*pos_v )
+        if ( pos_r < voi_radius_b1 ) then
+          attenuation = ( pos_r - voi_radius_b0 ) / ( voi_radius_b1 - voi_radius_b0 )
+          velocity_u(i,j) *= attenuation
+          velocity_v(i,j) *= attenuation
+        end if
+      else if ( voi_radius_a < pos_r .and. pos_r <= voi_radius_b0 ) then
+        factor = monopole_charge_qa / (4*PI*voi_radius_a_cubed) &
+               * ( 1.0 - 2*voi_radius_a_cubed/pos_r_cubed )
+        velocity_u(i,j) = factor * pos_u
+        velocity_v(i,j) = factor * pos_v
+      else if ( pos_r < voi_radius_a ) then
+        factor = - monopole_charge_qa / (4*PI*voi_radius_a_cubed)
+        velocity_u(i,j) = factor * pos_u
+        velocity_v(i,j) = factor * pos_v
+      else
+        print *, ' ???what???'
+      end if  
+
     end do
   end do
+
+  call iScale_vects_by_log( NU_VECTOR, NV_VECTOR, velocity_u, velocity_v )
+
+!!>
+  !
+  ! vector field ==> log of the vector field
+  !
+  do j = 1, NV_VECTOR
+    do i = 1, NU_VECTOR
+      vector_amplitude_original = sqrt( velocity_u(i,j)**2  &
+                                      + velocity_v(i,j)**2 )
+      vector_normalization_factor = log(1.0+1000*vector_amplitude_original)  &
+                                          / vector_amplitude_original
+      velocity_u(i,j) *= vector_normalization_factor
+      velocity_v(i,j) *= vector_normalization_factor
+    end do
+  end do
+!!<
+      
   vector_normalization_factor = maxval( sqrt( velocity_u**2 + velocity_v**2 ) )
   velocity_u(:,:) = velocity_u(:,:) / vector_normalization_factor
   velocity_v(:,:) = velocity_v(:,:) / vector_normalization_factor
   call iSample_vector( velocity_u, velocity_v )
 
 contains
+
+
+  subroutine iScale_vects_by_log( nu, nv, vec_u, vec_v )
+    integer <in> :: nu, nv
+    real, dimension(nu,nv) <io> :: vec_u, vec_v
+
+    real :: vec_amp_original
+    real :: amp_factor = 1000.0
+    real :: norm_factor
+
+    do j = 1, nv
+      do i = 1, nu
+        vec_amp_original = sqrt( vec_u(i,j)**2  &
+                                        + vec_v(i,j)**2 )
+        norm_factor = log(1.0+amp_factor*vec_amp_original)  &
+                                       / vec_amp_original
+        velocity_u(i,j) *= norm_factor
+        velocity_v(i,j) *= norm_factor
+      end do
+    end do
+  end subroutine iScale_vects_by_log
 
 
   subroutine iSample_lines
