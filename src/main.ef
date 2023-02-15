@@ -11,8 +11,8 @@ program main
 
   ! integer <const> :: NU_VECTOR = 60,   NV_VECTOR = 30
   integer <const> :: NU_VECTOR = 240,   NV_VECTOR = 120
-  ! integer <const> :: NU_SCALAR = 1001, NV_SCALAR = 501
-  integer <const> :: NU_SCALAR = 101, NV_SCALAR = 51
+  integer <const> :: NU_SCALAR = 2001, NV_SCALAR = 1001
+  ! integer <const> :: NU_SCALAR = 101, NV_SCALAR = 51
   integer :: i, j
   real :: pos_u, pos_v
   real :: pos_r, pos_r_sq, pos_r_cubed
@@ -309,10 +309,10 @@ contains
       call slice_pressure.vis_contour( sketch, 0.3 )
       call slice_pressure.vis_contour( sketch, 0.4 )
       call slice_pressure.vis_contour( sketch, 0.5 )
-      call slice_pressure.vis_contour( sketch, 0.6 )
-      call slice_pressure.vis_contour( sketch, 0.7 )
-      call slice_pressure.vis_contour( sketch, 0.8 )
-      call slice_pressure.vis_contour( sketch, 0.9 )
+      call slice_pressure.vis_contour( sketch, 0.6, fill_color=COLOR__CONST.gray(0.9) )
+      call slice_pressure.vis_contour( sketch, 0.7, fill_color=COLOR__CONST.gray(0.8)  )
+      call slice_pressure.vis_contour( sketch, 0.8, fill_color=COLOR__CONST.gray(0.7) )
+      call slice_pressure.vis_contour( sketch, 0.9, fill_color=COLOR__CONST.yellow )
     call sketch.group_pop
     call slice_pressure.finalize
     call sketch.rectangle( ll, ur,  &
