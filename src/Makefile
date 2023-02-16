@@ -152,7 +152,6 @@ line:
 
 clean:
 	rm -rf list.ps list.pdf
-	rm -rf *.svg
 	rm -rf depend_list.mk
 	rm -rf *.o *.lst *.F90 *.mod *.L
 	rm -rf test
