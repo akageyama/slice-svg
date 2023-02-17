@@ -23,6 +23,24 @@ module contour_path_m
        +---+---1           3=P=2
        |   |   M           P   |
        +---+---2=P=1=P=1=P=2---+
+
+      To round the corner, we make a 45-degree turn
+      at each corner, instead of 90-degree turn.
+      In the figure below, we came from left, along the
+      bottom line, and have just made a turn to left
+      at the corner point "2". And the present vertex
+      position (vpos_now) is "1". To draw a "rounded"
+      path (...L...L...) with double 45-degree turns.
+
+                        L
+                        L
+                        1
+                      L .\____vpos_now
+                    L   .
+                  L     .
+        L L L L 1 . . . 2
+                 \       \_____vpos_prev1
+                  \____________vpos_prev2
   !!<
 
   type, public :: contour_path_t
@@ -193,10 +211,13 @@ contains
     type(slice_mesh_ivect_t) <io> :: vpos_now
 
     logical :: moved_one_step, path_is_closed
-    type(slice_mesh_ivect_t) :: vpos_prev
+    type(slice_mesh_ivect_t) :: vpos_prev1, vpos_prev2
 
+    vpos_prev1 = vpos_now
+    vpos_prev2 = vpos_prev1
     do
-      vpos_prev = vpos_now
+      vpos_prev2 = vpos_prev1
+      vpos_prev1 = vpos_now
       call turn( 'left',          &
                  this,            &
                  mesh_edge,       &
@@ -205,8 +226,9 @@ contains
                  moved_one_step,  &
                  path_is_closed )
       if ( moved_one_step ) then
-        call register( this, vpos_prev )
-        vpos_prev = vpos_now
+        call register( this, vpos_prev2 )
+        vpos_prev2 = vpos_prev1
+        vpos_prev1 = vpos_now
       end if
       if ( path_is_closed ) return
 
@@ -219,8 +241,9 @@ contains
                  moved_one_step,  &
                  path_is_closed )
       if ( moved_one_step ) then
-        call register( this, vpos_prev )
-        vpos_prev = vpos_now
+        call register( this, vpos_prev2 )
+        vpos_prev2 = vpos_prev1
+        vpos_prev1 = vpos_now
       end if
       if ( path_is_closed ) return
 
