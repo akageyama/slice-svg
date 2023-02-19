@@ -1,0 +1,81 @@
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN"
+    "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+
+<svg width="800" height="500" viewBox="0 0 800 500"
+  onload="init(evt)"
+  xmlns="http://www.w3.org/2000/svg"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+
+  <defs>
+    <style type="text/css" > <![CDATA[
+      svg { /* default values */
+        stroke: black;
+        fill: white;
+      }
+      g.selected rect {
+        fill: #ffc; /* light yellow */
+      }
+      text {
+        stroke: none;
+        fill:black;
+        text-anchor: middle;
+      }
+    ]]></style>
+    <script type="application/ecmascript"><![CDATA[
+      var scaleChoice = 1;
+      var scaleFactor = [1.25, 1.5, 1.75];
+
+      function init(evt) {  
+        var obj;
+        for (var i = 0; i < 3; i++) {
+          obj = document.getElementById("scale" + i);
+          obj.addEventListener("click", clickButton, false);
+        }
+        transformArrow();
+      }
+
+      function clickButton(evt) {
+        var choice = evt.target.parentNode
+        var name = choice.getAttribute("id");
+        var old = document.getElementById("scale" + scaleChoice);
+        old.removeAttribute("class");
+        choice.setAttribute("class", "selected");
+      
+        scaleChoice = parseInt(name[name.length - 1]);
+        transformArrow();
+      }
+
+      function transformArrow() {    
+        var factor = scaleFactor[scaleChoice];
+        var obj = document.getElementById("arrow-element");
+        obj.setAttribute("transform",
+          "scale(" + factor + ")");
+      }
+    ]]></script>
+
+     <g id="arrow-element">
+         <line x1="-20.00" y1=".00" x2="10.00" y2=".00" />
+         <polygon fill="black" points="20.00,.00 10.00,-5.00 10.00,5.00" />
+     </g>
+  </defs>
+
+  <g id="arrow" >
+    <use xlink:href="#arrow-element" stroke="blue" x="50" y="60" />
+  </g>
+
+  <g id="scale0" > 
+    <rect x="100" y="10" width="30" height="30" />
+    <text x="115" y="30">S</text>
+  </g>
+
+  <g id="scale1" class="selected">
+    <rect x="140" y="10" width="30" height="30" />
+    <text x="155" y="30">M</text>
+  </g>
+
+  <g id="scale2" >
+    <rect x="180" y="10" width="30" height="30" />
+    <text x="195" y="30">L</text>
+  </g>
+</svg>
+
