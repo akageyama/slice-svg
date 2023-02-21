@@ -383,7 +383,11 @@ contains
                -2*scale  .           .  2*scale  
                      -1*scale      scale         
     !!<  
-    real :: px, py, qx, qy, rx, ry, sx, sy, tx, ty
+    real :: buffer, px, py, qx, qy, rx, ry, sx, sy, tx, ty
+    real :: viewbox_upperleft_x, viewbox_upperleft_y
+    real :: viewbox_lowerright_x, viewbox_lowerright_y
+    real :: viewbox_width, viewbox_height
+
     integer :: nop  ! number of options
     integer <const> :: MAX_NOP = 20
     char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
@@ -400,13 +404,31 @@ contains
     tx = scale
     ty = scale*0.5
 
+    viewbox_upperleft_x = px - buffer
+    viewbox_upperleft_y = sy - buffer
+    viewbox_lowerright_x = rx + buffer
+    viewbox_lowerright_y = ty + buffer
+    viewbox_width = viewbox_lowerright_x - viewbox_upperleft_x
+    viewbox_height = viewbox_lowerright_y - viewbox_upperleft_y
+
     call write_decorated_comment( this, 'Arrow Element' )
 
 
     call write_out( this, '<defs>' )
       call indent_push( this )
-      call write_out( this, '<symbol id="arrow-element">' )
         call indent_push( this )
+          nop = 0
+          nop += 1; str(nop) = '<symbol id="arrow-element"'
+          nop += 1; str(nop) = svglib__text_line( 'width=', viewbox_width, &
+                                                  'height=', viewbox_height )
+          nop += 1; str(nop) = svglib__text_line( 'viewBox=', viewbox_upperleft_x,   &
+                                                              viewbox_upperleft_y,   &
+                                                              viewbox_width,         &
+                                                              viewbox_height )
+          nop += 1; str(nop) = '>'
+          call string_concatenate( nop, str, str_all )
+          call write_out( this, str_all)
+            call indent_push( this )
           str(1) = '<line'
           str(2) = svglib__text_line( 'x1=', px,  &
                                       'y1=', py,  &
@@ -559,7 +581,7 @@ contains
              // ')' // COMMA // SPACE
     str(4) = 'translate' &
              // '(' // trim(r2s(x)) // COMMA  &
-                    // trim(r2s(y)) // COMMA  &
+                    // trim(r2s(y))   &
              // ')' // SPACE
     str(5) = 'scale(1.0)' // QUOTE // ' />'
     nop = 5
