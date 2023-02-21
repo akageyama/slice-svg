@@ -383,10 +383,7 @@ contains
                -2*scale  .           .  2*scale  
                      -1*scale      scale         
     !!<  
-    real :: buffer, px, py, qx, qy, rx, ry, sx, sy, tx, ty
-    real :: viewbox_upperleft_x, viewbox_upperleft_y
-    real :: viewbox_lowerright_x, viewbox_lowerright_y
-    real :: viewbox_width, viewbox_height
+    real :: px, py, qx, qy, rx, ry, sx, sy, tx, ty
 
     integer :: nop  ! number of options
     integer <const> :: MAX_NOP = 20
@@ -404,27 +401,13 @@ contains
     tx = scale
     ty = scale*0.5
 
-    viewbox_upperleft_x = px - buffer
-    viewbox_upperleft_y = sy - buffer
-    viewbox_lowerright_x = rx + buffer
-    viewbox_lowerright_y = ty + buffer
-    viewbox_width = viewbox_lowerright_x - viewbox_upperleft_x
-    viewbox_height = viewbox_lowerright_y - viewbox_upperleft_y
-
     call write_decorated_comment( this, 'Arrow Element' )
-
 
     call write_out( this, '<defs>' )
       call indent_push( this )
         call indent_push( this )
           nop = 0
-          nop += 1; str(nop) = '<symbol id="arrow-element"'
-          nop += 1; str(nop) = svglib__text_line( 'width=', viewbox_width, &
-                                                  'height=', viewbox_height )
-          nop += 1; str(nop) = svglib__text_line( 'viewBox=', viewbox_upperleft_x,   &
-                                                              viewbox_upperleft_y,   &
-                                                              viewbox_width,         &
-                                                              viewbox_height )
+          nop += 1; str(nop) = '<g id="arrow-element"'
           nop += 1; str(nop) = '>'
           call string_concatenate( nop, str, str_all )
           call write_out( this, str_all)
@@ -449,7 +432,7 @@ contains
                                        // QUOTE // ' />'
           call write_out( this, str_all )
         call indent_pop( this )
-        call write_out( this, '</symbol>' )
+        call write_out( this, '</g>' )
       call indent_pop( this )
     call write_out( this, '</defs>' )
     call write_decorated_comment( this, 'End Arrow Element' )
@@ -509,7 +492,7 @@ contains
     logical :: just_once = .true.
 
     ==<just_once>==
-      call write_marker_arrow( this )
+!      call write_marker_arrow( this )
       call write_arrow_element( this )
     ==</just_once>==
 
