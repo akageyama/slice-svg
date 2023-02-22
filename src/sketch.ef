@@ -135,13 +135,15 @@ contains
   end subroutine sketch__arrow
 
 
-  subroutine sketch__group_push( this, line_type,            &
-                                        line_width_in_pixel,  &
-                                        line_color,           &
-                                        line_opacity,         &
-                                        fill_color,           &
-                                        fill_opacity )
+  subroutine sketch__group_push( this, id,                   &
+                                       line_type,            &
+                                       line_width_in_pixel,  &
+                                       line_color,           &
+                                       line_opacity,         &
+                                       fill_color,           &
+                                       fill_opacity )
     class(sketch_t) <io> :: this
+    char(len=*) <optin> :: id
     char(len=6) <optin> :: line_type  ! 'dotted' or
                                       ! 'dashed'
     real <optin> :: line_width_in_pixel
@@ -157,6 +159,13 @@ contains
     integer :: n
 
     call iClear_str
+
+    nop = 0
+
+    if ( present(id) ) then
+      nop += 1
+      str(nop) = svglib__text_line( 'id=', id )
+    end if
 
     if ( present(line_color) ) then
       nop += 1

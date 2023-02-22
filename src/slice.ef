@@ -311,15 +311,34 @@ contains
     integer :: i, j
     real :: u, v
 
-    do j = 1, this.mesh_vert.nv
-      do i = 1, this.mesh_vert.nu
-        u = this.mesh_vert.pos_u(i)
-        v = this.mesh_vert.pos_v(j)
-        call sketch.arrow( u, v, &
-                           this.vect_u(i,j), &
-                           this.vect_v(i,j) )
-      end do
+    integer :: skip
+    character(len=11) :: tag_for_group
+    logical, dimension(:,:), allocatable :: pass_to_sketch_flag
+
+    allocate(pass_to_sketch_flag(this.mesh_vert.nu,this.mesh_vert.nv))
+
+    pass_to_sketch_flag(:,:) = .false.
+
+    do skip = 4, 1, -1
+      write(tag_for_group,"(a,i1)") "arrow-skip", skip
+        ! "arrow-skip4, arrow-skip3, ...
+      call sketch.group_push( id=trim(tag_for_group) )
+        do j = 1, this.mesh_vert.nv, skip
+          do i = 1, this.mesh_vert.nu, skip
+            if ( .not. pass_to_sketch_flag(i,j) ) then
+              u = this.mesh_vert.pos_u(i)
+              v = this.mesh_vert.pos_v(j)
+              call sketch.arrow( u, v, &
+                                 this.vect_u(i,j), &
+                                 this.vect_v(i,j) )
+              pass_to_sketch_flag(i,j) = .true.
+            end if
+          end do
+        end do
+      call sketch.group_pop()
     end do
+
+    deallocate(pass_to_sketch_flag)
   end subroutine slice__vector_vis_arrows
 
 end module slice_m
