@@ -378,6 +378,7 @@ contains
                            this.screen_size.width,  &
                            this.screen_size.height )
 
+    call this.svglib.arrow_template
   end subroutine sketch__initialize
 
 

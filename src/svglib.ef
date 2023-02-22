@@ -22,6 +22,7 @@ module svglib_m
     procedure :: close => svglib__close
     procedure :: line => svglib__line
     procedure :: arrow => svglib__arrow
+    procedure :: arrow_template => svglib__arrow_template
     procedure :: text => svglib__text
     procedure :: polygon => svglib__polygon
   end type svglib_t
@@ -353,8 +354,46 @@ contains
   end subroutine write_marker_arrow
 
 
-  subroutine write_arrow_element( this )
-    type(svglib_t) <io> :: this
+
+  function r2s( val ) result(str)
+    ! real to string
+    real <in> :: val
+    char(len=100) :: str
+
+    write(str,"(f0.2)") val
+  end function r2s
+
+
+  subroutine string_concatenate( n, str_array, str_concat )
+    integer <in> :: n
+    char(len=*), dimension(:) <in> :: str_array
+    char(len=*) <out> :: str_concat
+
+    integer :: i
+
+    str_concat = ''
+    do i = 1, n
+      str_concat = trim(str_concat) // SPACE // trim(str_array(i))
+    end do
+  end subroutine string_concatenate
+      
+
+  subroutine write_out( this, line )
+    type(svglib_t) <in> :: this
+    char(len=*) <in> :: line
+
+    integer <const> :: NUM_SPACES_PER_INDENT = 2
+    integer :: num_spaces
+    char(len=*) <const> :: BLANK_LINE = '                                         '
+
+    num_spaces = this.indent_level*NUM_SPACES_PER_INDENT
+
+    write(this.file_unit, *) BLANK_LINE(1:num_spaces)//trim(adjustl(line))
+  end subroutine write_out
+
+
+  subroutine svglib__arrow_template( this )
+    class(svglib_t) <io> :: this
 
     real <const> :: ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT  &
                     = SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT / 10.0
@@ -401,79 +440,41 @@ contains
     tx = scale
     ty = scale*0.5
 
-    call write_decorated_comment( this, 'Arrow Element' )
+    call write_a_comment( this, '<Arrow Template 01>' )
 
     call write_out( this, '<defs>' )
       call indent_push( this )
-        call indent_push( this )
-          nop = 0
-          nop += 1; str(nop) = '<g id="arrow-element"'
-          nop += 1; str(nop) = '>'
-          call string_concatenate( nop, str, str_all )
-          call write_out( this, str_all)
-            call indent_push( this )
-          str(1) = '<line'
-          str(2) = svglib__text_line( 'x1=', px,  &
-                                      'y1=', py,  &
-                                      'x2=', qx,  &
-                                      'y2=', qy )
-          str(3) = svglib__text_line( 'stroke-width=',  &
-                                      ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT )
-          str(4) = '/>'
-          nop = 4
-          call string_concatenate( nop, str, str_all )
-          call write_out( this, str_all )
-          str_all = '<polygon points=' // QUOTE // trim(r2s(rx))  &
-                                       // COMMA // trim(r2s(ry))  &
-                                       // SPACE // trim(r2s(sx))  &
-                                       // COMMA // trim(r2s(sy))  &
-                                       // SPACE // trim(r2s(tx))  &
-                                       // COMMA // trim(r2s(ty))  &
-                                       // QUOTE // ' />'
-          call write_out( this, str_all )
-        call indent_pop( this )
+        call write_out( this, '<g id="arrow-template01">' )
+          call indent_push( this )
+            call write_out( this, '<g id="arrow-template01-scale" transform="scale(1.0)">' )
+              call indent_push( this )
+                str(1) = '<line'
+                str(2) = svglib__text_line( 'x1=', px,  &
+                                            'y1=', py,  &
+                                            'x2=', qx,  &
+                                            'y2=', qy )
+                str(3) = svglib__text_line( 'stroke-width=',  &
+                                            ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT )
+                str(4) = '/>'
+                nop = 4
+                call string_concatenate( nop, str, str_all )
+                call write_out( this, str_all )
+                str_all = '<polygon points=' // QUOTE // trim(r2s(rx))  &
+                                             // COMMA // trim(r2s(ry))  &
+                                             // SPACE // trim(r2s(sx))  &
+                                             // COMMA // trim(r2s(sy))  &
+                                             // SPACE // trim(r2s(tx))  &
+                                             // COMMA // trim(r2s(ty))  &
+                                             // QUOTE // ' />'
+                call write_out( this, str_all )
+              call indent_pop( this )
+            call write_out( this, '</g>' )
+          call indent_pop( this )
         call write_out( this, '</g>' )
       call indent_pop( this )
     call write_out( this, '</defs>' )
-    call write_decorated_comment( this, 'End Arrow Element' )
-  end subroutine write_arrow_element
-
-
-  function r2s( val ) result(str)
-    ! real to string
-    real <in> :: val
-    char(len=100) :: str
-
-    write(str,"(f0.2)") val
-  end function r2s
-
-
-  subroutine string_concatenate( n, str_array, str_concat )
-    integer <in> :: n
-    char(len=*), dimension(:) <in> :: str_array
-    char(len=*) <out> :: str_concat
-
-    integer :: i
-
-    str_concat = ''
-    do i = 1, n
-      str_concat = trim(str_concat) // SPACE // trim(str_array(i))
-    end do
-  end subroutine string_concatenate
-      
-
-  subroutine write_out( this, line )
-    type(svglib_t) <in> :: this
-    char(len=*) <in> :: line
-
-    integer <const> :: NUM_SPACES_PER_INDENT = 2
-    integer :: num_spaces
-    char(len=*) <const> :: BLANK_LINE = '                                         '
-
-    num_spaces = this.indent_level*NUM_SPACES_PER_INDENT
-
-    write(this.file_unit, *) BLANK_LINE(1:num_spaces)//trim(adjustl(line))
-  end subroutine write_out
+    call write_a_comment( this, '</Arrow Template 01>' )
+  end subroutine svglib__arrow_template
 
 
   subroutine svglib__arrow_use_marker( this, x, y, vx, vy )
@@ -492,8 +493,7 @@ contains
     logical :: just_once = .true.
 
     ==<just_once>==
-!      call write_marker_arrow( this )
-      call write_arrow_element( this )
+      call write_marker_arrow( this )
     ==</just_once>==
 
     vector_amp = sqrt(vx**2+vy**2)
@@ -539,11 +539,6 @@ contains
     integer <const> :: MAX_NOP = 20
     char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
     char(len=SVGLIB__BSL*MAX_NOP) :: str_all
-    logical :: just_once = .true.
-
-    ==<just_once>==
-      call write_arrow_element( this )
-    ==</just_once>==
 
     vector_amp = sqrt(vx**2+vy**2)
     if ( vector_amp < TOO_SMALL ) return
@@ -555,18 +550,17 @@ contains
 
     amp_factor = vector_amp / SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
 
-    str(1) = '<use xlink:href="#arrow-element"' // SPACE
-    str(2) = 'transform=' // QUOTE 
-    str(3) = 'rotate'  &
-             // '(' // trim(r2s(angle_from_x_axis)) // COMMA  &
-                    // trim(r2s(x)) // COMMA  &
-                    // trim(r2s(y))  &
+    str(1) = '<use xlink:href="#arrow-template01"' // SPACE
+    str(2) = 'transform=' // QUOTE // 'rotate('
+    str(3) = trim(r2s(angle_from_x_axis)) // COMMA  &
+             // trim(r2s(x)) // COMMA  &
+             // trim(r2s(y))  &
              // ')' // COMMA // SPACE
     str(4) = 'translate' &
              // '(' // trim(r2s(x)) // COMMA  &
                     // trim(r2s(y))   &
-             // ')' // SPACE
-    str(5) = 'scale(1.0)' // QUOTE // ' />'
+             // ')' // COMMA // SPACE
+    str(5) = 'scale(' // trim(r2s(amp_factor)) // ')' // QUOTE // ' />'
     nop = 5
     call string_concatenate( nop, str, str_all )
     call write_out( this, str_all )
