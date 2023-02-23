@@ -307,7 +307,7 @@ contains
   subroutine slice__vector_vis_arrows( this, sketch )
     class(slice__vector_t) <io> :: this
     type(sketch_t) <io> :: sketch
-    !>>
+    !!>
         o--o--o--o--o--o--o--o--o <== Original (=finest) grid
         |  |  |  |  |  |  |  |  |
         o-----o-----o-----o-----o <== Coarse grid (stride=2)
@@ -317,7 +317,7 @@ contains
         o-----------------------o <== Coarser2 grid (stride=8)
         |  |  |  |  |  |  |  |  |
         3  0  1  0  2  0  1  0  3 <====== "skip"    
-    !<<
+    !!<
     integer :: i, j
     real :: u, v
 
