@@ -18,7 +18,7 @@ objlist := $(addsuffix .o, $(filebase)) # => example.o
        # .SECONDARY: obj/%.F90 does not work (GNU Make 3.81).
 
 
-.PHONY: clean line list test
+.PHONY: clean line list runmne view fig
 
 
 %.F90: %.ef
@@ -105,14 +105,14 @@ svglist := sample_line.svg \
 
 # default target
 
-view: $(svglist)
+view: $(svglist) fig
 	open $(svglist)
 
-$(svglist): test
-	./test
+fig: runme
+	./runme
 
-test: $(objlist)
-	$(FC) $(FFLAGS) -o test $(objlist)
+runme: $(objlist)
+	$(FC) $(FFLAGS) -o runme $(objlist)
 
 
 -include depend_list.mk
@@ -154,5 +154,5 @@ clean:
 	rm -rf list.ps list.pdf
 	rm -rf depend_list.mk
 	rm -rf *.o *.lst *.F90 *.mod *.L
-	rm -rf test
+	rm -rf runme
 
