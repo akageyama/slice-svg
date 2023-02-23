@@ -281,6 +281,9 @@ contains
     type(color_t) :: magenta
 
     type(slice__scalar_t) :: slice_pressure
+    real :: level_min, level_max, level_middle
+    type(color_t) :: color
+    integer :: l
     
     magenta = COLOR__CONST.magenta
 
@@ -304,15 +307,31 @@ contains
 
     call sketch.group_push( line_color=magenta,  &
                             line_width_in_pixel=2.0 )
-      call slice_pressure.vis_contour_above( sketch, 0.1 )
-      call slice_pressure.vis_contour_above( sketch, 0.2 )
-      call slice_pressure.vis_contour_above( sketch, 0.3 )
-      call slice_pressure.vis_contour_above( sketch, 0.4 )
-      call slice_pressure.vis_contour_above( sketch, 0.5 )
-      call slice_pressure.vis_contour_above( sketch, 0.6, fill_color=COLOR__CONST.gray(0.9) )
-      call slice_pressure.vis_contour_above( sketch, 0.7, fill_color=COLOR__CONST.gray(0.8)  )
-      call slice_pressure.vis_contour_above( sketch, 0.8, fill_color=COLOR__CONST.gray(0.7) )
-      call slice_pressure.vis_contour_above( sketch, 0.9, fill_color=COLOR__CONST.yellow )
+      ! -- the lowest contour --
+      level_max = 0.1
+      level_middle = 0.05
+      color = color__normalized_real_to_color( level_middle )
+      call slice_pressure.vis_contour_below( sketch, 0.1,  &
+                                             fill_color=color )
+      ! -- contours in between --
+      do l = 1, 8
+        level_min = 0.1*l
+        level_max = 0.1*(l+1)
+        level_middle = ( level_min + level_max ) / 2
+        color = color__normalized_real_to_color( level_middle )
+        call slice_pressure.vis_contour_between( sketch, level_min, level_max,  &
+                                                 fill_color=color )
+      end do
+      ! -- the highest contour --
+      level_min = 0.9
+      level_middle = 0.95
+      color = color__normalized_real_to_color( level_middle )
+      call slice_pressure.vis_contour_above( sketch, level_min,  &
+                                             fill_color=color )
+      !!>
+        call slice_pressure.vis_contour_above( sketch, 0.6, fill_color=COLOR__CONST.gray(0.9) )
+        call slice_pressure.vis_contour_above( sketch, 0.9, fill_color=COLOR__CONST.yellow )
+      !!<
     call sketch.group_pop
     call slice_pressure.finalize
     call sketch.rectangle( ll, ur,  &

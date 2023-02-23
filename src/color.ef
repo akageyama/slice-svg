@@ -3,7 +3,7 @@ module color_m
   implicit none
   private
   public :: COLOR__CONST
-  public :: color__norm_real_to_color_code
+  public :: color__normalized_real_to_color
 
 
   type, public :: color_t ! basic color type
@@ -42,73 +42,90 @@ module color_m
 
 contains
 
-
-  function color__hsv__to_rgb( this ) result(rgb)
+  function color__hsv__to_rgb( this ) result(rgb)  
     class(color__hsv_t) <in> :: this
-
     type(color_t) :: rgb
-    !!>
-        Copied from VFIVE.
-    !!<
-    integer :: hue_
-    real :: local_, diff_, m, n, k;
 
-    local_ = this.hue * 360.0;
-    local_ = mod(local_,360.0)
-    local_ = local_ - 360.0;
-    local_ = local_ / 60.0;
-    hue_ = int(local_);
-    diff_ = local_ - hue_;
-    m = this.val * (1.0 - this.sat);
-    n = this.val * (1.0 - this.sat * diff_);
-    k = this.val * (1.0 - this.sat * (1.0 - diff_));
+    real :: h, s, v
+    real :: r, g, b
+    integer :: hue6
+    real    :: f, p, q, t
+  
+    h = this.hue
+    s = this.sat
+    v = this.val
 
-    select case (hue_) 
-      case (0)
-        rgb.r = this.val
-        rgb.g = k
-        rgb.b = m
-      case (1)
-        rgb.r = n
-        rgb.g = this.val
-        rgb.b = m
-      case (2)
-        rgb.r = m
-        rgb.g = this.val
-        rgb.b = k
-      case (3)
-        rgb.r = m
-        rgb.g = n
-        rgb.b = this.val
-      case (4)
-        rgb.r = k
-        rgb.g = m
-        rgb.b = this.val
-      case (5)
-        rgb.r = this.val
-        rgb.g = m
-        rgb.b = n
+    call iClip( h )
+    call iClip( s )
+    call iClip( v )
+  
+    if( s == 0.0 ) then
+      rgb.r = v
+      rgb.g = v
+      rgb.b = v
+      return
+    end if
+  
+    if( h == 1.0 ) then
+      h = 0.0
+    end if
+  
+    h *= 6.0
+    hue6 = int(h)
+    f = h - hue6
+    p = v*(1.0-s)
+    q = v*(1.0-(s*f))
+    t = v*(1.0-(s*(1-f)))
+  
+    select case (hue6)
+      case (0) 
+        r=v; g=t; b=p
+      case (1) 
+        r=q; g=v; b=p
+      case (2) 
+        r=p; g=v; b=t
+      case (3) 
+        r=p; g=q; b=v
+      case (4) 
+        r=t; g=p; b=v
+      case (5) 
+        r=v; g=p; b=q
+      case default
     end select
+  
+    rgb.r = r
+    rgb.g = g
+    rgb.b = b
+
+  contains
+  
+    subroutine iClip( val )
+      real <io> :: val
+  
+      if ( val < 0.0 ) val = 0.0
+      if ( val > 1.0 ) val = 1.0
+    end subroutine iClip
+
   end function color__hsv__to_rgb
 
-
-  function color__norm_real_to_color_code( value ) result(code)
+  function color__normalized_real_to_color( value ) result(col)
     real <in> :: value
+    type(color_t) :: col
+
     char(len=7) :: code ! '#FFFFFF' for white
 
     type(color__hsv_t) :: hsv
-    type(color_t) :: rgb
 
     call ut__assert( value >= 0.0 .and. value <= 1.0,  &
                     'Normalized value out of range.' )
 
-    hsv.hue = 0.7 * value
-    hsv.sat = 1.0
-    hsv.val = 1.0
+    hsv.hue = 0.3 + 0.5 * value
+    hsv.sat = 0.7
+    hsv.val = 0.6
 
-   rgb = hsv.to_rgb()
-   code = rgb.to_code()
-  end function color__norm_real_to_color_code
+    col = hsv.to_rgb()
+
+  end function color__normalized_real_to_color
 
 
   subroutine color__const__test_print( this )
