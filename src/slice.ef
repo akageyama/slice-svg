@@ -30,7 +30,9 @@ module slice_m
     procedure :: initialize => slice__scalar_initialize
     procedure :: finalize => slice__scalar_finalize
     procedure :: set_val => slice__scalar_set_val
-    procedure :: vis_contour => slice__scalar_vis_contour
+    procedure :: vis_contour_above => slice__scalar_vis_contour_above
+    procedure :: vis_contour_below => slice__scalar_vis_contour_below
+    procedure :: vis_contour_between => slice__scalar_vis_contour_between
   end type slice__scalar_t
 
   type, public :: slice__vector_t
@@ -49,69 +51,22 @@ module slice_m
 contains
 
 
-  subroutine slice__scalar_initialize( this, nu, nv,  &
-                                       u_min, u_max,  &
-                                       v_min, v_max,  &
-                                       val )
-    class(slice__scalar_t) <out> :: this
-    integer <in> :: nu, nv
-    real <in> :: u_min, u_max
-    real <in> :: v_min, v_max
-    real, dimension(nu,nv) <optin> :: val
-
-    allocate(this.val_vert(nu,nv))
-
-    call this.mesh_vert.initialize( nu, nv,        &
-                                    u_min, u_max,  &
-                                    v_min, v_max )
-    call this.mesh_cell.initialize( this.mesh_vert )
-    call this.mesh_edge.initialize( this.mesh_vert )
-
-    if ( present(val) ) then
-      this.val_vert(:,:) = val(:,:)
-    else
-      this.val_vert(:,:) = 0.0
-    end if
-
-    call this.mesh_cell.set_meanval( this.mesh_vert,  &
-                                     this.val_vert )
-  end subroutine slice__scalar_initialize
-
-
-  subroutine slice__scalar_set_val( this, nu, nv, val )
-    class(slice__scalar_t) <io> :: this
-    integer <in> :: nu, nv
-    real, dimension(nu,nv) <in> :: val
-
-    this.val_vert(:,:) = val(:,:)
-    this.val_vert_max = maxval(val)
-    this.val_vert_min = minval(val)
-    call this.mesh_cell.set_meanval( this.mesh_vert,  &
-                                     this.val_vert )
-  end subroutine slice__scalar_set_val
-
-
-  subroutine slice__scalar_finalize( this )
-    class(slice__scalar_t) <io> :: this
-
-    deallocate(this.val_vert)
-    call this.mesh_vert.finalize
-    call this.mesh_cell.finalize
-    call this.mesh_edge.finalize
-  end subroutine slice__scalar_finalize
-
-
-  subroutine slice__scalar_vis_contour( this, sketch,     &
-                                              level,      &
-                                              width_in_pixels, &
-                                              line_color, &
-                                              fill_color )
-    class(slice__scalar_t) <io> :: this
+  subroutine vis_contour_template( this,            &
+                                   sketch,          &
+                                   switch,          &
+                                   level,           &
+                                   width_in_pixels, &
+                                   line_color,      &
+                                   fill_color,      &
+                                   level2 )
+    type(slice__scalar_t) <io> :: this
     type(sketch_t) <io> :: sketch
+    char(len=*) <in> :: switch
     real <in> :: level
     real <optin> :: width_in_pixels
     type(color_t) <optin> :: line_color
     type(color_t) <optin> :: fill_color
+    real <optin> :: level2
     
     !!>
         In the followings, "e" stands for "edge",
@@ -175,7 +130,16 @@ contains
                                     this.mesh_vert.nv )
     ==</just_once>==
 
-    call this.mesh_edge.apply_stokes( this.mesh_cell, level )
+    select case (switch)
+      case ('above')
+        call this.mesh_edge.apply_stokes( this.mesh_cell, switch, level )
+      case ('below')
+        call this.mesh_edge.apply_stokes( this.mesh_cell, switch, level )
+      case ('between')
+        call this.mesh_edge.apply_stokes( this.mesh_cell, switch, level, level2 )
+      case default
+        call ut__fatal( '__MODFUNC__: case error.' )
+    end select
 
     call contour_path.reset
     direct_now.d = SLICE_MESH__EAST ! Try to find east-ward edge.
@@ -238,7 +202,131 @@ contains
                            fill_color )
     end subroutine iDraw_contour
 
-  end subroutine slice__scalar_vis_contour
+  end subroutine vis_contour_template
+
+
+  subroutine slice__scalar_vis_contour_above( this,            &
+                                              sketch,          &
+                                              level,           &
+                                              width_in_pixels, &
+                                              line_color,      &
+                                              fill_color )
+    class(slice__scalar_t) <io> :: this
+    type(sketch_t) <io> :: sketch
+    real <in> :: level
+    real <optin> :: width_in_pixels
+    type(color_t) <optin> :: line_color
+    type(color_t) <optin> :: fill_color
+
+    call vis_contour_template( this,            &
+                               sketch,          &
+                               'above',         &
+                               level,           &
+                               width_in_pixels, &
+                               line_color,      &
+                               fill_color )
+  end subroutine slice__scalar_vis_contour_above
+
+
+  subroutine slice__scalar_vis_contour_below( this,            &
+                                              sketch,          &
+                                              level,           &
+                                              width_in_pixels, &
+                                              line_color,      &
+                                              fill_color )
+    class(slice__scalar_t) <io> :: this
+    type(sketch_t) <io> :: sketch
+    real <in> :: level
+    real <optin> :: width_in_pixels
+    type(color_t) <optin> :: line_color
+    type(color_t) <optin> :: fill_color
+
+    call vis_contour_template( this,            &
+                               sketch,          &
+                               'below',         &
+                               level,           &
+                               width_in_pixels, &
+                               line_color,      &
+                               fill_color )
+  end subroutine slice__scalar_vis_contour_below  
+
+
+  subroutine slice__scalar_vis_contour_between( this,            &
+                                                sketch,          &
+                                                level,           &
+                                                level2,          &
+                                                width_in_pixels, &
+                                                line_color,      &
+                                                fill_color ) 
+    class(slice__scalar_t) <io> :: this
+    type(sketch_t) <io> :: sketch
+    real <in> :: level, level2
+    real <optin> :: width_in_pixels
+    type(color_t) <optin> :: line_color
+    type(color_t) <optin> :: fill_color
+
+    call vis_contour_template( this,            &
+                               sketch,          &
+                               'between',       &
+                               level,           &
+                               width_in_pixels, &
+                               line_color,      &
+                               fill_color,      &
+                               level2 )
+  end subroutine slice__scalar_vis_contour_between    
+
+
+  subroutine slice__scalar_initialize( this, nu, nv,  &
+                                       u_min, u_max,  &
+                                       v_min, v_max,  &
+                                       val )
+    class(slice__scalar_t) <out> :: this
+    integer <in> :: nu, nv
+    real <in> :: u_min, u_max
+    real <in> :: v_min, v_max
+    real, dimension(nu,nv) <optin> :: val
+
+    allocate(this.val_vert(nu,nv))
+
+    call this.mesh_vert.initialize( nu, nv,        &
+                                    u_min, u_max,  &
+                                    v_min, v_max )
+    call this.mesh_cell.initialize( this.mesh_vert )
+    call this.mesh_edge.initialize( this.mesh_vert )
+
+    if ( present(val) ) then
+      this.val_vert(:,:) = val(:,:)
+    else
+      this.val_vert(:,:) = 0.0
+    end if
+
+    call this.mesh_cell.set_meanval( this.mesh_vert,  &
+                                     this.val_vert )
+  end subroutine slice__scalar_initialize
+
+
+  subroutine slice__scalar_set_val( this, nu, nv, val )
+    class(slice__scalar_t) <io> :: this
+    integer <in> :: nu, nv
+    real, dimension(nu,nv) <in> :: val
+
+    this.val_vert(:,:) = val(:,:)
+    this.val_vert_max = maxval(val)
+    this.val_vert_min = minval(val)
+    call this.mesh_cell.set_meanval( this.mesh_vert,  &
+                                     this.val_vert )
+  end subroutine slice__scalar_set_val
+
+
+  subroutine slice__scalar_finalize( this )
+    class(slice__scalar_t) <io> :: this
+
+    deallocate(this.val_vert)
+    call this.mesh_vert.finalize
+    call this.mesh_cell.finalize
+    call this.mesh_edge.finalize
+  end subroutine slice__scalar_finalize
+
 
 
   subroutine slice__vector_initialize( this,        &

@@ -304,15 +304,15 @@ contains
 
     call sketch.group_push( line_color=magenta,  &
                             line_width_in_pixel=2.0 )
-      call slice_pressure.vis_contour( sketch, 0.1 )
-      call slice_pressure.vis_contour( sketch, 0.2 )
-      call slice_pressure.vis_contour( sketch, 0.3 )
-      call slice_pressure.vis_contour( sketch, 0.4 )
-      call slice_pressure.vis_contour( sketch, 0.5 )
-      call slice_pressure.vis_contour( sketch, 0.6, fill_color=COLOR__CONST.gray(0.9) )
-      call slice_pressure.vis_contour( sketch, 0.7, fill_color=COLOR__CONST.gray(0.8)  )
-      call slice_pressure.vis_contour( sketch, 0.8, fill_color=COLOR__CONST.gray(0.7) )
-      call slice_pressure.vis_contour( sketch, 0.9, fill_color=COLOR__CONST.yellow )
+      call slice_pressure.vis_contour_above( sketch, 0.1 )
+      call slice_pressure.vis_contour_above( sketch, 0.2 )
+      call slice_pressure.vis_contour_above( sketch, 0.3 )
+      call slice_pressure.vis_contour_above( sketch, 0.4 )
+      call slice_pressure.vis_contour_above( sketch, 0.5 )
+      call slice_pressure.vis_contour_above( sketch, 0.6, fill_color=COLOR__CONST.gray(0.9) )
+      call slice_pressure.vis_contour_above( sketch, 0.7, fill_color=COLOR__CONST.gray(0.8)  )
+      call slice_pressure.vis_contour_above( sketch, 0.8, fill_color=COLOR__CONST.gray(0.7) )
+      call slice_pressure.vis_contour_above( sketch, 0.9, fill_color=COLOR__CONST.yellow )
     call sketch.group_pop
     call slice_pressure.finalize
     call sketch.rectangle( ll, ur,  &

@@ -343,10 +343,13 @@ contains
   end subroutine slice_mesh_cell__set_meanval
 
 
-  subroutine slice_mesh_edge__apply_stokes( this, mesh_cell, level )
+  subroutine slice_mesh_edge__apply_stokes( this, mesh_cell,  &
+                                                  switch, level, level2 )
     class(slice_mesh__edge_t) <io> :: this
     type(slice_mesh__cell_t) <in> :: mesh_cell
+    char(len=*) <in> :: switch
     real <in> :: level
+    real <optin> :: level2
     !!>
         Applying Stokes thereom, we get the boundary curve 
         of cells that has larger value than "level".
@@ -371,16 +374,47 @@ contains
 
     this.u_ternary(:,:) = 0  ! reset
     this.v_ternary(:,:) = 0
-    do j = 1, mesh_cell.nv
-      do i = 1, mesh_cell.nu
-        if ( mesh_cell.mean_val(i,j) >= level ) then
-          this.u_ternary(i,j)   += 1  ! right-in-south
-          this.v_ternary(i+1,j) += 1  !    up-in-east
-          this.u_ternary(i,j+1) -= 1  !  left-in-north
-          this.v_ternary(i,j)   -= 1  !  down-in-west
-        end if
-      end do
-    end do
+
+    select case (switch)
+      case ('above')
+        do j = 1, mesh_cell.nv
+          do i = 1, mesh_cell.nu
+            if ( mesh_cell.mean_val(i,j) >= level ) then
+              this.u_ternary(i,j)   += 1  ! right-in-south
+              this.v_ternary(i+1,j) += 1  !    up-in-east
+              this.u_ternary(i,j+1) -= 1  !  left-in-north
+              this.v_ternary(i,j)   -= 1  !  down-in-west
+            end if
+          end do
+        end do
+      case ('below')
+        do j = 1, mesh_cell.nv
+          do i = 1, mesh_cell.nu
+            if ( mesh_cell.mean_val(i,j) < level ) then
+              this.u_ternary(i,j)   += 1  ! right-in-south
+              this.v_ternary(i+1,j) += 1  !    up-in-east
+              this.u_ternary(i,j+1) -= 1  !  left-in-north
+              this.v_ternary(i,j)   -= 1  !  down-in-west
+            end if
+          end do
+        end do
+      case ('between')
+        call ut__assert( present(level2),  &
+                         '__MODFUNC__: You forgot setting level2.' )
+        do j = 1, mesh_cell.nv
+          do i = 1, mesh_cell.nu
+            if ( mesh_cell.mean_val(i,j) >= level .and.   &
+                 mesh_cell.mean_val(i,j) < level2 ) then
+              this.u_ternary(i,j)   += 1  ! right-in-south
+              this.v_ternary(i+1,j) += 1  !    up-in-east
+              this.u_ternary(i,j+1) -= 1  !  left-in-north
+              this.v_ternary(i,j)   -= 1  !  down-in-west
+            end if
+          end do
+        end do
+      case default 
+        call ut__fatal( '__MODFUNC__: case error.' )
+    end select
   end subroutine slice_mesh_edge__apply_stokes
 
 
