@@ -136,6 +136,7 @@ contains
 
 
   subroutine sketch__group_push( this, id,                   &
+                                       visibility,           &
                                        line_type,            &
                                        line_width_in_pixel,  &
                                        line_color,           &
@@ -144,6 +145,7 @@ contains
                                        fill_opacity )
     class(sketch_t) <io> :: this
     char(len=*) <optin> :: id
+    char(len=*) <optin> :: visibility ! 'visible' or 'hidden'
     char(len=6) <optin> :: line_type  ! 'dotted' or
                                       ! 'dashed'
     real <optin> :: line_width_in_pixel
@@ -165,6 +167,11 @@ contains
     if ( present(id) ) then
       nop += 1
       str(nop) = svglib__text_line( 'id=', id )
+    end if
+
+    if ( present(visibility) ) then
+      nop += 1
+      str(nop) = svglib__text_line( 'visibility=', visibility )
     end if
 
     if ( present(line_color) ) then

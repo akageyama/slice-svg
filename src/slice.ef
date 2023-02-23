@@ -307,11 +307,21 @@ contains
   subroutine slice__vector_vis_arrows( this, sketch )
     class(slice__vector_t) <io> :: this
     type(sketch_t) <io> :: sketch
-
+    !>>
+        o--o--o--o--o--o--o--o--o <== Original (=finest) grid
+        |  |  |  |  |  |  |  |  |
+        o-----o-----o-----o-----o <== Coarse grid (stride=2)
+        |  |  |  |  |  |  |  |  |
+        o-----------o-----------o <== Coarser grid (stride=4)
+        |  |  |  |  |  |  |  |  |
+        o-----------------------o <== Coarser2 grid (stride=8)
+        |  |  |  |  |  |  |  |  |
+        3  0  1  0  2  0  1  0  3 <====== "skip"    
+    !<<
     integer :: i, j
     real :: u, v
 
-    integer :: skip
+    integer :: skip, stride
     character(len=11) :: tag_for_group
     logical, dimension(:,:), allocatable :: pass_to_sketch_flag
 
@@ -319,12 +329,14 @@ contains
 
     pass_to_sketch_flag(:,:) = .false.
 
-    do skip = 4, 1, -1
+    do skip = 3, 0, -1
+      stride = 2**skip
       write(tag_for_group,"(a,i1)") "arrow-skip", skip
         ! "arrow-skip4, arrow-skip3, ...
-      call sketch.group_push( id=trim(tag_for_group) )
-        do j = 1, this.mesh_vert.nv, skip
-          do i = 1, this.mesh_vert.nu, skip
+      call sketch.group_push( id=trim(tag_for_group),  &
+                              visibility="visible" )
+        do j = 1, this.mesh_vert.nv, stride
+          do i = 1, this.mesh_vert.nu, stride
             if ( .not. pass_to_sketch_flag(i,j) ) then
               u = this.mesh_vert.pos_u(i)
               v = this.mesh_vert.pos_v(j)
