@@ -105,11 +105,9 @@ svglist := sample_line.svg \
 
 # default target
 
-view: $(svglist) fig
-	open $(svglist)
-
 fig: runme
 	./runme
+	open $(svglist)
 
 runme: $(objlist)
 	$(FC) $(FFLAGS) -o runme $(objlist)
