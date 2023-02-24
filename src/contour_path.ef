@@ -227,6 +227,7 @@ contains
                  path_is_closed )
       if ( moved_one_step ) then
         call register( this, vpos_prev2 )
+        call register( this, vpos_prev1 )
         vpos_prev2 = vpos_prev1
         vpos_prev1 = vpos_now
       end if
@@ -242,6 +243,7 @@ contains
                  path_is_closed )
       if ( moved_one_step ) then
         call register( this, vpos_prev2 )
+        call register( this, vpos_prev1 )
         vpos_prev2 = vpos_prev1
         vpos_prev1 = vpos_now
       end if
