@@ -46,7 +46,8 @@ module contour_path_m
   type, public :: contour_path_t
     integer :: vert_nu, vert_nv
     integer :: num ! total number of vertex points of the path
-    integer, dimension(:), allocatable :: list_i, list_j
+    type(slice_mesh_ivect_t) :: vpos_start
+    real, dimension(:), allocatable :: list_u, list_v
   contains
     procedure :: initialize => contour_path__initialize
     procedure :: reset => contour_path__reset
@@ -58,16 +59,6 @@ module contour_path_m
 
 
 contains
-
-
-  function returned_to_start_point( i_start, j_start,  &
-                                    i_now, j_now ) result(ans)
-    integer <in> :: i_start, j_start
-    integer <in> :: i_now, j_now
-    logical :: ans
-    ans = ( i_start == i_now  .and.  &
-            j_start == j_now )
-  end function returned_to_start_point
 
 
   subroutine turn( which_way,       &
@@ -107,19 +98,26 @@ contains
       vpos_now = vpos_now.shift( direct_turned.d )
       direct_now = direct_turned
       moved_one_step = .true.
-      path_is_closed = returned_to_start_point( path.list_i(1),  &
-                                                path.list_j(1),  &
-                                                vpos_now.i,      &
-                                                vpos_now.j )
+      path_is_closed = returned_to_start_point( path.vpos_start,  &
+                                                vpos_now )
     end if
   end subroutine turn
+
+
+  function returned_to_start_point( vpos_start, vpos_now ) result(ans)
+    type(slice_mesh_ivect_t) <in> :: vpos_start, vpos_now
+    logical :: ans
+!debugp vpos_start, vpos_now
+    ans = ( vpos_start.i == vpos_now.i  .and.  &
+            vpos_start.j == vpos_now.j )
+  end function returned_to_start_point  
 
 
   subroutine contour_path__reset( this )
     class(contour_path_t) <io> :: this
     this.num = 0
-    this.list_i(:) = 0
-    this.list_j(:) = 0
+    this.list_u(:) = 0.0
+    this.list_v(:) = 0.0
   end subroutine contour_path__reset
 
 
@@ -131,8 +129,8 @@ contains
 
     max_path_element_num = vert_nu * vert_nv
 
-    allocate(this.list_i(max_path_element_num))
-    allocate(this.list_j(max_path_element_num))
+    allocate(this.list_u(max_path_element_num))
+    allocate(this.list_v(max_path_element_num))
 
     this.vert_nu = vert_nu
     this.vert_nv = vert_nv
@@ -141,11 +139,13 @@ contains
 
 
   subroutine contour_path__set_starting_edge( this,         &
+                                              mesh_vert,    &
                                               mesh_edge,    &
                                               direct_now,   &
                                               status,       &
                                               vpos_now )
     class(contour_path_t) <io> :: this
+    type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
     type(slice_mesh_direct_t) <in> :: direct_now
     char(len=10) <out> :: status ! 'no contour' or 'have found'
@@ -172,11 +172,11 @@ contains
         if ( mesh_edge.u_ternary(ei,ej) == +1 ) then
           ! Found a boundary curve of 'Eastward' direction.
           vpos_start = slice_mesh_ivect_t(ei,ej)
+          this.vpos_start = vpos_start
             ! Vertex indexes of an left-end of
             ! an edge is the same as the edge indexes.
-          call register( this, vpos_start )
           vpos_now = vpos_start.shift( SLICE_MESH__EAST )
-          call register( this, vpos_now )
+          call register( this, mesh_vert, vpos_start, vpos_now )
           call mesh_edge.erase( vpos_start, SLICE_MESH__EAST )
           status = 'have found'
           return
@@ -187,37 +187,72 @@ contains
   end subroutine contour_path__set_starting_edge    
 
 
-  subroutine register( contour_path, vpos )
+  subroutine register( contour_path, mesh_vert, vpos, vpos2 )
     type(contour_path_t) <io> :: contour_path
+    type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh_ivect_t) <in> :: vpos
+    type(slice_mesh_ivect_t) <optin> :: vpos2
 
+    !!>
+        Two cases:
+          (1) Only vpos1 exists:
+                 register vpos1
+          (2) vpos2 also exists:
+                 register average of vpos1 and vpos2.                 
+    !!<
+    real :: u_sim, v_sim
+    real :: u_sim2, v_sim2
     integer :: n
+
     n = contour_path.num + 1
-    call ut__assert( n <= size(contour_path.list_i,dim=1),  &
+    call ut__assert( n <= size(contour_path.list_u,dim=1),  &
                     '__MODFUNC__: Increase array size of path_vert.' )
-    contour_path.list_i(n) = vpos.i
-    contour_path.list_j(n) = vpos.j
+
+    u_sim = mesh_vert.pos_u(vpos.i)
+    v_sim = mesh_vert.pos_v(vpos.j)
+
+    if ( present(vpos2) ) then
+      u_sim2 = mesh_vert.pos_u(vpos2.i)
+      v_sim2 = mesh_vert.pos_v(vpos2.j)
+      u_sim = ( u_sim + u_sim2 ) / 2
+      v_sim = ( v_sim + v_sim2 ) / 2
+    end if
+
+    contour_path.list_u(n) = u_sim
+    contour_path.list_v(n) = v_sim
     contour_path.num = n
   end subroutine register
 
 
   subroutine contour_path__trace_and_erase( this,       &
+                                            mesh_vert,  &
                                             mesh_edge,  &
                                             direct_now, &
                                             vpos_now )
     class(contour_path_t) <io> :: this
+    type(slice_mesh__vert_t) :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
     type(slice_mesh_direct_t) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     type(slice_mesh_ivect_t) <io> :: vpos_now
 
     logical :: moved_one_step, path_is_closed
-    type(slice_mesh_ivect_t) :: vpos_prev1, vpos_prev2
+    type(slice_mesh_ivect_t) :: vpos_prev
 
-    vpos_prev1 = vpos_now
-    vpos_prev2 = vpos_prev1
+    vpos_prev = this.vpos_start
     do
-      vpos_prev2 = vpos_prev1
-      vpos_prev1 = vpos_now
+!debugp vpos_prev, vpos_now      
+        !!> 
+          Turn left if you can.
+                       C
+                       |
+                       |
+                       |
+            A -------> B <= You are here. Checking if you can
+                  \         turn to the left (upward) direction.
+                   \
+                    You came along this edge.
+        !!<
+!debugp 'calling turn (left)        '
       call turn( 'left',          &
                  this,            &
                  mesh_edge,       &
@@ -226,14 +261,38 @@ contains
                  moved_one_step,  &
                  path_is_closed )
       if ( moved_one_step ) then
-        call register( this, vpos_prev2 )
-        call register( this, vpos_prev1 )
-        vpos_prev2 = vpos_prev1
-        vpos_prev1 = vpos_now
+!debugp ' !! moved_one_step'
+        !!>
+            OK. You have turned to left. "vpos" has moved.
+            
+                         C <= You are here now.
+                         |
+                         M <= Place a path point at 
+                         |    the middle of edge BC.
+               A - - - - B
+        !!<
+        call register( this, mesh_vert, vpos_now, vpos_prev )
+        vpos_prev = vpos_now
       end if
       if ( path_is_closed ) return
+        ! Your job is done if you have returned to the starting point.
 
-      ! right
+      !!>
+        You are at C. Turn right if you can the next step,
+        and you will place another path point at the middle
+        of edge CD.
+        
+           O - - - - - - - C - - - M - --> D
+           |               |     *         |
+           |               |   *           |
+           |               | *             |
+           |               M(iddle of BC)  |
+           |             * |               |
+           |           *   |               |
+           |         *     |               |
+           A - - - * - - - B - - - - - - - O
+      !!<
+!debugp 'calling turn (right)        '
       call turn( 'right',         &
                  this,            &
                  mesh_edge,       &
@@ -242,14 +301,16 @@ contains
                  moved_one_step,  &
                  path_is_closed )
       if ( moved_one_step ) then
-        call register( this, vpos_prev2 )
-        call register( this, vpos_prev1 )
-        vpos_prev2 = vpos_prev1
-        vpos_prev1 = vpos_now
+        call register( this, mesh_vert, vpos_now, vpos_prev )
+        vpos_prev = vpos_now
       end if
       if ( path_is_closed ) return
 
-      ! straight
+      !!>
+         If you could not turn left nor right, you should
+         be able to go forward.
+      !!<
+!debugp 'calling turn (forward)        '
       call turn( 'forward',       &
                  this,            &
                  mesh_edge,       &
@@ -257,22 +318,11 @@ contains
                  vpos_now,        &
                  moved_one_step,  &
                  path_is_closed )
-
-      !!>
-          We do not need to register the forward-stepped point,
-          because the path
-                   1---2---3
-                           |          
-                           4---5---6---7
-          is the same as
-                   1-------2
-                           |          
-                           3-----------4
-      !!<
-      if ( path_is_closed ) then
-        call register( this, vpos_now )
-        return
+      if ( moved_one_step ) then
+        call register( this, mesh_vert, vpos_now, vpos_prev )
+        vpos_prev = vpos_now
       end if
+      if ( path_is_closed ) return
     end do
 
   end subroutine contour_path__trace_and_erase
