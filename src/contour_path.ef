@@ -39,9 +39,9 @@ module contour_path_m
                     L   .
                   L     .
         L L L L 1 . . . 2
-                 \       \_____vpos_prev1
-                  \____________vpos_prev2
+                         \_____vpos_prev
   !!<
+
 
   type, public :: contour_path_t
     integer :: vert_nu, vert_nv
@@ -98,8 +98,7 @@ contains
       vpos_now = vpos_now.shift( direct_turned.d )
       direct_now = direct_turned
       moved_one_step = .true.
-      path_is_closed = returned_to_start_point( path.vpos_start,  &
-                                                vpos_now )
+      path_is_closed = returned_to_start_point( path.vpos_start, vpos_now )
     end if
   end subroutine turn
 
@@ -107,7 +106,6 @@ contains
   function returned_to_start_point( vpos_start, vpos_now ) result(ans)
     type(slice_mesh_ivect_t) <in> :: vpos_start, vpos_now
     logical :: ans
-!debugp vpos_start, vpos_now
     ans = ( vpos_start.i == vpos_now.i  .and.  &
             vpos_start.j == vpos_now.j )
   end function returned_to_start_point  
@@ -230,7 +228,7 @@ contains
                                             direct_now, &
                                             vpos_now )
     class(contour_path_t) <io> :: this
-    type(slice_mesh__vert_t) :: mesh_vert
+    type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
     type(slice_mesh_direct_t) <io> :: direct_now  ! E(ast)/N(orth)/W(est)/S(outh)-ward
     type(slice_mesh_ivect_t) <io> :: vpos_now
@@ -238,9 +236,8 @@ contains
     logical :: moved_one_step, path_is_closed
     type(slice_mesh_ivect_t) :: vpos_prev
 
-    vpos_prev = this.vpos_start
+    vpos_prev = vpos_now
     do
-!debugp vpos_prev, vpos_now      
         !!> 
           Turn left if you can.
                        C
@@ -252,7 +249,6 @@ contains
                    \
                     You came along this edge.
         !!<
-!debugp 'calling turn (left)        '
       call turn( 'left',          &
                  this,            &
                  mesh_edge,       &
@@ -261,7 +257,6 @@ contains
                  moved_one_step,  &
                  path_is_closed )
       if ( moved_one_step ) then
-!debugp ' !! moved_one_step'
         !!>
             OK. You have turned to left. "vpos" has moved.
             
@@ -271,7 +266,12 @@ contains
                          |    the middle of edge BC.
                A - - - - B
         !!<
-        call register( this, mesh_vert, vpos_now, vpos_prev )
+        if ( this_path_is_on_the_boarder( vpos_now, mesh_vert ) ) then
+          call register( this, mesh_vert, vpos_prev )
+          call register( this, mesh_vert, vpos_now )
+        else
+          call register( this, mesh_vert, vpos_now, vpos_prev )
+        end if
         vpos_prev = vpos_now
       end if
       if ( path_is_closed ) return
@@ -292,7 +292,6 @@ contains
            |         *     |               |
            A - - - * - - - B - - - - - - - O
       !!<
-!debugp 'calling turn (right)        '
       call turn( 'right',         &
                  this,            &
                  mesh_edge,       &
@@ -301,7 +300,12 @@ contains
                  moved_one_step,  &
                  path_is_closed )
       if ( moved_one_step ) then
-        call register( this, mesh_vert, vpos_now, vpos_prev )
+        if ( this_path_is_on_the_boarder( vpos_now, mesh_vert ) ) then
+          call register( this, mesh_vert, vpos_prev )
+          call register( this, mesh_vert, vpos_now )
+        else
+          call register( this, mesh_vert, vpos_now, vpos_prev )
+        end if
         vpos_prev = vpos_now
       end if
       if ( path_is_closed ) return
@@ -310,7 +314,6 @@ contains
          If you could not turn left nor right, you should
          be able to go forward.
       !!<
-!debugp 'calling turn (forward)        '
       call turn( 'forward',       &
                  this,            &
                  mesh_edge,       &
@@ -326,5 +329,21 @@ contains
     end do
 
   end subroutine contour_path__trace_and_erase
+
+
+  function this_path_is_on_the_boarder( vpos, mesh_vert ) result(ans)
+    type(slice_mesh_ivect_t) <in> :: vpos
+    type(slice_mesh__vert_t) <in> :: mesh_vert
+    logical :: ans
+
+    if ( vpos.i == 1            .or. &
+         vpos.i == mesh_vert.nu .or. &
+         vpos.j == 1            .or. &
+         vpos.j == mesh_vert.nv ) then
+      ans = .true.
+    else
+      ans = .false.
+    end if
+  end function this_path_is_on_the_boarder
 
 end module contour_path_m

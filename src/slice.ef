@@ -143,23 +143,19 @@ contains
 
     call contour_path.reset
     direct_now.d = SLICE_MESH__EAST ! Try to find east-ward edge.
-!debugp 'starting_edge'    
     call contour_path.set_starting_edge( this.mesh_vert,  &
                                          this.mesh_edge,  &
                                          direct_now,      &
                                          status,          &
                                          vpos_now )
-!debugp 'calling do while'    
     do while ( status == 'have found' )
       !!>
           Tring to find the 1st contour for this level.
       !!<
-!debugp 'calling contour_path.trace_and_erase'    
       call contour_path.trace_and_erase( this.mesh_vert,  &
                                          this.mesh_edge,  &
                                          direct_now,      &
                                          vpos_now )
-!debugp 'calling iDraw_contour'    
       call iDraw_contour( this.mesh_vert.nu,    &
                           this.mesh_vert.nv,    &
                           width_in_pixels,      &
