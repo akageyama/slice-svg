@@ -173,8 +173,9 @@ contains
           this.vpos_start = vpos_start
             ! Vertex indexes of an left-end of
             ! an edge is the same as the edge indexes.
+          call register( this, mesh_vert, vpos_start )
           vpos_now = vpos_start.shift( SLICE_MESH__EAST )
-          call register( this, mesh_vert, vpos_start, vpos_now )
+          call register( this, mesh_vert, vpos_now )
           call mesh_edge.erase( vpos_start, SLICE_MESH__EAST )
           status = 'have found'
           return
@@ -185,21 +186,12 @@ contains
   end subroutine contour_path__set_starting_edge    
 
 
-  subroutine register( contour_path, mesh_vert, vpos, vpos2 )
+  subroutine register( contour_path, mesh_vert, vpos )
     type(contour_path_t) <io> :: contour_path
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh_ivect_t) <in> :: vpos
-    type(slice_mesh_ivect_t) <optin> :: vpos2
 
-    !!>
-        Two cases:
-          (1) Only vpos1 exists:
-                 register vpos1
-          (2) vpos2 also exists:
-                 register average of vpos1 and vpos2.                 
-    !!<
     real :: u_sim, v_sim
-    real :: u_sim2, v_sim2
     integer :: n
 
     n = contour_path.num + 1
@@ -208,13 +200,6 @@ contains
 
     u_sim = mesh_vert.pos_u(vpos.i)
     v_sim = mesh_vert.pos_v(vpos.j)
-
-    if ( present(vpos2) ) then
-      u_sim2 = mesh_vert.pos_u(vpos2.i)
-      v_sim2 = mesh_vert.pos_v(vpos2.j)
-      u_sim = ( u_sim + u_sim2 ) / 2
-      v_sim = ( v_sim + v_sim2 ) / 2
-    end if
 
     contour_path.list_u(n) = u_sim
     contour_path.list_v(n) = v_sim
@@ -234,9 +219,7 @@ contains
     type(slice_mesh_ivect_t) <io> :: vpos_now
 
     logical :: moved_one_step, path_is_closed
-    type(slice_mesh_ivect_t) :: vpos_prev
 
-    vpos_prev = vpos_now
     do
         !!> 
           Turn left if you can.
@@ -266,13 +249,7 @@ contains
                          |    the middle of edge BC.
                A - - - - B
         !!<
-        if ( this_path_is_on_the_boarder( vpos_now, mesh_vert ) ) then
-          call register( this, mesh_vert, vpos_prev )
-          call register( this, mesh_vert, vpos_now )
-        else
-          call register( this, mesh_vert, vpos_now, vpos_prev )
-        end if
-        vpos_prev = vpos_now
+        call register( this, mesh_vert, vpos_now )
       end if
       if ( path_is_closed ) return
         ! Your job is done if you have returned to the starting point.
@@ -300,13 +277,7 @@ contains
                  moved_one_step,  &
                  path_is_closed )
       if ( moved_one_step ) then
-        if ( this_path_is_on_the_boarder( vpos_now, mesh_vert ) ) then
-          call register( this, mesh_vert, vpos_prev )
-          call register( this, mesh_vert, vpos_now )
-        else
-          call register( this, mesh_vert, vpos_now, vpos_prev )
-        end if
-        vpos_prev = vpos_now
+        call register( this, mesh_vert, vpos_now )
       end if
       if ( path_is_closed ) return
 
@@ -322,28 +293,11 @@ contains
                  moved_one_step,  &
                  path_is_closed )
       if ( moved_one_step ) then
-        call register( this, mesh_vert, vpos_now, vpos_prev )
-        vpos_prev = vpos_now
+        call register( this, mesh_vert, vpos_now )
       end if
       if ( path_is_closed ) return
     end do
 
   end subroutine contour_path__trace_and_erase
-
-
-  function this_path_is_on_the_boarder( vpos, mesh_vert ) result(ans)
-    type(slice_mesh_ivect_t) <in> :: vpos
-    type(slice_mesh__vert_t) <in> :: mesh_vert
-    logical :: ans
-
-    if ( vpos.i == 1            .or. &
-         vpos.i == mesh_vert.nu .or. &
-         vpos.j == 1            .or. &
-         vpos.j == mesh_vert.nv ) then
-      ans = .true.
-    else
-      ans = .false.
-    end if
-  end function this_path_is_on_the_boarder
 
 end module contour_path_m
