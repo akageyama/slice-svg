@@ -152,25 +152,27 @@ contains
     type(slice_mesh_ivect_t) :: vpos_start
     !!>
           Tring to find an eastward arrow AB.
-              +---+---+---+
-              |           |
-              +---+       +
-                  |       |
-                  A==>B---+
+
+         | .    |       .
+         |  .   |     . |
+         |   .  |   .   |
+       --p----.-m=.=====p--
+         |      .   \_____ Find this edge.
     !!< 
     integer :: ei, ej
 
-    call ut__assert( direct_now.d==SLICE_MESH__EAST,  &
+    call ut__assert( direct_now.d==SLICE_MESH__PATH_NORTHWARD,  &
                     '__MODFUNC__: We assume the start edge is Eastward.' )
     call ut__assert( this.num == 0,  &
                     '__MODFUNC__: You forgot to reset contour_path.' )
 
     do ej = 1, mesh_edge.u_nv
       do ei = 1, mesh_edge.u_nu
-        if ( mesh_edge.u_ternary(ei,ej) == +1 ) then
-          ! Found a boundary curve of 'Eastward' direction.
-          vpos_start = slice_mesh_ivect_t(ei,ej)
-          this.vpos_start = vpos_start
+        if ( mesh_edge.u_ternary(ei,ej) == -1 ) then
+          ! Found an edge in which a path should 
+          ! run through in the northward direction.
+          this.vpos_start = slice_mesh_ivect_t(ei,ej)
+          call interpol_edge_u(mesh_vert,ei,ej,)
             ! Vertex indexes of an left-end of
             ! an edge is the same as the edge indexes.
           call register( this, mesh_vert, vpos_start )
@@ -186,7 +188,7 @@ contains
   end subroutine contour_path__set_starting_edge    
 
 
-  subroutine register( contour_path, mesh_vert, vpos )
+  subroutine register( contour_path, mesh_vert, vpos, level )
     type(contour_path_t) <io> :: contour_path
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh_ivect_t) <in> :: vpos

@@ -7,11 +7,11 @@ module slice_mesh_m
             SLICE_MESH__SOUTH,  &
             SLICE_MESH__EAST
 
-  integer <const> :: SLICE_MESH__NORTH = 0  !       0        0 (NORTH)
-  integer <const> :: SLICE_MESH__WEST  = 1  !       |        1 (WEST)
-  integer <const> :: SLICE_MESH__SOUTH = 2  !  1 -- + -- 3   2 (SOUTH)
-  integer <const> :: SLICE_MESH__EAST  = 3  !       |        3 (EAST)
-                                            !       2
+  integer <const> :: SLICE_MESH__PATH_NORTHWARD = 0  !       0        0 (NORTH)
+  integer <const> :: SLICE_MESH__PATH_WESTWARD  = 1  !       |        1 (WEST)
+  integer <const> :: SLICE_MESH__PATH_SOUTHWARD = 2  !  1 -- + -- 3   2 (SOUTH)
+  integer <const> :: SLICE_MESH__PATH_EASTWARD  = 3  !       |        3 (EAST)
+                                                     !       2
 
   type, public :: slice_mesh_direct_t
     integer :: d ! 0 (NORTH), 1 (WEST), 2 (SOUTH), 3 (EAST)
@@ -108,6 +108,7 @@ module slice_mesh_m
     procedure :: initialize => slice_mesh_edge__initialize
     procedure :: finalize => slice_mesh_edge__finalize
     procedure :: apply_stokes => slice_mesh_edge__apply_stokes
+    procedure :: set_ternary => slice_mesh_edge__set_ternary
     procedure :: erase => slice_mesh_edge__erase
     procedure :: can_turn_to => slice_mesh_edge__can_turn_to
   end type slice_mesh__edge_t    
@@ -418,12 +419,127 @@ contains
   end subroutine slice_mesh_edge__apply_stokes
 
 
-  function slice_mesh_edge__has_nonzero_ternary( this ) result(ans)
-    class(slice_mesh__edge_t) <in> :: this
-    logical :: ans
+  subroutine slice_mesh_edge__set_ternary( this,       &
+                                           mesh_vert,  &
+                                           level)
+    class(slice_mesh__edge_t) <io> :: this
+    class(slice_mesh__vert_t) <in> :: mesh_vert
+    real <in> :: level
+    !!>
+        Each cell is surrounded by four edges, two vertical
+        edges (edge_v) and two horizontal edges (edge_u).
 
-    ans = maxval(this.u_ternary(:,:)) == 1
-  end function slice_mesh_edge__has_nonzero_ternary
+                                  v
+                                  |
+                                  |
+                                  +----- u
+
+              edge_u
+            o--------o
+            |        |
+     edge_v |  cell  | edge_v
+            |        |
+            o--------o
+              edge_u
+
+        Compare scalar field values on the four vertices F
+        and "Level" of the contour. Check the sign F - Level
+        on the vertices. Denote "p" when 
+                  F - Level > 0,
+        and "m" when 
+                  F - Level < 0.0.
+        Define u_ternary as the sign of dF/du and v_ternary
+        as the sign of dF/dv.
+                                   _______ u_ternary = 0
+                                  /
+                             m--------m
+                             |        |
+          v_ternary = -1 --> |        | <------ v_ternary = 0
+                             |        |
+                             p--------m
+                                  \______ u_ternary = -1
+
+
+        Algorithm
+
+          1. Find a edge_u with u_ternary = -1.
+                                   _______ u_ternary = 0
+                                  /
+                             m--------m
+                             |        |
+          v_ternary = -1 --> |        | <------ v_ternary = 0
+                             |        |
+                             p========m
+                                  \______ u_ternary = -1
+
+          2. Search other three edges 
+    !!<
+    integer :: ei, ej  ! edge indexes
+
+    this.u_ternary(:,:) = NIL  ! To confirm all edges
+    this.v_ternary(:,:) = NIL  ! are set below.
+
+    ! edge_u
+    do je = 1, this.u_nv
+        do ie = 1, this.u_nu
+          if ( mesh_vert(ie,  je) > level .and.  &
+               mesh_vert(ie+1,je) < level ) then
+            this.u_ternary(i,j) = -1 
+            !!>
+                    |        |
+                  --p========m--
+                    |        |
+            !!<
+          else if ( mesh_vert(ie,  je) < level .and.  &
+                    mesh_vert(ie+1,je) > level ) then
+            this.u_ternary(i,j) = +1
+            !!>
+                    |        |
+                  --p========m--
+                    |        |
+            !!<
+          else
+            this.u_ternary(i,j) = 0
+          end if
+        end do
+      end do
+
+    ! edge_v
+    do je = 1, this.v_nv
+        do ie = 1, this.v_nu
+          if ( mesh_vert(ie,je  ) > level .and.  &
+               mesh_vert(ie,je+1) < level ) then
+            this.v_ternary(i,j) = -1 
+            !!>
+                    |
+                  --m--
+                    |
+                    |
+                  --p--
+                    |
+            !!<
+          else if ( mesh_vert(ie,je  ) < level .and.  &
+                    mesh_vert(ie,je+1) > level ) then
+            this.v_ternary(i,j) = +1
+            !!>
+                    |
+                  --p--
+                    |
+                    |
+                  --m--
+                    |
+            !!<
+          else
+            this.v_ternary(i,j) = 0
+          end if
+        end do
+      end do
+
+      call ut__assert( maxval(abs(this.u_ternary)) <= 1,  &
+                       "__MODFUNC__: You missed an edge_u?" )
+      call ut__assert( maxval(abs(this.v_ternary)) <= 1,  &
+                       "__MODFUNC__: You missed an edge_v?" )
+  end subroutine slice_mesh_edge__set_ternary  
 
 
   function slice_mesh_edge__can_turn_to( this,          &

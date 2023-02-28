@@ -142,7 +142,7 @@ contains
     end select
 
     call contour_path.reset
-    direct_now.d = SLICE_MESH__EAST ! Try to find east-ward edge.
+    direct_now.d = SLICE_MESH__PATH_NORTHWARD 
     call contour_path.set_starting_edge( this.mesh_vert,  &
                                          this.mesh_edge,  &
                                          direct_now,      &
