@@ -12,8 +12,8 @@ program main
   integer <const> :: NU_VECTOR = 60,   NV_VECTOR = 30
   ! integer <const> :: NU_VECTOR = 240,   NV_VECTOR = 120
   ! integer <const> :: NU_SCALAR = 2001, NV_SCALAR = 1001
-  ! integer <const> :: NU_SCALAR = 101, NV_SCALAR = 51
-  integer <const> :: NU_SCALAR = 21, NV_SCALAR = 11
+  integer <const> :: NU_SCALAR = 101, NV_SCALAR = 51
+  ! integer <const> :: NU_SCALAR = 21, NV_SCALAR = 11
   integer :: i, j
   real :: pos_u, pos_v
   real :: pos_r, pos_r_sq, pos_r_cubed

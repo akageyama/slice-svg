@@ -32,7 +32,6 @@ module slice_m
     procedure :: set_val => slice__scalar_set_val
     procedure :: vis_contour_above => slice__scalar_vis_contour_above
     procedure :: vis_contour_below => slice__scalar_vis_contour_below
-    procedure :: vis_contour_between => slice__scalar_vis_contour_between
   end type slice__scalar_t
 
   type, public :: slice__vector_t
@@ -135,8 +134,6 @@ contains
         call this.mesh_edge.apply_stokes( this.mesh_cell, switch, level )
       case ('below')
         call this.mesh_edge.apply_stokes( this.mesh_cell, switch, level )
-      case ('between')
-        call this.mesh_edge.apply_stokes( this.mesh_cell, switch, level, level2 )
       case default
         call ut__fatal( '__MODFUNC__: case error.' )
     end select
@@ -145,6 +142,7 @@ contains
     direct_now.d = SLICE_MESH__PATH_NORTHWARD 
     call contour_path.set_starting_edge( this.mesh_vert,  &
                                          this.mesh_edge,  &
+                                         this.val_vert,   &
                                          direct_now,      &
                                          status,          &
                                          vpos_now )
@@ -250,31 +248,6 @@ contains
                                line_color,      &
                                fill_color )
   end subroutine slice__scalar_vis_contour_below  
-
-
-  subroutine slice__scalar_vis_contour_between( this,            &
-                                                sketch,          &
-                                                level,           &
-                                                level2,          &
-                                                width_in_pixels, &
-                                                line_color,      &
-                                                fill_color ) 
-    class(slice__scalar_t) <io> :: this
-    type(sketch_t) <io> :: sketch
-    real <in> :: level, level2
-    real <optin> :: width_in_pixels
-    type(color_t) <optin> :: line_color
-    type(color_t) <optin> :: fill_color
-
-    call vis_contour_template( this,            &
-                               sketch,          &
-                               'between',       &
-                               level,           &
-                               width_in_pixels, &
-                               line_color,      &
-                               fill_color,      &
-                               level2 )
-  end subroutine slice__scalar_vis_contour_between    
 
 
   subroutine slice__scalar_initialize( this, nu, nv,  &

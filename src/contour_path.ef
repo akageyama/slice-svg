@@ -139,12 +139,15 @@ contains
   subroutine contour_path__set_starting_edge( this,         &
                                               mesh_vert,    &
                                               mesh_edge,    &
+                                              val_vert,     &
                                               direct_now,   &
                                               status,       &
                                               vpos_now )
     class(contour_path_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
+    real, dimension(mesh_vert.nu,  &
+                    mesh_vert.nv) <in> :: val_vert
     type(slice_mesh_direct_t) <in> :: direct_now
     char(len=10) <out> :: status ! 'no contour' or 'have found'
     type(slice_mesh_ivect_t) <out> :: vpos_now ! vert position
@@ -156,7 +159,7 @@ contains
          | .    |       .
          |  .   |     . |
          |   .  |   .   |
-       --p----.-m=.=====p--
+       --m----.-p=.=====m--
          |      .   \_____ Find this edge.
     !!< 
     integer :: ei, ej
@@ -172,7 +175,26 @@ contains
           ! Found an edge in which a path should 
           ! run through in the northward direction.
           this.vpos_start = slice_mesh_ivect_t(ei,ej)
-          call interpol_edge_u(mesh_vert,ei,ej,)
+          tip_v = mesh_vert.pos_v(ej)
+          !!>   
+               \
+                . . . . . . <--- val1 > level
+                .\
+                . \        ___ u=u2
+                .  \      /
+            - - o---+----o - - - - o -    <--- val = level
+               /    .\   .
+           u=u1     . \  .
+                    .  \ .
+                    .   \. <--- val2 < level
+                  u=ui   \ 
+                         
+          !!<
+          val1 = val_vert(ei,  ej)
+          val2 = val_vert(ei+1,ej)
+          u1 = mesh_vert.pos_u(ei)
+          u2 = mesh_vert.pos_u(ei+1)
+          ui = linear_interpol( u1, u2, val1, val2, level )
             ! Vertex indexes of an left-end of
             ! an edge is the same as the edge indexes.
           call register( this, mesh_vert, vpos_start )
@@ -185,7 +207,27 @@ contains
       end do
     end do 
     status = 'no contour'
-  end subroutine contour_path__set_starting_edge    
+  end subroutine contour_path__set_starting_edge
+
+
+  function linear_interpol( u1, u2, val1, val2, level ) result( ui )
+    real <in> :: u1, u2, val1, val2, level
+    real :: ui
+    !!>   
+         \
+          . . . . . . <--- val1 > level
+          .\
+          . \        ___ u=u2
+          .  \      /
+      - - o---+----o - - - - o -    <--- val = level
+         /    .\   .
+     u=u1     . \  .
+              .  \ .
+              .   \. <--- val2 < level
+            u=ui   \ 
+    !!<
+
+  end function linear_interpol
 
 
   subroutine register( contour_path, mesh_vert, vpos, level )
