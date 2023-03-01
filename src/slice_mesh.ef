@@ -101,20 +101,73 @@ module slice_mesh_m
     !!< 
     integer :: u_nu, u_nv
     integer :: v_nu, v_nv
-    integer, dimension(:,:), allocatable :: u_ternary
-    integer, dimension(:,:), allocatable :: v_ternary
-                                            ! {+1, 0, -1}
+    integer, dimension(:,:), allocatable :: u_ternary ! {+1, 0, -1}
+    integer, dimension(:,:), allocatable :: v_ternary ! {+1, 0, -1}
+    real, dimension(:,:), allocatable :: u_cross_coord
+    real, dimension(:,:), allocatable :: v_cross_coord
+                                            
   contains
     procedure :: initialize => slice_mesh_edge__initialize
     procedure :: finalize => slice_mesh_edge__finalize
     procedure :: apply_stokes => slice_mesh_edge__apply_stokes
-    procedure :: set_ternary => slice_mesh_edge__set_ternary
+    procedure :: compare_with_level => slice_mesh_edge__compare_with_level
     procedure :: erase => slice_mesh_edge__erase
     procedure :: can_turn_to => slice_mesh_edge__can_turn_to
   end type slice_mesh__edge_t    
 
 
 contains
+
+
+  function linear_interpol( x1, x2, val1, val2, level ) result( xi )
+    real <in> :: x1, x2, val1, val2, level
+    real :: xi
+    !!>   
+         \
+          . . . . . . <--- val1 > level
+          .\
+          . \        ___ x=x2
+          .  \      /
+      ----o---+----o--------o---   <--- val = level
+         /    .\   .
+     x=x1     . \  .
+              .  \ .
+              .   \. <--- val2 < level
+            x=xi   \ 
+
+
+                    /
+                   .  <--- val2 > level
+                  /.  
+                 / .
+                /  .   ___ x=x2
+               /   . /
+      ----o---+----o--------o---   <--- val = level
+         /.  /.     
+     x=x1 . / .     
+          ./  .     
+          .   .  <--- val2 < level
+         /    .
+             x=xi     
+    !!<
+    real :: weight1, weight2
+
+    call ut__assert( x1 < x2,  &
+                     "__MODFUNC__: Bad grids order." )
+    call ut__assert( (val1-level)*(val2-level) < 0.0,  &
+                     "__MODFUNC__: Cannot interpolate." )
+
+    if ( val1 == val2 ) then
+      xi = (x1+x2)/2 ! the middle point
+    else
+      ! For both cases,
+      weight1 = (level-val2) / (val1-val2) 
+      weight2 = 1.0 - weight1
+      xi = weight1 * x1 + weight2 * x2
+      call ut__assert( xi >= x1 .and. xi <= x2,  &
+                      __MODFUNC__: "Weight is out of range." )
+    end if
+  end function linear_interpol
 
 
   function slice_mesh_direct__turn( this, how ) result(ans)
@@ -419,11 +472,14 @@ contains
   end subroutine slice_mesh_edge__apply_stokes
 
 
-  subroutine slice_mesh_edge__set_ternary( this,       &
-                                           mesh_vert,  &
-                                           level)
+  subroutine slice_mesh_edge__compare_with_level( this,       &
+                                                  mesh_vert,  &
+                                                  val_vert,   &
+                                                  level )
     class(slice_mesh__edge_t) <io> :: this
     class(slice_mesh__vert_t) <in> :: mesh_vert
+    real, dimension(mesh_vert.nu,  &
+                    mesh_vert.nv) <in> :: val_vert
     real <in> :: level
     !!>
         Each cell is surrounded by four edges, two vertical
@@ -474,7 +530,8 @@ contains
 
           2. Search other three edges 
     !!<
-    integer :: ei, ej  ! edge indexes
+    integer :: ie, je  ! edge indexes
+    real :: u1, u2, v1, v2, val1, val2
 
     this.u_ternary(:,:) = NIL  ! To confirm all edges
     this.v_ternary(:,:) = NIL  ! are set below.
@@ -490,6 +547,12 @@ contains
                   --p========m--
                     |        |
             !!<
+            u1 = mesh_vert.pos_u(ei)
+            u2 = mesh_vert.pos_u(ei+1)
+            val1 = val_vert(ei,  ej)
+            val2 = val_vert(ei+1,ej)
+            this.u_cross_coord(ie,je ) = linear_interpol( u1, u2, val1, val2, level )
+
           else if ( mesh_vert(ie,  je) < level .and.  &
                     mesh_vert(ie+1,je) > level ) then
             this.u_ternary(i,j) = +1
@@ -539,7 +602,11 @@ contains
                        "__MODFUNC__: You missed an edge_u?" )
       call ut__assert( maxval(abs(this.v_ternary)) <= 1,  &
                        "__MODFUNC__: You missed an edge_v?" )
-  end subroutine slice_mesh_edge__set_ternary  
+
+  contains
+
+    subroutine isgks
+  end subroutine slice_mesh_edge__compare_with_level  
 
 
   function slice_mesh_edge__can_turn_to( this,          &

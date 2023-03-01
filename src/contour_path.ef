@@ -139,15 +139,12 @@ contains
   subroutine contour_path__set_starting_edge( this,         &
                                               mesh_vert,    &
                                               mesh_edge,    &
-                                              val_vert,     &
                                               direct_now,   &
                                               status,       &
                                               vpos_now )
     class(contour_path_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
-    real, dimension(mesh_vert.nu,  &
-                    mesh_vert.nv) <in> :: val_vert
     type(slice_mesh_direct_t) <in> :: direct_now
     char(len=10) <out> :: status ! 'no contour' or 'have found'
     type(slice_mesh_ivect_t) <out> :: vpos_now ! vert position
@@ -208,55 +205,6 @@ contains
     status = 'no contour'
   end subroutine contour_path__set_starting_edge
 
-
-  function linear_interpol( u1, u2, val1, val2, level ) result( ui )
-    real <in> :: u1, u2, val1, val2, level
-    real :: ui
-    !!>   
-         \
-          . . . . . . <--- val1 > level
-          .\
-          . \        ___ u=u2
-          .  \      /
-      - - p---+----m - - - - o -    <--- val = level
-         /    .\   .
-     u=u1     . \  .
-              .  \ .
-              .   \. <--- val2 < level
-            u=ui   \ 
-
-
-                    /
-                   .  <--- val2 > level
-                  /.  
-                 / .
-                /  .   ___ u=u2
-               /   . /
-      - - m---+----p - - - - o -    <--- val = level
-         /.  /.     
-     u=u1 . / .     
-          ./  .     
-          .   .  <--- val2 < level
-         /    .
-             u=ui     
-    !!<
-    real :: weight1, weight2
-    call ut__assert( u1 < u2,  &
-                     "__MODFUNC__: Bad grids order." )
-    call ut__assert( (val1-level)*(val2-level) < 0.0,  &
-                     "__MODFUNC__: Cannot interpolate." )
-
-    if ( val1 == val2 ) then
-      ui = (u1+u2)/2 ! the middle point
-    else
-      ! For both cases,
-      weight1 = (level-val2) / (val1-val2) 
-      weight2 = 1.0 - weight1
-      ui = weight1 * u1 + weight2 * u2
-      call ut__assert( ui >= u1 .and. ui <= u2,  &
-                      __MODFUNC__: "Weight is out of range." )
-    end if
-  end function linear_interpol
 
 
   subroutine register( contour_path, mesh_vert, vpos, level )
