@@ -6,6 +6,11 @@ module slice_mesh_m
             SLICE_MESH__WEST,   &
             SLICE_MESH__SOUTH,  &
             SLICE_MESH__EAST
+  public :: SLICE_MESH__EDGE_LEVEL_QUINARY_MM,  &
+            SLICE_MESH__EDGE_LEVEL_QUINARY_PP,  &
+            SLICE_MESH__EDGE_LEVEL_QUINARY_MP,  &
+            SLICE_MESH__EDGE_LEVEL_QUINARY_PM,  &
+            SLICE_MESH__EDGE_LEVEL_QUINARY_BB        
 
   integer <const> :: SLICE_MESH__PATH_NORTHWARD = 0  !       0        0 (NORTH)
   integer <const> :: SLICE_MESH__PATH_WESTWARD  = 1  !       |        1 (WEST)
@@ -16,7 +21,12 @@ module slice_mesh_m
   integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_PP = 1  ! --p===p-- 
   integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_MP = 2  ! --m===p-- 
   integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_PM = 3  ! --p===m-- 
-  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_SS = 4  ! --p===p-- (boundary)
+  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_BB = 4  ! --p===p-- (boundary)
+    !!>
+        When you change values of SLICE_MESH__EDGE_LEVEL_QUINARY_*,
+        note that their positiveness is assumed in some checks.
+    !!<
+
 
   type, public :: slice_mesh_direct_t
     integer :: d ! 0 (NORTH), 1 (WEST), 2 (SOUTH), 3 (EAST)
@@ -386,39 +396,17 @@ contains
   end subroutine slice_mesh_edge__finalize  
 
 
-  subroutine slice_mesh_cell__set_meanval( this, vert, val_on_vert )
-    class(slice_mesh__cell_t) <io> :: this
-    type(slice_mesh__vert_t) <in> :: vert
-    real, dimension(:,:) <in> :: val_on_vert
-
-    integer :: i, j
-
-    call ut__assert( size(val_on_vert,dim=1) == vert.nu .and.  &
-                     size(val_on_vert,dim=2) == vert.nv,       &
-                    'Inconsistent size of input scal_val_vert.' )
-    ! Take average
-    do j = 1, this.nv
-      do i = 1, this.nu
-        this.mean_val(i,j) = (  val_on_vert(i,    j)   &
-                              + val_on_vert(i+1,  j)   &
-                              + val_on_vert(i,  j+1)   &
-                              + val_on_vert(i+1,j+1) ) / 4
-      end do
-    end do
-    this.mean_val_max = maxval(this.mean_val)
-    this.mean_val_min = minval(this.mean_val)
-  end subroutine slice_mesh_cell__set_meanval
-
-
-  subroutine slice_mesh_edge__level_check( this,       &
-                                           mesh_vert,  &
+  function edge_level_check_set_u_quinary( edge_u_nu,  &
+                                           edge_u_nv,  &
+                                           vert_nu,    &
+                                           vert_nv,    &
                                            val_vert,   &
-                                           level )
-    class(slice_mesh__edge_t) <io> :: this
-    type(slice_mesh__vert_t) <in> :: mesh_vert
-    real, dimension(mesh_vert.nu,  &
-                    mesh_vert.nv) <in> :: val_vert
+                                           level ) result(u_quinary) 
+
+    integer <in> :: edge_u_nu, edge_u_nv
+    real, dimension(vert_nu,vert_nv) <in> :: val_vert
     real <in> :: level
+    integer, dimension(edge_u_nu,edge_u_nv)  :: u_quinary
     !!>
         Each cell is surrounded by four edges; two vertical
         edges (edge_v) and two horizontal edges (edge_u).
@@ -466,65 +454,24 @@ contains
 
     !!<
     integer :: ei, ej  ! edge indexes
-    real :: u1, u2, v1, v2, val1, val2
-    real :: diff1, diff2
-
-    this.u_quinary(:,:) = NIL  ! Will be used later to check
-    this.v_quinary(:,:) = NIL  ! all edges are surveyed.
-
     ! edge_u
-    do ej = 1, this.u_nv  
-      ! Some edges on ej=1 (bottom) and ej=u_nv(top) 
+    do ej = 1, edge_u_nv  
+      ! Some edges on ej=1 (bottom) and ej=u_nv (top) 
       ! will be overwritten later.
-      do ei = 1, this.u_nu
-          !!> 
-              There are two cases for which a contour goes
-              through the u_edge.
-
-              Case 1:
-
-                            . |       |
-                           - -+ - - - + - - - - - - - val_vert(ei,ej)
-                diff1 > 0 |   | .     |
-                           - -+===.===+ - - - - - - - level
-                diff2 > 0 |   |     . |
-                           - -+ - - - . - - - - - - - val_vert(ei+1,ej)
-                              |       | .
-                              |       |
-                             ei     ei+1
-
-              Case 2:
-                              |       | .
-                           - -+ - - - . - - - - - - - - val_vert(ei+1,ej)
-                diff2 < 0 |   |     . |
-                           - -+===.===+ - - - - - - - - level
-                diff1 < 0 |   | .     |
-                           - -. - - - + - - - - - - - - val_vert(ei,ej)
-                            . |       | 
-                              |       |
-                             ei     ei+1
-          !!<
+      do ei = 1, edge_u_nu
         if ( val_vert(ei,  ej) < level .and. &
              val_vert(ei+1,ej) < level ) then
           !!>
                The path does not cross this edge.
                          ei   ei+1
-                          |    |     .
-                          |    |    .      
+                          |    |      .      
                       ----m====m---.---- level
-                          |    |  .     
-                          |    | .
-                          |    |.     
-                          |    + - - - - val_vert(ei+1,ej)  
-                          |   .|
+                          |    |._______ val_vert(ei+1,ej)
                           |  . |
-                          | .  |
-                          |.   |
-                          + - - - - - - - val_vert(ei,ej)
-                         .|    |
-                        . |    |
+                          .----|-------- val_vert(ei,ej)
+                       .  |    |
           !!<
-          this.u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MM
+          u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MM
         else if ( val_vert(ei,  ej) > level .and. &
                   val_vert(ei+1,ej) > level ) then
           !!>
@@ -533,10 +480,11 @@ contains
                       ----p====p----.------ level
                          ei   ei+1       .
           !!<
-          this.u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PP
+          u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PP
         else if ( val_vert(ei,  ej) >= level .and. &
                   val_vert(ei+1,ej) <  level ) then          
           !!> 
+              The path goes through the edge.
                      .
                        .       u2
                        | .     |
@@ -546,10 +494,11 @@ contains
                            |     .
                           u=ui
           !!<
-          this.u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PM
-        else if ( val_vert(ei,  ej) < level .and. &
-                  val_vert(ei+1,ej) > level ) then
+          u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PM
+        else if ( val_vert(ei,  ej) <  level .and. &
+                  val_vert(ei+1,ej) >= level ) then
           !!> 
+              The path goes through the edge, too.
                                  .
                        u1      . 
                        |     . |
@@ -559,96 +508,203 @@ contains
                      .     |     
                           u=ui
           !!<
-          this.u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MP
+          u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MP
         else
-          call ut__assert( "__MODFUNC__: case error?!" )
-
-          u1 = mesh_vert.pos_u(ei)
-          u2 = mesh_vert.pos_u(ei+1)
-          diff1 = val_vert(ei,ej) - level
-          diff2 = level - val_vert(ei+1,ej)
-          this.u_cross_coord(ei,ej) = linear_interpol( u1, u2, diff1, diff2 )
-          if ( diff1 >= 0.0 ) then
-          else
-            this.u_quinary(ei,ej) = +1  ! d(val)/du > 0
-          end if
+          call ut__assert( "__MODFUNC__: What? Case error?!" )
         end if
       end do
     end do
+
+    call iBoundary_care
+
+  contains
+
+    subroutine iBoundary_care
+      !!>
+                       u_quinary = ..._BB (Special key on boundary)
+                      /   /
+                     /   /   
+          m---m---p===p===p     p: val_vert >= level
+          |   .   .   .   |     m: val_vert <  level
+          |   .   .   .   |
+          |   .   .   .   |
+          |   .   .   .   |
+          |   .   .   .   |
+          m---p===p===p---m
+                 \   \
+                  \   \
+                   u_quinary = ..._BB
+  
+         |       |       |    _ Contour line       
+         m - - - m - - - m   /    at "level"
+         |       |       * */             
+         |       |    *  |   *   |       |       |      
+         m - - - m -*- - p - - * m - - - m - - - m   ej=3
+         |       *       |       *       |       |
+         |     * |       |       | *     |       |
+         m - -*- p - - - p - - - p - * - m - - - m   ej=2
+         |    *  |       |       |    *  |       |
+         |    *  |       |       |    *  |       |
+         m-----*-p=======p=======p-- *---m-------m   ej=1
+      !!<
+      do ej = 1, edge_u_nv, edge_u_nv-1 ! bottom and top boundaries
+        do ei = 1, edge_u_nu
+          if ( u_quinary(ei,ej) == SLICE_MESH__EDGE_LEVEL_QUINARY_PP ) then
+            u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_BB
+          end if
+        end do
+      end do
+    end subroutine iBoundary_care
+
+  end function edge_level_check_set_u_quinary
+
+
+  function edge_level_check_set_v_quinary( edge_v_nu,  &
+                                           edge_v_nv,  &
+                                           vert_nu,    &
+                                           vert_nv,    &
+                                           val_vert,   &
+                                           level ) result(v_quinary)
+
+    integer <in> :: edge_v_nu, edge_v_nv
+    real, dimension(vert_nu,vert_nv) <in> :: val_vert
+    real <in> :: level
+    integer, dimension(edge_v_nu,edge_v_nv) :: v_quinary
 
     !!>
-                     u_quinary = 4 (Special key on boundary)
-                    /   /
-                   /   /   
-        m---m---p===p===p     p: val_vert >= level
-        |   .   .   .   |     m: val_vert <  level
-        |   .   .   .   |
-        |   .   .   .   |
-        |   .   .   .   |
-        |   .   .   .   |
-        m---p===p===p---m
-               \   \
-                \   \
-                 u_quinary = 4
-
-       |       |       |    _ Contour line       
-       m - - - m - - - m   /    at "level"
-       |       |       * */             
-       |       |    *  |   *   |       |       |      
-       m - - - m -*- - p - - * m - - - m - - - m   ej=3
-       |       *       |       *       |       |
-       |     * |       |       | *     |       |
-       m - -*- p - - - p - - - p -*- - m - - - m   ej=2
-       |    *  |       |       |   *   |       |
-       |    *  |       |       |    *  |       |
-       m-----*-p=======p=======p-----*-m-------m   ej=1
+        See comments in "edge_level_check_set_u_quinary".
     !!<
-    do ej = 1, this.u_nv, this.u_nv-1 ! bottom and top
-      do ei = 1, this.u_nu
-        if ( val_vert(ei,  ej) >= level   &
-                              .and.
-             val_vert(ei+1,ej) >= level ) then
-          this.u_quinary(ei,ej) = -2  ! special care key 
-        end if
-      end if
-    end if
+
+    integer :: ei, ej  ! edge indexes
 
     ! edge_v
-    do ej = 1, this.v_nv
-      do ei = 1, this.v_nu
-        ! Some edges on ei=1 (left) and ei=v_nu(right) 
+    do ej = 1, edge_v_nv  
+      do ei = 1, edge_v_nu
+        ! Some edges on ei=1 (left) and ei=u_nv (right) 
         ! will be overwritten later.
-        diff1 = val_vert(ei,ej) - level
-        diff2 = level - val_vert(ei,ej+1)
-        if ( diff1*diff2 < 0.0 ) then
-          this.v_quinary(ei,ej) = 0
+        if ( val_vert(ei,ej  ) < level .and. &
+             val_vert(ei,ej+1) < level ) then
+          v_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MM
+        else if ( val_vert(ei,ej  ) > level .and. &
+                  val_vert(ei,ej+1) > level ) then
+          v_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PP
+        else if ( val_vert(ei,ej  ) >= level .and. &
+                  val_vert(ei,ej+1) <  level ) then          
+          v_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PM
+        else if ( val_vert(ei,ej  ) <  level .and. &
+                  val_vert(ei,ej+1) >= level ) then
+          v_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MP
         else
-          v1 = mesh_vert.pos_v(ej)
-          v2 = mesh_vert.pos_v(ej+1)
-          this.v_cross_coord(ei,ej) = linear_interpol( v1, v2, diff1, diff2 )
-          if ( diff1 >= 0.0 ) then
-            this.v_quinary(ei,ej) = -1  ! d(val)/dv < 0
-          else
-            this.v_quinary(ei,ej) = +1  ! d(val)/dv > 0
-          end if
+          call ut__assert( "__MODFUNC__: What? Case error?!" )
         end if
       end do
     end do
 
-    do ej = 1, this.u_nv
-      do ei = 1, this.u_nu, this.u_nu-1 ! left and right 
-        if ( val_vert(ei,ej  ) >= level   &
-                              .and.
-             val_vert(ei,ej+1) >= level ) then
-          this.v_quinary(ei,ej) = -2  ! special care key 
-        end if
-      end if
-    end if    
+    call iBoundary_care
 
-    call ut__assert( maxval(abs(this.u_quinary)) <= 2,  &
-                     "__MODFUNC__: You missed an edge_u?" )
-    call ut__assert( maxval(abs(this.v_quinary)) <= 2,  &
-                     "__MODFUNC__: You missed an edge_v?" )
+  contains
+
+    subroutine iBoundary_care
+      do ej = 1, edge_v_nv
+        do ei = 1, edge_v_nu, edve_v_nu-1 ! left and right boundaries
+          if ( v_quinary(ei,ej) == SLICE_MESH__EDGE_LEVEL_QUINARY_PP ) then
+            v_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_BB
+          end if
+        end do
+      end do
+    end subroutine iBoundary_care 
+
+  end function edge_level_check_set_v_quinary  
+
+
+  subroutine slice_mesh_edge__level_check( this,       &
+                                           mesh_vert,  &
+                                           val_vert,   &
+                                           level )
+    class(slice_mesh__edge_t) <io> :: this
+    type(slice_mesh__vert_t) <in> :: mesh_vert
+    real, dimension(mesh_vert.nu,  &
+                    mesh_vert.nv) <in> :: val_vert
+    real <in> :: level
+
+    this.u_quinary(:,:) = -999  ! Any negative. Used later to
+    this.v_quinary(:,:) = -999  ! check if all edges are set.
+
+    this.u_quinary = edge_level_check_set_u_quinary(      &
+                                         this.u_nu,       &
+                                         this.u_nv,       &
+                                         mesh_vert.nu,    &
+                                         mesh_vert.nv,    &
+                                         val_vert,        &
+                                         level )
+
+    this.v_quinary = edge_level_check_set_v_quinary(      &
+                                         this.v_nu,       &
+                                         this.v_nv,       &
+                                         mesh_vert.nu,    &
+                                         mesh_vert.nv,    &
+                                         val_vert,        &
+                                         level )
+
+    call iInterpol_cross_point_edge_u
+    call iInterpol_cross_point_edge_v
+
+    call ut__assert( minval(this.u_quinary) ) >= 0,  &
+                     "__MODFUNC__: You missed some edge_u?" )
+    call ut__assert( minval(this.v_quinary) ) >= 0,  &
+                     "__MODFUNC__: You missed some edge_v?" )
+
+  contains
+
+    subroutine iInterpol_cross_point_edge_u
+      real :: u1, u2, diff1, diff2
+      integer :: quinary
+      !!> 
+              .                                 .
+                .       u2            u1      . 
+                | .     |             |     . |
+            ----p===.===m----     ----m===.===p----
+                |   | . |             | . |   |
+               u1   |   .             .   |   u2
+                    |     .         .     |  
+                   u=ui                  u=ui
+      !!<
+
+      do ej = 1, this.u_nv
+        do ei = 1, this.u_nu
+          quinary = this.u_quinary(ei,ej)
+          if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_MP  &
+                      .or.                                   &
+               quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM ) then
+            u1 = mesh_vert.pos_u(ei)
+            u2 = mesh_vert.pos_u(ei+1)
+            diff1 = val_vert(ei,ej) - level
+            diff2 = level - val_vert(ei+1,ej)
+            this.u_cross_coord(ei,ej) = linear_interpol( u1, u2, diff1, diff2 )
+          end if
+        end do
+      end do
+    end subroutine iInterpol_cross_point_edge_u
+
+    subroutine iInterpol_cross_point_edge_v
+      real :: v1, v2, diff1, diff2
+      integer :: quinary
+      ! edge_v
+      do ej = 1, this.v_nv
+        do ei = 1, this.v_nu
+          quinary = this.v_quinary(ei,ej)
+          if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_MP  &
+                      .or.                                   &
+               quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM ) then
+            v1 = mesh_vert.pos_v(ej)
+            v2 = mesh_vert.pos_v(ej+1)
+            diff1 = val_vert(ei,ej) - level
+            diff2 = level - val_vert(ei,ej+1)
+            this.v_cross_coord(ei,ej) = linear_interpol( v1, v2, diff1, diff2 )
+          end if
+        end do
+      end do
+    end subroutine iInterpol_cross_point_edge_v    
 
   end subroutine slice_mesh_edge__level_check  
 

@@ -160,40 +160,91 @@ contains
          |      .   \_____ Find this edge.
     !!< 
     integer :: ei, ej
+    integer :: quinary
+    real :: path_tip_u, path_tip_v
 
     call ut__assert( direct_now.d==SLICE_MESH__PATH_NORTHWARD,  &
-                    '__MODFUNC__: We assume the start edge is Eastward.' )
+                    '__MODFUNC__: Path must cross the start edge northtward.' )
     call ut__assert( this.num == 0,  &
                     '__MODFUNC__: You forgot to reset contour_path.' )
+    !!> 
+        Find a starting edge of a contour line for the input level.
+        Mathematically, every contour line is closed unless it touches 
+        on the boundary of the simulatin box (u=umin/umax or v=vmin/vmax).
 
+        We set a virtual contour line along the boundary if the boudary grid
+        vertices satisfy the condition 
+            vert_val >= level  (denoted by "p" in the figure),
+        see the upper right figure. 
+
+        Since all contour lines are thus always closed, we first find an
+        edge (starting edge) for each contour and draw the contour with
+        keeping grid vertices with 
+            vert_val >= level
+        always in its left-hand side of the path.
+        
+        Starting edge of a trully closed contour (without touching the
+        boundaries) is any u_edge with its quinary value "PM" (plus-in-left
+        and minus-in-right of the edge).
+
+        Cares should be taken for contour lines with virual (on-boundary)
+        contours. 
+                            contour line
+      [Case A]                *                 
+             ei     ei+1    *           [Case B]                ei=1
+             |       |    *                               *   (right boundary)
+         - - p - - - p -*-                |       |     * |       *
+             |       |*                   |       |   *   |       *
+             |      *|                  - m - - - m -*- - p - - - B
+             |    *  |                    |       |  *    |       *
+      ej - - P==*====M - -                |       |  *    |       *
+             | *  \  |                    |       |  *    |       *
+             |*   PM |                  - m - - - m -*- - p - - - B
+             *      \                     |       | *     |       *
+                     \                    |       |*      |       *
+                   start edge             |      *|       |       *  ej=1    
+                                        --m----***B*******B*******B (bottom
+      [Case C]                             \     / \     / \     /   boundary) 
+       ei=1 (left boundary)                   MP      BB      BB        
+        |     * |       |                              \
+        |   *   |       |                               start edge
+        m -*- - p - - - p -          [Case D]    
+        | *     |       |                 |       |      *|       |
+        |*      |       |             - - p - - - p - - * m - - - m - -
+        *       |       |                 |       |    *  |       |
+        B - - - p - - - p -               |       |   *   |       |
+        *       |       |                 |       |  *    |       |   ej=1
+        *       |       |              ***B*******B** - - m - - - m - (bottom
+        *       |       |                  \     / \     / \     /     boundary)
+        B*******B*******B*** ej=1             BB      PM      MM
+         \     / \     /    (bottom                    \
+            BB      BB       boundary)                  start edge
+             \
+              start edge
+    !!< 
     do ej = 1, mesh_edge.u_nv
       do ei = 1, mesh_edge.u_nu
-        if ( mesh_edge.u_quinary(ei,ej) == -1 ) then
-          ! Found an edge in which a path should 
-          ! run through in the northward direction.
-          !!>   
-               \
-                . . . . . . <--- val1 > level
-                .\
-                . \        ___ u=u2
-                .  \      /
-            - - p---+----m - - - - o -    <--- val = level
-               /    .\   .
-           u=u1     . \  .
-                    .  \ .
-                    .   \. <--- val2 < level
-                  u=ui   \ 
-                         
-          !!<
+        quinary = mesh_edge.u_quinary(ei,ej)
+        if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM   &
+                    .or.                                    &
+             quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_BB ) then
           this.vpos_start = slice_mesh_ivect_t(ei,ej)
-          this.tip_v = mesh_vert.pos_v(ej)
-          val1 = val_vert(ei,  ej)
-          val2 = val_vert(ei+1,ej)
-          call ut__assert ( val1)
-          u1 = mesh_vert.pos_u(ei)
-          u2 = mesh_vert.pos_u(ei+1)
-          this.tip_u = linear_interpol( u1, u2, val1, val2, level )
-          call register( this, mesh_vert, vpos_start )
+          path_tip_v = mesh_vert.pos_v(ej)
+          if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM ) then
+            ! [Case A] and [Case D] in above figure.
+            path_tip_u = mesh_edge.u_cross_coord(ei,ej)
+            call register( this, path_tip_u, path_tip_v )
+          else if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_BB ) then
+            ! [Case B] and [Case C] in above figure.
+            path_tip_u = mesh_vert.pos_u(ei)    ! left vertex of the edge
+            call register( this, path_tip_u, path_tip_v )
+            path_tip_u = mesh_vert.pos_u(ei+1)  ! right vertex of the edge
+            call register( this, path_tip_u, path_tip_v )
+          else
+            call ut__fatal( "__MODFUNC__: Missing some case?" )
+          end if
+
+          
           vpos_now = vpos_start.shift( SLICE_MESH__EAST )
           call register( this, mesh_vert, vpos_now )
           call mesh_edge.erase( vpos_start, SLICE_MESH__EAST )
@@ -206,24 +257,18 @@ contains
   end subroutine contour_path__set_starting_edge
 
 
-
-  subroutine register( contour_path, mesh_vert, vpos, level )
+  subroutine register( contour_path, u, v )
     type(contour_path_t) <io> :: contour_path
-    type(slice_mesh__vert_t) <in> :: mesh_vert
-    type(slice_mesh_ivect_t) <in> :: vpos
+    real <in> :: u, v
 
-    real :: u_sim, v_sim
     integer :: n
 
     n = contour_path.num + 1
     call ut__assert( n <= size(contour_path.list_u,dim=1),  &
                     '__MODFUNC__: Increase array size of path_vert.' )
 
-    u_sim = mesh_vert.pos_u(vpos.i)
-    v_sim = mesh_vert.pos_v(vpos.j)
-
-    contour_path.list_u(n) = u_sim
-    contour_path.list_v(n) = v_sim
+    contour_path.list_u(n) = u
+    contour_path.list_v(n) = v
     contour_path.num = n
   end subroutine register
 
