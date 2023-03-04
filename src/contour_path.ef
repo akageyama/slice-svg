@@ -168,7 +168,7 @@ contains
 
     do ej = 1, mesh_edge.u_nv
       do ei = 1, mesh_edge.u_nu
-        if ( mesh_edge.u_ternary(ei,ej) == -1 ) then
+        if ( mesh_edge.u_quinary(ei,ej) == -1 ) then
           ! Found an edge in which a path should 
           ! run through in the northward direction.
           !!>   

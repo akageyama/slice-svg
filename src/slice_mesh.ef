@@ -12,6 +12,11 @@ module slice_mesh_m
   integer <const> :: SLICE_MESH__PATH_SOUTHWARD = 2  !  1 -- + -- 3   2 (SOUTH)
   integer <const> :: SLICE_MESH__PATH_EASTWARD  = 3  !       |        3 (EAST)
                                                      !       2
+  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_MM = 0  ! --m===m-- 
+  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_PP = 1  ! --p===p-- 
+  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_MP = 2  ! --m===p-- 
+  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_PM = 3  ! --p===m-- 
+  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_SS = 4  ! --p===p-- (boundary)
 
   type, public :: slice_mesh_direct_t
     integer :: d ! 0 (NORTH), 1 (WEST), 2 (SOUTH), 3 (EAST)
@@ -101,8 +106,25 @@ module slice_mesh_m
     !!< 
     integer :: u_nu, u_nv
     integer :: v_nu, v_nv
-    integer, dimension(:,:), allocatable :: u_ternary ! {+1, 0, -1}
-    integer, dimension(:,:), allocatable :: v_ternary ! {+1, 0, -1}
+    integer, dimension(:,:), allocatable :: u_quinary ! {0,1,2,3,4}
+    integer, dimension(:,:), allocatable :: v_quinary ! {0,1,2,3,4}
+      !!>
+          Take an edge V1-V2. 
+                    V1--edge--V2  
+          Denote "p" when V1 or V2 > level (of the contour),
+          and "m" when V1 or V2 < level. For example, when
+          V1 > level and V2 < level, 
+                     p--edge--m
+             There are five possibilities.
+
+          Combination | quinary
+          ------------+--------
+             m----m   |  0
+             p----p   |  1
+             m----p   |  2
+             p----m   |  3
+             p----p   |  4 (Special quinary for boundary edges)
+      !!<
     real, dimension(:,:), allocatable :: u_cross_coord
     real, dimension(:,:), allocatable :: v_cross_coord
                                             
@@ -219,13 +241,13 @@ contains
 
     select case (direction)
       case (SLICE_MESH__NORTH)
-        this.v_ternary(vert_pos.i,   vert_pos.j  ) = 0
+        this.v_quinary(vert_pos.i,   vert_pos.j  ) = 0
       case (SLICE_MESH__WEST)
-        this.u_ternary(vert_pos.i-1, vert_pos.j  ) = 0
+        this.u_quinary(vert_pos.i-1, vert_pos.j  ) = 0
       case (SLICE_MESH__SOUTH)
-        this.v_ternary(vert_pos.i,   vert_pos.j-1) = 0
+        this.v_quinary(vert_pos.i,   vert_pos.j-1) = 0
       case (SLICE_MESH__EAST)
-        this.u_ternary(vert_pos.i,   vert_pos.j  ) = 0
+        this.u_quinary(vert_pos.i,   vert_pos.j  ) = 0
       case default
         call ut__fatal( '__MODFUNC__: case error.' )
     end select
@@ -349,9 +371,9 @@ contains
       this.u_nv = mesh_vert.nv
       this.v_nu = mesh_vert.nu
       this.v_nv = mesh_vert.nv - 1
-      allocate(this.u_ternary(this.u_nu,  &
+      allocate(this.u_quinary(this.u_nu,  &
                               this.u_nv))
-      allocate(this.v_ternary(this.v_nu,  &
+      allocate(this.v_quinary(this.v_nu,  &
                               this.v_nv))
   end subroutine slice_mesh_edge__initialize
 
@@ -359,8 +381,8 @@ contains
   subroutine slice_mesh_edge__finalize( this )
     class(slice_mesh__edge_t) <io> :: this
 
-    deallocate(this.u_ternary)
-    deallocate(this.v_ternary)
+    deallocate(this.u_quinary)
+    deallocate(this.v_quinary)
   end subroutine slice_mesh_edge__finalize  
 
 
@@ -386,81 +408,6 @@ contains
     this.mean_val_max = maxval(this.mean_val)
     this.mean_val_min = minval(this.mean_val)
   end subroutine slice_mesh_cell__set_meanval
-
-
-  subroutine slice_mesh_edge__apply_stokes( this, mesh_cell,  &
-                                                  switch, level, level2 )
-    class(slice_mesh__edge_t) <io> :: this
-    type(slice_mesh__cell_t) <in> :: mesh_cell
-    char(len=*) <in> :: switch
-    real <in> :: level
-    real <optin> :: level2
-    !!>
-        Applying Stokes thereom, we get the boundary curve 
-        of cells that has larger value than "level".
-
-              <---               <---             
-          +--------+         +--------+   
-        | |cell at | ^     | |cell at | ^  
-        | |   ci=1 | |  +  | |   ci=2 | |  
-        v |   cj=3 | |     v |   cj=3 | |  
-          +--------+         +--------+   
-              --->              --->      "cancel out" 
-                                          /
-                                  <---   / <---
-                              +--------+--------+
-                            | |cell at |cell at | ^ 
-                         =  | |   ci=1 |   ci=2 | | 
-                            v |   cj=3 |   cj=3 | | 
-                              +--------+--------+
-                                  --->     --->
-    !!<
-    integer :: i, j  ! cell indexes
-
-    this.u_ternary(:,:) = 0  ! reset
-    this.v_ternary(:,:) = 0
-
-    select case (switch)
-      case ('above')
-        do j = 1, mesh_cell.nv
-          do i = 1, mesh_cell.nu
-            if ( mesh_cell.mean_val(i,j) >= level ) then
-              this.u_ternary(i,j)   += 1  ! right-in-south
-              this.v_ternary(i+1,j) += 1  !    up-in-east
-              this.u_ternary(i,j+1) -= 1  !  left-in-north
-              this.v_ternary(i,j)   -= 1  !  down-in-west
-            end if
-          end do
-        end do
-      case ('below')
-        do j = 1, mesh_cell.nv
-          do i = 1, mesh_cell.nu
-            if ( mesh_cell.mean_val(i,j) < level ) then
-              this.u_ternary(i,j)   += 1  ! right-in-south
-              this.v_ternary(i+1,j) += 1  !    up-in-east
-              this.u_ternary(i,j+1) -= 1  !  left-in-north
-              this.v_ternary(i,j)   -= 1  !  down-in-west
-            end if
-          end do
-        end do
-      case ('between')
-        call ut__assert( present(level2),  &
-                         '__MODFUNC__: You forgot setting level2.' )
-        do j = 1, mesh_cell.nv
-          do i = 1, mesh_cell.nu
-            if ( mesh_cell.mean_val(i,j) >= level .and.   &
-                 mesh_cell.mean_val(i,j) < level2 ) then
-              this.u_ternary(i,j)   += 1  ! right-in-south
-              this.v_ternary(i+1,j) += 1  !    up-in-east
-              this.u_ternary(i,j+1) -= 1  !  left-in-north
-              this.v_ternary(i,j)   -= 1  !  down-in-west
-            end if
-          end do
-        end do
-      case default 
-        call ut__fatal( '__MODFUNC__: case error.' )
-    end select
-  end subroutine slice_mesh_edge__apply_stokes
 
 
   subroutine slice_mesh_edge__level_check( this,       &
@@ -491,38 +438,45 @@ contains
         Here we compare the scalar field "vert_val" on the
         vertices at (ei,ej) with "level" of the contour. 
         Denoting "p" when 
-                  val_vert(ei,ej) - level > 0,
+                  val_vert(ei,ej) > level,
         and "m" when 
-                  val_vert(ei,ej) - level < 0.0.
-        Define u_ternary as the sign of dF/du and v_ternary
+                  val_vert(ei,ej) < level.
+        Define u_quinary as the sign of dF/du and v_quinary
         as the sign of dF/dv.
-                                   _______ u_ternary = 0
+
+          Combination | quinary
+          ------------+--------
+             m----m   |  0
+             p----p   |  1
+             m----p   |  2
+             p----m   |  3
+             p----p   |  4 (Special quinary for boundary edges)
+
+                                   _______ u_quinary = 0
                                   /
                              m--------m
                              |        |
-          v_ternary = -1 --> |        | <------ v_ternary = 0
+           v_quinary = 3 --> |        | <------ v_quinary = 0
                              |        |
                              p--------m
-                                  \______ u_ternary = -1
+                                  \______ u_quinary = 3
 
         Here we calculate crossing point of the contour for
-        edges with [uv]_ternary = \pm 1 by the linear interpolation.
+        edges with [uv]_quinary = 2 or 3, by the linear interpolation.
 
     !!<
     integer :: ei, ej  ! edge indexes
     real :: u1, u2, v1, v2, val1, val2
     real :: diff1, diff2
 
-    this.u_ternary(:,:) = NIL  ! Will be used later to check
-    this.v_ternary(:,:) = NIL  ! all edges are surveyed.
+    this.u_quinary(:,:) = NIL  ! Will be used later to check
+    this.v_quinary(:,:) = NIL  ! all edges are surveyed.
 
     ! edge_u
     do ej = 1, this.u_nv  
       ! Some edges on ej=1 (bottom) and ej=u_nv(top) 
       ! will be overwritten later.
       do ei = 1, this.u_nu
-        diff1 = val_vert(ei,ej) - level
-        diff2 = level - val_vert(ei+1,ej)
           !!> 
               There are two cases for which a contour goes
               through the u_edge.
@@ -550,50 +504,80 @@ contains
                               |       |
                              ei     ei+1
           !!<
-        if ( diff1*diff2 < 0.0 ) then
+        if ( val_vert(ei,  ej) < level .and. &
+             val_vert(ei+1,ej) < level ) then
           !!>
                The path does not cross this edge.
-                                        |    |     .
-                                        |    |    .      
-                          - - - - - - - +====+ - .- - - level
-                        /              /|    |  .     
-                       |    diff2 > 0 | |    | .
-                       |               \|    |.     
-             diff1 < 0 |                +- - + - - - - val_vert(ei+1,ej)  
-                       |                |   .|
-                       |                |  . |
-                       |                | .  |
-                        \               |.   |
-                          - - - - - - - + - -+ - - - - val_vert(ei,ej)
-                                       .|    |
-                                      . |    |
-                                     .  ei   ei+1
+                         ei   ei+1
+                          |    |     .
+                          |    |    .      
+                      ----m====m---.---- level
+                          |    |  .     
+                          |    | .
+                          |    |.     
+                          |    + - - - - val_vert(ei+1,ej)  
+                          |   .|
+                          |  . |
+                          | .  |
+                          |.   |
+                          + - - - - - - - val_vert(ei,ej)
+                         .|    |
+                        . |    |
           !!<
-          this.u_ternary(ei,ej) = 0
-        else
+          this.u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MM
+        else if ( val_vert(ei,  ej) > level .and. &
+                  val_vert(ei+1,ej) > level ) then
+          !!>
+                          .
+                          |    . 
+                      ----p====p----.------ level
+                         ei   ei+1       .
+          !!<
+          this.u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PP
+        else if ( val_vert(ei,  ej) >= level .and. &
+                  val_vert(ei+1,ej) <  level ) then          
           !!> 
-                       + - - - +
-                 diff1 | \     |
-                       +===\===+
-                 diff2 |   | \ |
-                       +---+---+
-                      u1   |   u2
-                           ui
+                     .
+                       .       u2
+                       | .     |
+                   ----p===.===m----
+                       |   | . |
+                      u1   |   .
+                           |     .
+                          u=ui
           !!<
+          this.u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PM
+        else if ( val_vert(ei,  ej) < level .and. &
+                  val_vert(ei+1,ej) > level ) then
+          !!> 
+                                 .
+                       u1      . 
+                       |     . |
+                   ----m===.===p----
+                       | . |   |
+                       .   |   u2
+                     .     |     
+                          u=ui
+          !!<
+          this.u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MP
+        else
+          call ut__assert( "__MODFUNC__: case error?!" )
+
           u1 = mesh_vert.pos_u(ei)
           u2 = mesh_vert.pos_u(ei+1)
+          diff1 = val_vert(ei,ej) - level
+          diff2 = level - val_vert(ei+1,ej)
           this.u_cross_coord(ei,ej) = linear_interpol( u1, u2, diff1, diff2 )
           if ( diff1 >= 0.0 ) then
-            this.u_ternary(ei,ej) = -1  ! d(val)/du < 0
           else
-            this.u_ternary(ei,ej) = +1  ! d(val)/du > 0
+            this.u_quinary(ei,ej) = +1  ! d(val)/du > 0
           end if
         end if
       end do
     end do
 
     !!>
-                     u_ternary = -2 (A special key)
+                     u_quinary = 4 (Special key on boundary)
                     /   /
                    /   /   
         m---m---p===p===p     p: val_vert >= level
@@ -605,12 +589,12 @@ contains
         m---p===p===p---m
                \   \
                 \   \
-                 u_ternary = -2
+                 u_quinary = 4
 
        |       |       |    _ Contour line       
        m - - - m - - - m   /    at "level"
        |       |       * */             
-       |       |     * |   *   |       |       |      
+       |       |    *  |   *   |       |       |      
        m - - - m -*- - p - - * m - - - m - - - m   ej=3
        |       *       |       *       |       |
        |     * |       |       | *     |       |
@@ -624,7 +608,7 @@ contains
         if ( val_vert(ei,  ej) >= level   &
                               .and.
              val_vert(ei+1,ej) >= level ) then
-          this.u_ternary(ei,ej) = -2  ! special care key 
+          this.u_quinary(ei,ej) = -2  ! special care key 
         end if
       end if
     end if
@@ -637,15 +621,15 @@ contains
         diff1 = val_vert(ei,ej) - level
         diff2 = level - val_vert(ei,ej+1)
         if ( diff1*diff2 < 0.0 ) then
-          this.v_ternary(ei,ej) = 0
+          this.v_quinary(ei,ej) = 0
         else
           v1 = mesh_vert.pos_v(ej)
           v2 = mesh_vert.pos_v(ej+1)
           this.v_cross_coord(ei,ej) = linear_interpol( v1, v2, diff1, diff2 )
           if ( diff1 >= 0.0 ) then
-            this.v_ternary(ei,ej) = -1  ! d(val)/dv < 0
+            this.v_quinary(ei,ej) = -1  ! d(val)/dv < 0
           else
-            this.v_ternary(ei,ej) = +1  ! d(val)/dv > 0
+            this.v_quinary(ei,ej) = +1  ! d(val)/dv > 0
           end if
         end if
       end do
@@ -656,14 +640,14 @@ contains
         if ( val_vert(ei,ej  ) >= level   &
                               .and.
              val_vert(ei,ej+1) >= level ) then
-          this.v_ternary(ei,ej) = -2  ! special care key 
+          this.v_quinary(ei,ej) = -2  ! special care key 
         end if
       end if
     end if    
 
-    call ut__assert( maxval(abs(this.u_ternary)) <= 2,  &
+    call ut__assert( maxval(abs(this.u_quinary)) <= 2,  &
                      "__MODFUNC__: You missed an edge_u?" )
-    call ut__assert( maxval(abs(this.v_ternary)) <= 2,  &
+    call ut__assert( maxval(abs(this.v_quinary)) <= 2,  &
                      "__MODFUNC__: You missed an edge_v?" )
 
   end subroutine slice_mesh_edge__level_check  
@@ -697,9 +681,9 @@ contains
         the next step. The nearest neighbor vertex to
         move is determined by the condition that the
         edge value toward the nearest neighbor has a
-        proper, non-zero, value of edge ternary.
+        proper, non-zero, value of edge quinary.
           For example, in the above case, if the value
-        of edge_u.ternary on the M-N edge is +1, i.e., 
+        of edge_u.quinary on the M-N edge is +1, i.e., 
         eastward, then you jump to N.
     !!<
     integer :: i, j, vert_nu, vert_nv, dir
@@ -722,13 +706,13 @@ contains
 
     select case (direct_turned.d )
       case (SLICE_MESH__NORTH)
-        if ( this.v_ternary(i,j)   == +1 ) ans = .true.
+        if ( this.v_quinary(i,j)   == +1 ) ans = .true.
       case (SLICE_MESH__SOUTH)
-        if ( this.v_ternary(i,j-1) == -1 ) ans = .true.
+        if ( this.v_quinary(i,j-1) == -1 ) ans = .true.
       case (SLICE_MESH__EAST)
-        if ( this.u_ternary(i,j)   == +1 ) ans = .true.
+        if ( this.u_quinary(i,j)   == +1 ) ans = .true.
       case (SLICE_MESH__WEST)
-        if ( this.u_ternary(i-1,j) == -1 ) ans = .true.
+        if ( this.u_quinary(i-1,j) == -1 ) ans = .true.
       case default
         call ut__fatal( '__MODFUNC__: case error.' )
     end select
