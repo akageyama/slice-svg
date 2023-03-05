@@ -292,7 +292,7 @@ contains
     !!<
     ei = mesh_edge.v_nu
     do ej = 1, mesh_edge.v_nv
-      quarter = mesh_edge.u_quarter(ei,ej)
+      quarter = mesh_edge.v_quarter(ei,ej)
       if ( quarter == PM  .or.  &
            quarter == MP  .or.  &
            quarter == PP ) then
@@ -332,7 +332,6 @@ contains
         return
       end if
     end do  
-
 
     ! North boundary
     ej = mesh_edge.v_nv
@@ -392,7 +391,7 @@ contains
     ! West boundary
     ei = 1
     do ej = mesh_edge.v_nv, 1, -1
-      quarter = mesh_edge.u_quarter(ei,ej)
+      quarter = mesh_edge.v_quarter(ei,ej)
       if ( quarter == PM  .or.  &
            quarter == MP  .or.  &
            quarter == PP ) then
@@ -400,15 +399,15 @@ contains
         this.start = contour_path_element_t( 'v', ei, ej, ON_BORDER )
         call mesh_edge.erase( 'v', slice_mesh_ivect_t(ei,ej) )
         select case (quarter)
-          case (PM)
-            v1 = mesh_vert.pos_u(ej)
-            v2 = mesh_edge.v_cross_coord(ei,ej)
           case (MP)
+            v1 = mesh_vert.pos_u(ej+1)
+            v2 = mesh_edge.v_cross_coord(ei,ej)
+          case (PM)
             v1 = mesh_edge.v_cross_coord(ei,ej)
-            v2 = mesh_vert.pos_v(ej+1)
+            v2 = mesh_vert.pos_v(ej)
           case (PP)
-            v1 = mesh_vert.pos_v(ej)
-            v2 = mesh_vert.pos_v(ej+1)
+            v1 = mesh_vert.pos_v(ej+1)
+            v2 = mesh_vert.pos_v(ej)
           case default
             call ut__fatal( "__MODFUNC__: case error." )
         end select
@@ -417,14 +416,14 @@ contains
         call iDouble_register( u1, v1, u1, v2 )
 
         select case (quarter)
-          case (PM)
-            this.next = contour_path_element_t( 'v', ei, ej, WESTWARD )
-          case (MP,PP)
-            if ( ej < mesh_edge.v_nv ) then
-              this.next = contour_path_element_t( 'v', ei, ej+1, ON_BORDER )
+          case (MP)
+            this.next = contour_path_element_t( 'v', ei, ej, EASTWARD )
+          case (PM,PP)
+            if ( ej > 1 ) then
+              this.next = contour_path_element_t( 'v', ei, ej-1, ON_BORDER )
             else 
-              ! you are on the north-east corner. turn west.
-              this.next = contour_path_element_t( 'u', ei-1, ej, ON_BORDER )
+              ! you are on the south-west corner. turn east.
+              this.next = contour_path_element_t( 'u', ei, ej, ON_BORDER )
             end if
           case default
             call ut__fatal( "__MODFUNC__: case error." )
@@ -435,7 +434,6 @@ contains
 
   contains
 
-
     subroutine iDouble_register( u1, v1, u2, v2 )
       real <in> :: u1, v1, u2, v2
       call register( this, u1, v1 )
@@ -444,6 +442,14 @@ contains
 
   end subroutine set_starting_edge_on_boundaries
 
+
+
+  subroutine set_starting_edge_in_bulk( this,         &
+                                        mesh_vert,    &
+                                        mesh_edge,    &
+                                        status )  
+
+  end subroutine set_starting_edge_in_bulk
 
   subroutine contour_path__set_starting_edge( this,         &
                                               mesh_vert,    &
@@ -461,9 +467,13 @@ contains
     call set_starting_edge_on_boundaries( this,         &
                                           mesh_vert,    &
                                           mesh_edge,    &
-                                          status,       &
-                                          head_cell,    &
-                                          head_direct )
+                                          status )
+    if ( status == 'have found' ) return
+
+    call set_starting_edge_in_bulk( this,         &
+                                    mesh_vert,    &
+                                    mesh_edge,    &
+                                    status )
     !!>
           Tring to find an eastward arrow AB.
 
