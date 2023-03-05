@@ -191,7 +191,7 @@ contains
            quarter == PP ) then
         status = 'have found'
         this.start = contour_path_element_t( 'u', ei, ej, ON_BORDER )
-        call mesh_edge.erase( which, slice_mesh_ivect_t(ei,ej) )
+        call mesh_edge.erase( 'u', slice_mesh_ivect_t(ei,ej) )
         !!>           
             [case PM]
                         |      *|     
@@ -259,42 +259,180 @@ contains
     end do
 
     ! East boundary
-        !!>  
-          [case MP]         
-                   .         *     
-                 - p - - - - p <-- 2nd register
-                   .         *
-                   .         * <-- 1st register
-                   .        *|     
-                   .       * |     
-                   .      *  |     
-               * * p - - * - m
-                   .     *   |
-                     
-          [case PM]         
-                   .         |
-                 . p . . .*. m 
-                   .       * |     
-                   .        *|     
-                   .         *  <== 2nd register   
-                   .         *
-                 . p . . . . p  <== 1st register
-                   .         *
-
-          [case PP]         
-                   .         *            
-                 - p - - - - p  <== 2nd register          
-                   .         *             
-                   .         *             
-                   .         *             
-                 - p - - - - p  <== 1st register
-                   .         *
-        !!<
-    ei = mesh_edge.u_nu
+    !!>  
+      [case MP]         
+               .         *     
+             - p - - - - p <-- 2nd register
+               .         *
+               .         * <-- 1st register
+               .        *|     
+               .       * |     
+               .      *  |     
+           * * p - - * - m
+               .     *   |
+                 
+      [case PM]         
+               .         |
+             . p . . .*. m 
+               .       * |     
+               .        *|     
+               .         *  <== 2nd register   
+               .         *
+             . p . . . . p  <== 1st register
+               .         *
+      
+      [case PP]         
+               .         *            
+             - p - - - - p  <== 2nd register          
+               .         *             
+               .         *             
+               .         *             
+             - p - - - - p  <== 1st register
+               .         *
+    !!<
+    ei = mesh_edge.v_nu
     do ej = 1, mesh_edge.v_nv
       quarter = mesh_edge.u_quarter(ei,ej)
+      if ( quarter == PM  .or.  &
+           quarter == MP  .or.  &
+           quarter == PP ) then
+        status = 'have found'
+        this.start = contour_path_element_t( 'v', ei, ej, ON_BORDER )
+        call mesh_edge.erase( 'v', slice_mesh_ivect_t(ei,ej) )
+        select case (quarter)
+          case (PM)
+            v1 = mesh_vert.pos_u(ej)
+            v2 = mesh_edge.v_cross_coord(ei,ej)
+          case (MP)
+            v1 = mesh_edge.v_cross_coord(ei,ej)
+            v2 = mesh_vert.pos_v(ej+1)
+          case (PP)
+            v1 = mesh_vert.pos_v(ej)
+            v2 = mesh_vert.pos_v(ej+1)
+          case default
+            call ut__fatal( "__MODFUNC__: case error." )
+        end select
 
-  
+        u1 = mesh_vert.pos_u(ei)
+        call iDouble_register( u1, v1, u1, v2 )
+
+        select case (quarter)
+          case (PM)
+            this.next = contour_path_element_t( 'v', ei, ej, WESTWARD )
+          case (MP,PP)
+            if ( ej < mesh_edge.v_nv ) then
+              this.next = contour_path_element_t( 'v', ei, ej+1, ON_BORDER )
+            else 
+              ! you are on the north-east corner. turn west.
+              this.next = contour_path_element_t( 'u', ei-1, ej, ON_BORDER )
+            end if
+          case default
+            call ut__fatal( "__MODFUNC__: case error." )
+        end select
+        return
+      end if
+    end do  
+
+
+    ! North boundary
+    ej = mesh_edge.v_nv
+    do ei = mesh_edge.u_nu, 1, -1
+      quarter = mesh_edge.u_quarter(ei,ej)
+      if ( quarter == PM  .or.  &
+           quarter == MP  .or.  &
+           quarter == PP ) then
+        status = 'have found'
+        this.start = contour_path_element_t( 'u', ei, ej, ON_BORDER )
+        call mesh_edge.erase( 'u', slice_mesh_ivect_t(ei,ej) )
+
+        select case (quarter)
+          case (PM)
+            !   2nd register     1st register
+            !             \     /
+            !          * * p * * - - m - 
+            u1 = mesh_edge.u_cross_coord(ei,ej)
+            u2 = mesh_vert.pos_u(ei)
+          case (MP)
+            !       2nd register       1st register
+            !                 \       /
+            !          - - m - * * * p *
+            u1 = mesh_vert.pos_u(ei+1)
+            u2 = mesh_edge.u_cross_coord(ei,ej)
+          case (PP)
+            !   2nd register           1st register
+            !             \           /
+            !          * * p * * * * p *
+            u1 = mesh_vert.pos_u(ei+1)
+            u2 = mesh_vert.pos_u(ei)
+          case default
+            call ut__fatal( "__MODFUNC__: case error." )
+        end select
+
+        v1 = mesh_vert.pos_v(ej)
+        call iDouble_register( u1, v1, u2, v1 )
+
+        select case (quarter)
+          case (MP)
+            this.next = contour_path_element_t( 'u', ei, ej, SOUTHWARD )
+          case (PM,PP)
+            if ( ei > 1 ) then
+              this.next = contour_path_element_t( 'u', ei-1, ej, ON_BORDER )
+            else 
+              ! you are on the north-west corner. turn south.
+              this.next = contour_path_element_t( 'v', 1, ej-1, ON_BORDER )
+            end if
+          case default
+            call ut__fatal( "__MODFUNC__: case error." )
+        end select
+        return
+      end if
+    end do
+
+
+    ! West boundary
+    ei = 1
+    do ej = mesh_edge.v_nv, 1, -1
+      quarter = mesh_edge.u_quarter(ei,ej)
+      if ( quarter == PM  .or.  &
+           quarter == MP  .or.  &
+           quarter == PP ) then
+        status = 'have found'
+        this.start = contour_path_element_t( 'v', ei, ej, ON_BORDER )
+        call mesh_edge.erase( 'v', slice_mesh_ivect_t(ei,ej) )
+        select case (quarter)
+          case (PM)
+            v1 = mesh_vert.pos_u(ej)
+            v2 = mesh_edge.v_cross_coord(ei,ej)
+          case (MP)
+            v1 = mesh_edge.v_cross_coord(ei,ej)
+            v2 = mesh_vert.pos_v(ej+1)
+          case (PP)
+            v1 = mesh_vert.pos_v(ej)
+            v2 = mesh_vert.pos_v(ej+1)
+          case default
+            call ut__fatal( "__MODFUNC__: case error." )
+        end select
+
+        u1 = mesh_vert.pos_u(ei)
+        call iDouble_register( u1, v1, u1, v2 )
+
+        select case (quarter)
+          case (PM)
+            this.next = contour_path_element_t( 'v', ei, ej, WESTWARD )
+          case (MP,PP)
+            if ( ej < mesh_edge.v_nv ) then
+              this.next = contour_path_element_t( 'v', ei, ej+1, ON_BORDER )
+            else 
+              ! you are on the north-east corner. turn west.
+              this.next = contour_path_element_t( 'u', ei-1, ej, ON_BORDER )
+            end if
+          case default
+            call ut__fatal( "__MODFUNC__: case error." )
+        end select
+        return
+      end if
+    end do  
+
   contains
 
 
