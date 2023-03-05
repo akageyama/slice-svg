@@ -6,24 +6,23 @@ module slice_mesh_m
             SLICE_MESH__WEST,   &
             SLICE_MESH__SOUTH,  &
             SLICE_MESH__EAST
-  public :: SLICE_MESH__EDGE_LEVEL_QUINARY_MM,  &
-            SLICE_MESH__EDGE_LEVEL_QUINARY_PP,  &
-            SLICE_MESH__EDGE_LEVEL_QUINARY_MP,  &
-            SLICE_MESH__EDGE_LEVEL_QUINARY_PM,  &
-            SLICE_MESH__EDGE_LEVEL_QUINARY_BB        
+  public :: SLICE_MESH__EDGE_LEVEL_QUARTER_MM,  &
+            SLICE_MESH__EDGE_LEVEL_QUARTER_PP,  &
+            SLICE_MESH__EDGE_LEVEL_QUARTER_MP,  &
+            SLICE_MESH__EDGE_LEVEL_QUARTER_PM
 
   integer <const> :: SLICE_MESH__PATH_NORTHWARD = 0  !       0        0 (NORTH)
   integer <const> :: SLICE_MESH__PATH_WESTWARD  = 1  !       |        1 (WEST)
   integer <const> :: SLICE_MESH__PATH_SOUTHWARD = 2  !  1 -- + -- 3   2 (SOUTH)
   integer <const> :: SLICE_MESH__PATH_EASTWARD  = 3  !       |        3 (EAST)
-                                                     !       2
-  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_MM = 0  ! --m===m-- 
-  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_PP = 1  ! --p===p-- 
-  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_MP = 2  ! --m===p-- 
-  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_PM = 3  ! --p===m-- 
-  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUINARY_BB = 4  ! --p===p-- (boundary)
+  integer <const> :: SLICE_MESH__PATH_ON_BORDER = 4  !       2
+
+  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUARTER_MM = 0  ! --m===m-- 
+  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUARTER_PP = 1  ! --p===p-- 
+  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUARTER_MP = 2  ! --m===p-- 
+  integer <const> :: SLICE_MESH__EDGE_LEVEL_QUARTER_PM = 3  ! --p===m-- 
     !!>
-        When you change values of SLICE_MESH__EDGE_LEVEL_QUINARY_*,
+        When you change values of SLICE_MESH__EDGE_LEVEL_QUARTER_*,
         note that their positiveness is assumed in some checks.
     !!<
 
@@ -116,8 +115,8 @@ module slice_mesh_m
     !!< 
     integer :: u_nu, u_nv
     integer :: v_nu, v_nv
-    integer, dimension(:,:), allocatable :: u_quinary ! {0,1,2,3,4}
-    integer, dimension(:,:), allocatable :: v_quinary ! {0,1,2,3,4}
+    integer, dimension(:,:), allocatable :: u_quarter ! {0,1,2,3,4}
+    integer, dimension(:,:), allocatable :: v_quarter ! {0,1,2,3,4}
       !!>
           Take an edge V1-V2. 
                     V1--edge--V2  
@@ -127,13 +126,13 @@ module slice_mesh_m
                      p--edge--m
              There are five possibilities.
 
-          Combination | quinary
+          Combination | quarter
           ------------+--------
              m----m   |  0
              p----p   |  1
              m----p   |  2
              p----m   |  3
-             p----p   |  4 (Special quinary for boundary edges)
+             p----p   |  4 (Special quarter for boundary edges)
       !!<
     real, dimension(:,:), allocatable :: u_cross_coord
     real, dimension(:,:), allocatable :: v_cross_coord
@@ -244,23 +243,20 @@ contains
   end function slice_mesh_ivect__shift
 
 
-  subroutine slice_mesh_edge__erase( this, vert_pos, direction )
+  subroutine slice_mesh_edge__erase( this, which_edge, vert_pos )
     class(slice_mesh__edge_t) <io> :: this
+    char(len=1) <in> :: which_edge
     type(slice_mesh_ivect_t) <in> :: vert_pos
-    integer <in> :: direction
+    
+    integer <const> :: MM = SLICE_MESH__EDGE_LEVEL_QUARTER_MM
 
-    select case (direction)
-      case (SLICE_MESH__NORTH)
-        this.v_quinary(vert_pos.i,   vert_pos.j  ) = 0
-      case (SLICE_MESH__WEST)
-        this.u_quinary(vert_pos.i-1, vert_pos.j  ) = 0
-      case (SLICE_MESH__SOUTH)
-        this.v_quinary(vert_pos.i,   vert_pos.j-1) = 0
-      case (SLICE_MESH__EAST)
-        this.u_quinary(vert_pos.i,   vert_pos.j  ) = 0
-      case default
-        call ut__fatal( '__MODFUNC__: case error.' )
-    end select
+    if ( which_edge == 'u' ) then
+      this.u_quarter(vert_pos.i,vert_pos.j) = MM
+    else if ( which_edge == 'v' ) then
+      this.v_quarter(vert_pos.i,vert_pos.j) = MM
+    else 
+      call ut__fatal( '__MODFUNC__: argument error.' )
+    end if
   end subroutine slice_mesh_edge__erase
 
 
@@ -381,9 +377,9 @@ contains
       this.u_nv = mesh_vert.nv
       this.v_nu = mesh_vert.nu
       this.v_nv = mesh_vert.nv - 1
-      allocate(this.u_quinary(this.u_nu,  &
+      allocate(this.u_quarter(this.u_nu,  &
                               this.u_nv))
-      allocate(this.v_quinary(this.v_nu,  &
+      allocate(this.v_quarter(this.v_nu,  &
                               this.v_nv))
   end subroutine slice_mesh_edge__initialize
 
@@ -391,22 +387,22 @@ contains
   subroutine slice_mesh_edge__finalize( this )
     class(slice_mesh__edge_t) <io> :: this
 
-    deallocate(this.u_quinary)
-    deallocate(this.v_quinary)
+    deallocate(this.u_quarter)
+    deallocate(this.v_quarter)
   end subroutine slice_mesh_edge__finalize  
 
 
-  function edge_level_check_set_u_quinary( edge_u_nu,  &
+  function edge_level_check_set_u_quarter( edge_u_nu,  &
                                            edge_u_nv,  &
                                            vert_nu,    &
                                            vert_nv,    &
                                            val_vert,   &
-                                           level ) result(u_quinary) 
+                                           level ) result(u_quarter) 
 
     integer <in> :: edge_u_nu, edge_u_nv
     real, dimension(vert_nu,vert_nv) <in> :: val_vert
     real <in> :: level
-    integer, dimension(edge_u_nu,edge_u_nv)  :: u_quinary
+    integer, dimension(edge_u_nu,edge_u_nv)  :: u_quarter
     !!>
         Each cell is surrounded by four edges; two vertical
         edges (edge_v) and two horizontal edges (edge_u).
@@ -429,28 +425,28 @@ contains
                   val_vert(ei,ej) > level,
         and "m" when 
                   val_vert(ei,ej) < level.
-        Define u_quinary as the sign of dF/du and v_quinary
+        Define u_quarter as the sign of dF/du and v_quarter
         as the sign of dF/dv.
 
-          Combination | quinary
+          Combination | quarter
           ------------+--------
              m----m   |  0
              p----p   |  1
              m----p   |  2
              p----m   |  3
-             p----p   |  4 (Special quinary for boundary edges)
+             p----p   |  4 (Special quarter for boundary edges)
 
-                                   _______ u_quinary = 0
+                                   _______ u_quarter = 0
                                   /
                              m--------m
                              |        |
-           v_quinary = 3 --> |        | <------ v_quinary = 0
+           v_quarter = 3 --> |        | <------ v_quarter = 0
                              |        |
                              p--------m
-                                  \______ u_quinary = 3
+                                  \______ u_quarter = 3
 
         Here we calculate crossing point of the contour for
-        edges with [uv]_quinary = 2 or 3, by the linear interpolation.
+        edges with [uv]_quarter = 2 or 3, by the linear interpolation.
 
     !!<
     integer :: ei, ej  ! edge indexes
@@ -471,7 +467,7 @@ contains
                           .----|-------- val_vert(ei,ej)
                        .  |    |
           !!<
-          u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MM
+          u_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_MM
         else if ( val_vert(ei,  ej) > level .and. &
                   val_vert(ei+1,ej) > level ) then
           !!>
@@ -480,7 +476,7 @@ contains
                       ----p====p----.------ level
                          ei   ei+1       .
           !!<
-          u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PP
+          u_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_PP
         else if ( val_vert(ei,  ej) >= level .and. &
                   val_vert(ei+1,ej) <  level ) then          
           !!> 
@@ -494,7 +490,7 @@ contains
                            |     .
                           u=ui
           !!<
-          u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PM
+          u_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_PM
         else if ( val_vert(ei,  ej) <  level .and. &
                   val_vert(ei+1,ej) >= level ) then
           !!> 
@@ -508,71 +504,30 @@ contains
                      .     |     
                           u=ui
           !!<
-          u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MP
+          u_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_MP
         else
           call ut__assert( "__MODFUNC__: What? Case error?!" )
         end if
       end do
     end do
 
-    call iBoundary_care
-
-  contains
-
-    subroutine iBoundary_care
-      !!>
-                       u_quinary = ..._BB (Special key on boundary)
-                      /   /
-                     /   /   
-          m---m---p===p===p     p: val_vert >= level
-          |   .   .   .   |     m: val_vert <  level
-          |   .   .   .   |
-          |   .   .   .   |
-          |   .   .   .   |
-          |   .   .   .   |
-          m---p===p===p---m
-                 \   \
-                  \   \
-                   u_quinary = ..._BB
-  
-         |       |       |    _ Contour line       
-         m - - - m - - - m   /    at "level"
-         |       |       * */             
-         |       |    *  |   *   |       |       |      
-         m - - - m -*- - p - - * m - - - m - - - m   ej=3
-         |       *       |       *       |       |
-         |     * |       |       | *     |       |
-         m - -*- p - - - p - - - p - * - m - - - m   ej=2
-         |    *  |       |       |    *  |       |
-         |    *  |       |       |    *  |       |
-         m-----*-p=======p=======p-- *---m-------m   ej=1
-      !!<
-      do ej = 1, edge_u_nv, edge_u_nv-1 ! bottom and top boundaries
-        do ei = 1, edge_u_nu
-          if ( u_quinary(ei,ej) == SLICE_MESH__EDGE_LEVEL_QUINARY_PP ) then
-            u_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_BB
-          end if
-        end do
-      end do
-    end subroutine iBoundary_care
-
-  end function edge_level_check_set_u_quinary
+  end function edge_level_check_set_u_quarter
 
 
-  function edge_level_check_set_v_quinary( edge_v_nu,  &
+  function edge_level_check_set_v_quarter( edge_v_nu,  &
                                            edge_v_nv,  &
                                            vert_nu,    &
                                            vert_nv,    &
                                            val_vert,   &
-                                           level ) result(v_quinary)
+                                           level ) result(v_quarter)
 
     integer <in> :: edge_v_nu, edge_v_nv
     real, dimension(vert_nu,vert_nv) <in> :: val_vert
     real <in> :: level
-    integer, dimension(edge_v_nu,edge_v_nv) :: v_quinary
+    integer, dimension(edge_v_nu,edge_v_nv) :: v_quarter
 
     !!>
-        See comments in "edge_level_check_set_u_quinary".
+        See comments in "edge_level_check_set_u_quarter".
     !!<
 
     integer :: ei, ej  ! edge indexes
@@ -584,37 +539,23 @@ contains
         ! will be overwritten later.
         if ( val_vert(ei,ej  ) < level .and. &
              val_vert(ei,ej+1) < level ) then
-          v_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MM
+          v_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_MM
         else if ( val_vert(ei,ej  ) > level .and. &
                   val_vert(ei,ej+1) > level ) then
-          v_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PP
+          v_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_PP
         else if ( val_vert(ei,ej  ) >= level .and. &
                   val_vert(ei,ej+1) <  level ) then          
-          v_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_PM
+          v_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_PM
         else if ( val_vert(ei,ej  ) <  level .and. &
                   val_vert(ei,ej+1) >= level ) then
-          v_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_MP
+          v_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_MP
         else
           call ut__assert( "__MODFUNC__: What? Case error?!" )
         end if
       end do
     end do
 
-    call iBoundary_care
-
-  contains
-
-    subroutine iBoundary_care
-      do ej = 1, edge_v_nv
-        do ei = 1, edge_v_nu, edve_v_nu-1 ! left and right boundaries
-          if ( v_quinary(ei,ej) == SLICE_MESH__EDGE_LEVEL_QUINARY_PP ) then
-            v_quinary(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUINARY_BB
-          end if
-        end do
-      end do
-    end subroutine iBoundary_care 
-
-  end function edge_level_check_set_v_quinary  
+  end function edge_level_check_set_v_quarter  
 
 
   subroutine slice_mesh_edge__level_check( this,       &
@@ -627,10 +568,10 @@ contains
                     mesh_vert.nv) <in> :: val_vert
     real <in> :: level
 
-    this.u_quinary(:,:) = -999  ! Any negative. Used later to
-    this.v_quinary(:,:) = -999  ! check if all edges are set.
+    this.u_quarter(:,:) = -999  ! Any negative. Used later to
+    this.v_quarter(:,:) = -999  ! check if all edges are set.
 
-    this.u_quinary = edge_level_check_set_u_quinary(      &
+    this.u_quarter = edge_level_check_set_u_quarter(      &
                                          this.u_nu,       &
                                          this.u_nv,       &
                                          mesh_vert.nu,    &
@@ -638,7 +579,7 @@ contains
                                          val_vert,        &
                                          level )
 
-    this.v_quinary = edge_level_check_set_v_quinary(      &
+    this.v_quarter = edge_level_check_set_v_quarter(      &
                                          this.v_nu,       &
                                          this.v_nv,       &
                                          mesh_vert.nu,    &
@@ -649,16 +590,16 @@ contains
     call iInterpol_cross_point_edge_u
     call iInterpol_cross_point_edge_v
 
-    call ut__assert( minval(this.u_quinary) ) >= 0,  &
+    call ut__assert( minval(this.u_quarter) ) >= 0,  &
                      "__MODFUNC__: You missed some edge_u?" )
-    call ut__assert( minval(this.v_quinary) ) >= 0,  &
+    call ut__assert( minval(this.v_quarter) ) >= 0,  &
                      "__MODFUNC__: You missed some edge_v?" )
 
   contains
 
     subroutine iInterpol_cross_point_edge_u
       real :: u1, u2, diff1, diff2
-      integer :: quinary
+      integer :: quarter
       !!> 
               .                                 .
                 .       u2            u1      . 
@@ -672,10 +613,10 @@ contains
 
       do ej = 1, this.u_nv
         do ei = 1, this.u_nu
-          quinary = this.u_quinary(ei,ej)
-          if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_MP  &
+          quarter = this.u_quarter(ei,ej)
+          if ( quarter == SLICE_MESH__EDGE_LEVEL_QUARTER_MP  &
                       .or.                                   &
-               quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM ) then
+               quarter == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
             u1 = mesh_vert.pos_u(ei)
             u2 = mesh_vert.pos_u(ei+1)
             diff1 = val_vert(ei,ej) - level
@@ -688,14 +629,14 @@ contains
 
     subroutine iInterpol_cross_point_edge_v
       real :: v1, v2, diff1, diff2
-      integer :: quinary
+      integer :: quarter
       ! edge_v
       do ej = 1, this.v_nv
         do ei = 1, this.v_nu
-          quinary = this.v_quinary(ei,ej)
-          if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_MP  &
+          quarter = this.v_quarter(ei,ej)
+          if ( quarter == SLICE_MESH__EDGE_LEVEL_QUARTER_MP  &
                       .or.                                   &
-               quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM ) then
+               quarter == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
             v1 = mesh_vert.pos_v(ej)
             v2 = mesh_vert.pos_v(ej+1)
             diff1 = val_vert(ei,ej) - level
@@ -737,9 +678,9 @@ contains
         the next step. The nearest neighbor vertex to
         move is determined by the condition that the
         edge value toward the nearest neighbor has a
-        proper, non-zero, value of edge quinary.
+        proper, non-zero, value of edge quarter.
           For example, in the above case, if the value
-        of edge_u.quinary on the M-N edge is +1, i.e., 
+        of edge_u.quarter on the M-N edge is +1, i.e., 
         eastward, then you jump to N.
     !!<
     integer :: i, j, vert_nu, vert_nv, dir
@@ -762,13 +703,13 @@ contains
 
     select case (direct_turned.d )
       case (SLICE_MESH__NORTH)
-        if ( this.v_quinary(i,j)   == +1 ) ans = .true.
+        if ( this.v_quarter(i,j)   == +1 ) ans = .true.
       case (SLICE_MESH__SOUTH)
-        if ( this.v_quinary(i,j-1) == -1 ) ans = .true.
+        if ( this.v_quarter(i,j-1) == -1 ) ans = .true.
       case (SLICE_MESH__EAST)
-        if ( this.u_quinary(i,j)   == +1 ) ans = .true.
+        if ( this.u_quarter(i,j)   == +1 ) ans = .true.
       case (SLICE_MESH__WEST)
-        if ( this.u_quinary(i-1,j) == -1 ) ans = .true.
+        if ( this.u_quarter(i-1,j) == -1 ) ans = .true.
       case default
         call ut__fatal( '__MODFUNC__: case error.' )
     end select

@@ -42,11 +42,17 @@ module contour_path_m
                          \_____vpos_prev
   !!<
 
+  type, public :: contour_path__element_t
+    char(len=1) :: which_edge ! 'u' or 'v'
+    integer :: edge_i, edge_j
+    integer :: direct
+  end type contour_path__element_t
 
   type, public :: contour_path_t
     integer :: vert_nu, vert_nv
     integer :: num ! total number of vertex points of the path
-    type(slice_mesh_ivect_t) :: start_edge_u
+    type(contour_path__element_t) :: start
+    type(contour_path__element_t) :: next
     real, dimension(:), allocatable :: list_u, list_v
   contains
     procedure :: initialize => contour_path__initialize
@@ -140,24 +146,163 @@ contains
   subroutine set_starting_edge_on_boundaries( this,         &
                                               mesh_vert,    &
                                               mesh_edge,    &
-                                              status,       &
-                                              head_cell,    &
-                                              head_direct )
+                                              status )
     type(contour_path_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
     char(len=10) <out> :: status ! 'no contour' or 'have found'
-    type(slice_mesh_ivect_t) <out> :: head_cell ! path_tip_cell_position
-    type(slice_mesh_direct_t) <out> :: path_direct  
 
+    ! To shorten.
+    integer <const> :: MM = SLICE_MESH__EDGE_LEVEL_QUARTER_MM
+    integer <const> :: PP = SLICE_MESH__EDGE_LEVEL_QUARTER_PP
+    integer <const> :: MP = SLICE_MESH__EDGE_LEVEL_QUARTER_MP
+    integer <const> :: PM = SLICE_MESH__EDGE_LEVEL_QUARTER_PM
+    integer <const> :: NORTHWARD = SLICE_MESH__PATH_NORTHWARD
+    integer <const> :: WESTWARD  = SLICE_MESH__PATH_WESTWARD 
+    integer <const> :: SOUTHWARD = SLICE_MESH__PATH_SOUTHWARD
+    integer <const> :: EASTWARD  = SLICE_MESH__PATH_EASTWARD 
+    integer <const> :: ON_BORDER = SLICE_MESH__PATH_ON_BORDER
+
+    !!>
+         |       |       |    _ Contour line       
+         m - - - m - - - m   /    at "level"
+         |       |       * */             
+         |       |    *  |   *   |       |       |      
+         m - - - m -*- - p - - * m - - - m - - - m   ej=3
+         |       *       |       *       |       |
+         |     * |       |       | *     |       |
+         m - -*- p - - - p - - - p - * - m - - - m   ej=2
+         |    *  |       |       |    *  |       |
+         |    *  |       |       |    *  |       |
+         m - - * p * * * p * * * p * * - m - - - m   ej=1
+    !!<    
 
     integer :: ei, ej
+    real :: pos_u, pos_v
 
-    ! south boundary
+    status = 'no contour'  ! default 
+
+    ! South boundary
     ej = 1
     do ei = 1, mesh_edge.u_nu
-      quinary = mesh_edge.u_quinary(ei,ej)
-      if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_BB ) then
+      quarter = mesh_edge.u_quarter(ei,ej)
+      if ( quarter == PM  .or.  &
+           quarter == MP  .or.  &
+           quarter == PP ) then
+        status = 'have found'
+        this.start = contour_path_element_t( 'u', ei, ej, ON_BORDER )
+        call mesh_edge.erase( which, slice_mesh_ivect_t(ei,ej) )
+        !!>           
+            [case PM]
+                        |      *|     
+                      - p - - * m -   
+                        |    *  |     
+                        |   *   |     
+                        |  *    |     
+                    * * p * ====m===  ej=1 (bottom)
+                       /   \
+            1st register    \
+                             2nd register
+
+            [case MP]
+                        |*      |     
+                      - m * - - p - - 
+                        |  *    |     
+                        |   *   |     
+                        |    *  |     
+                    ====m==== * p * *   ej=1 (bottom)
+                             /   \
+                  1st register    \
+                                   2nd register
+
+            [case PP]
+                |*      |       |             
+                *       |       |             
+                p - - - p - - - p -           
+                *       |       |             
+                *       |       |             
+                *       |       |             
+                p * * * p * * * p * * ej=1 (bottom)   
+        !!<
+        select case (quarter)
+          case (PM)
+            u1 = mesh_vert.pos_u(ei)
+            u2 = mesh_edge.u_cross_coord(ei,ej)
+          case (MP)
+            u1 = mesh_edge.u_cross_coord(ei,ej)
+            u2 = mesh_vert.pos_u(ei+1)
+          case (PP)
+            u1 = mesh_vert.pos_u(ei)
+            u2 = mesh_vert.pos_u(ei+1)
+          case default
+            call ut__fatal( "__MODFUNC__: case error." )
+        end select
+
+        v1 = mesh_vert.pos_v(ej)
+        call iDouble_register( u1, v1, u2, v1 )
+
+        select case (quarter)
+          case (PM)
+            this.next = contour_path_element_t( 'u', ei, ej, NORTHWARD )
+          case (MP,PP)
+            if ( ei < mesh_edge.u_nu ) then
+              this.next = contour_path_element_t( 'u', ei+1, ej, ON_BORDER )
+            else 
+              ! you are on the south-east corner. turn north.
+              this.next = contour_path_element_t( 'v', ei+1, ej, ON_BORDER )
+            end if
+          case default
+            call ut__fatal( "__MODFUNC__: case error." )
+        end select
+        return
+      end if
+    end do
+
+    ! East boundary
+        !!>  
+          [case MP]         
+                   .         *     
+                 - p - - - - p <-- 2nd register
+                   .         *
+                   .         * <-- 1st register
+                   .        *|     
+                   .       * |     
+                   .      *  |     
+               * * p - - * - m
+                   .     *   |
+                     
+          [case PM]         
+                   .         |
+                 . p . . .*. m 
+                   .       * |     
+                   .        *|     
+                   .         *  <== 2nd register   
+                   .         *
+                 . p . . . . p  <== 1st register
+                   .         *
+
+          [case PP]         
+                   .         *            
+                 - p - - - - p  <== 2nd register          
+                   .         *             
+                   .         *             
+                   .         *             
+                 - p - - - - p  <== 1st register
+                   .         *
+        !!<
+    ei = mesh_edge.u_nu
+    do ej = 1, mesh_edge.v_nv
+      quarter = mesh_edge.u_quarter(ei,ej)
+
+  
+  contains
+
+
+    subroutine iDouble_register( u1, v1, u2, v2 )
+      real <in> :: u1, v1, u2, v2
+      call register( this, u1, v1 )
+      call register( this, u2, v2 )
+    end subroutine iDouble_register
 
   end subroutine set_starting_edge_on_boundaries
 
@@ -191,7 +336,7 @@ contains
          |      .   \_____ Find this edge.
     !!< 
     integer :: ei, ej
-    integer :: quinary
+    integer :: quarter
     real :: path_tip_u, path_tip_v
 
     call ut__assert( direct_now.d==SLICE_MESH__PATH_NORTHWARD,  &
@@ -215,7 +360,7 @@ contains
         always in its left-hand side of the path.
         
         Starting edge of a trully closed contour (without touching the
-        boundaries) is any u_edge with its quinary value "PM" (plus-in-left
+        boundaries) is any u_edge with its quarter value "PM" (plus-in-left
         and minus-in-right of the edge).
 
         Cares should be taken for contour lines with virual (on-boundary)
@@ -226,28 +371,28 @@ contains
              |       |    *                               *   (right boundary)
          - - p - - - p -*-                |       |     * |       *
              |       |*                   |       |   *   |       *
-             |      *|                  - m - - - m -*- - p - - - B
+             |      *|                  - m - - - m -*- - p - - - p
              |    *  |                    |       |  *    |       *
-      ej - - P==*====M - -                |       |  *    |       *
+      ej - - p==*====m - -                |       |  *    |       *
              | *  \  |                    |       |  *    |       *
-             |*   PM |                  - m - - - m -*- - p - - - B
+             |*   PM |                  - m - - - m -*- - p - - - p
              *      \                     |       | *     |       *
                      \                    |       |*      |       *
                    start edge             |      *|       |       *  ej=1    
-                                        --m----***B*******B*******B (bottom
+                                        --m----***p*******p*******p (bottom
       [Case C]                             \     / \     / \     /   boundary) 
-       ei=1 (left boundary)                   MP      BB      BB        
+       ei=1 (left boundary)                   MP      PP      PP
         |     * |       |                              \
         |   *   |       |                               start edge
         m -*- - p - - - p -          [Case D]    
         | *     |       |                 |       |      *|       |
         |*      |       |             - - p - - - p - - * m - - - m - -
         *       |       |                 |       |    *  |       |
-        B - - - p - - - p -               |       |   *   |       |
+        p - - - p - - - p -               |       |   *   |       |
         *       |       |                 |       |  *    |       |   ej=1
-        *       |       |              ***B*******B** - - m - - - m - (bottom
+        *       |       |              ***p*******p** - - m - - - m - (bottom
         *       |       |                  \     / \     / \     /     boundary)
-        B*******B*******B*** ej=1             BB      PM      MM
+        p*******p*******p*** ej=1             PP      PM      MM
          \     / \     /    (bottom                    \
             BB      BB       boundary)                  start edge
              \
@@ -255,8 +400,8 @@ contains
     !!< 
     do ej = 1, mesh_edge.u_nv
       do ei = 1, mesh_edge.u_nu
-        quinary = mesh_edge.u_quinary(ei,ej)
-        if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM ) then
+        quarter = mesh_edge.u_quarter(ei,ej)
+        if ( quarter == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
           ! Found a cell that inlcude at least one contour path.
           ! [Case A] and [Case D] in above figure.
           !!> 
@@ -279,7 +424,7 @@ contains
           path_tip_u = mesh_edge.u_cross_coord(ei,ej)
           call register( this, path_tip_u, path_tip_v )
           head_direct = SLICE_MESH__PATH_NORTHWARD
-        else if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_BB ) then
+        else if ( quarter == SLICE_MESH__EDGE_LEVEL_QUARTER_BB ) then
           ! [Case B] and [Case C] in above figure.
           !!> 
                                       head_cell
@@ -317,8 +462,8 @@ contains
             !!<
 integer :: ej2            
             do ej2 = 1, mesh_edge.v_nv
-              quinary = mesh_edge.u_quinary(ei,ej2)
-              if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM ) then
+              quarter = mesh_edge.u_quarter(ei,ej2)
+              if ( quarter == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
                 
               path_tip_u = mesh_vert.pos_u(ei)    ! left vertex of the edge
               path_tip_v = mesh_vert.pos_v(ej2)
