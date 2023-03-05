@@ -46,7 +46,7 @@ module contour_path_m
   type, public :: contour_path_t
     integer :: vert_nu, vert_nv
     integer :: num ! total number of vertex points of the path
-    type(slice_mesh_ivect_t) :: vpos_start
+    type(slice_mesh_ivect_t) :: start_edge_u
     real, dimension(:), allocatable :: list_u, list_v
   contains
     procedure :: initialize => contour_path__initialize
@@ -136,20 +136,51 @@ contains
   end subroutine contour_path__initialize
 
 
+
+  subroutine set_starting_edge_on_boundaries( this,         &
+                                              mesh_vert,    &
+                                              mesh_edge,    &
+                                              status,       &
+                                              head_cell,    &
+                                              head_direct )
+    type(contour_path_t) <io> :: this
+    type(slice_mesh__vert_t) <in> :: mesh_vert
+    type(slice_mesh__edge_t) <io> :: mesh_edge
+    char(len=10) <out> :: status ! 'no contour' or 'have found'
+    type(slice_mesh_ivect_t) <out> :: head_cell ! path_tip_cell_position
+    type(slice_mesh_direct_t) <out> :: path_direct  
+
+
+    integer :: ei, ej
+
+    ! south boundary
+    ej = 1
+    do ei = 1, mesh_edge.u_nu
+      quinary = mesh_edge.u_quinary(ei,ej)
+      if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_BB ) then
+
+  end subroutine set_starting_edge_on_boundaries
+
+
   subroutine contour_path__set_starting_edge( this,         &
                                               mesh_vert,    &
                                               mesh_edge,    &
-                                              direct_now,   &
                                               status,       &
-                                              vpos_now )
+                                              head_cell,    &
+                                              head_direct )
     class(contour_path_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
-    type(slice_mesh_direct_t) <in> :: direct_now
     char(len=10) <out> :: status ! 'no contour' or 'have found'
-    type(slice_mesh_ivect_t) <out> :: vpos_now ! vert position
+    type(slice_mesh_ivect_t) <out> :: head_cell ! path_tip_cell_position
+    type(slice_mesh_direct_t) <out> :: path_direct
 
-    type(slice_mesh_ivect_t) :: vpos_start
+    call set_starting_edge_on_boundaries( this,         &
+                                          mesh_vert,    &
+                                          mesh_edge,    &
+                                          status,       &
+                                          head_cell,    &
+                                          head_direct )
     !!>
           Tring to find an eastward arrow AB.
 
@@ -225,29 +256,82 @@ contains
     do ej = 1, mesh_edge.u_nv
       do ei = 1, mesh_edge.u_nu
         quinary = mesh_edge.u_quinary(ei,ej)
-        if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM   &
-                    .or.                                    &
-             quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_BB ) then
-          this.vpos_start = slice_mesh_ivect_t(ei,ej)
+        if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM ) then
+          ! Found a cell that inlcude at least one contour path.
+          ! [Case A] and [Case D] in above figure.
+          !!> 
+                  -+-------------+-
+                   | Northward   |
+                   | head direct |
+                   |     .       | <== head_cell to be
+                   |     |       |     checked in the next step.
+                   |     |       |     
+                  -p=====*-------m-
+                   |    . \      |
+                   |   .   path_tip you have just found.
+                   |  .          |   
+                   | . \         |
+                   |    contour  |
+          !!<
+          start_edge_u = slice_mesh_ivect_t(ei,ej)
+          head_cell = slice_mesh_ivect_t(ei,ej) ! cell's ij = edge's ij
           path_tip_v = mesh_vert.pos_v(ej)
-          if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM ) then
-            ! [Case A] and [Case D] in above figure.
-            path_tip_u = mesh_edge.u_cross_coord(ei,ej)
-            call register( this, path_tip_u, path_tip_v )
-          else if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_BB ) then
-            ! [Case B] and [Case C] in above figure.
-            path_tip_u = mesh_vert.pos_u(ei)    ! left vertex of the edge
-            call register( this, path_tip_u, path_tip_v )
-            path_tip_u = mesh_vert.pos_u(ei+1)  ! right vertex of the edge
-            call register( this, path_tip_u, path_tip_v )
-          else
+          path_tip_u = mesh_edge.u_cross_coord(ei,ej)
+          call register( this, path_tip_u, path_tip_v )
+          head_direct = SLICE_MESH__PATH_NORTHWARD
+        else if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_BB ) then
+          ! [Case B] and [Case C] in above figure.
+          !!> 
+                                      head_cell
+                                       /
+                   +------------+------------+
+                   |            |            |
+                   |            | Eastward   |
+                   |          ==|=>  head    |
+                   |            |  direct    |
+                   |            |            |
+                   B============B------------+
+                         |           \
+             Currently registering   We will find the next virtual
+             bottom edge_u           contour on this bottom edge_u.
+          !!<
+          path_tip_u = mesh_vert.pos_u(ei)    ! left vertex of the edge
+          path_tip_v = mesh_vert.pos_v(ej)
+          call register( this, path_tip_u, path_tip_v )
+          path_tip_u = mesh_vert.pos_u(ei+1)  ! right vertex of the edge
+          call register( this, path_tip_u, path_tip_v )
+
+          if ( ei==mesh_edge.u_nu ) then
+            !!>
+                     .       *     .
+                     .       *     .
+                 . . p . . . * . . m
+                     .         *   .
+                     .           * . 
+                     .        <=== *
+                     .             *
+                     .             *
+                 . . B * * * * * * B
+                                    \__ Lower-right corner
+                  
+            !!<
+integer :: ej2            
+            do ej2 = 1, mesh_edge.v_nv
+              quinary = mesh_edge.u_quinary(ei,ej2)
+              if ( quinary == SLICE_MESH__EDGE_LEVEL_QUINARY_PM ) then
+                
+              path_tip_u = mesh_vert.pos_u(ei)    ! left vertex of the edge
+              path_tip_v = mesh_vert.pos_v(ej2)
+              if ( )
+              call register( this, path_tip_u, path_tip_v )
+              
+          head_cell = slice_mesh_ivect_t(ei+1,ej) ! cell's ij = edge's ij
+          head_direct = SLICE_MESH__PATH_EASTWARD
+          call mesh_edge.erase( vpos_start, SLICE_MESH__EAST )
+
+        else
             call ut__fatal( "__MODFUNC__: Missing some case?" )
           end if
-
-          
-          vpos_now = vpos_start.shift( SLICE_MESH__EAST )
-          call register( this, mesh_vert, vpos_now )
-          call mesh_edge.erase( vpos_start, SLICE_MESH__EAST )
           status = 'have found'
           return
         end if
