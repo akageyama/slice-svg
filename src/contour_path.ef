@@ -4,42 +4,7 @@ module contour_path_m
   implicit none
   private
   !!>
-        P: positive edge: eastward for edgex and
-                          northward for edgey
-        M: negative edge: westward for edgex and
-                          southward for edgey 
-        1: vertex on which paths run straight forward.
-        2: vertex on which paths turn left.
-        3: vertex on which paths turn right.
 
-       +---+---+---+---+---2=M=1=M=2
-       |   |   |   |   |   M       P
-       +---+---+---2=M=1=M=3=P=1=P=2
-       |   |   |   M       P   |   |
-       2=M=1=M=2---2=P=1=P=2---+---+
-       M       P   |   |   |   |   |
-       2=P=1=P=2=M=1=M=1=M=1=M=2---+
-       |   |   M               P
-       +---+---1           3=P=2
-       |   |   M           P   |
-       +---+---2=P=1=P=1=P=2---+
-
-      To round the corner, we make a 45-degree turn
-      at each corner, instead of 90-degree turn.
-      In the figure below, we came from left, along the
-      bottom line, and have just made a turn to left
-      at the corner point "2". And the present vertex
-      position (vpos_now) is "1". To draw a "rounded"
-      path (...L...L...) with double 45-degree turns.
-
-                        L
-                        L
-                        1
-                      L .\____vpos_now
-                    L   .
-                  L     .
-        L L L L 1 . . . 2
-                         \_____vpos_prev
   !!<
 
   type, public :: contour_path__element_t
@@ -67,12 +32,42 @@ module contour_path_m
 
 contains
 
+  subroutine move_if_possible_on_boundary( which_way,       &
+                                           path,            &
+                                           vert,            &
+                                           edge,            &
+                                           moved_one_step )
+    char(len=*) <in> :: which_way
+    type(contour_path_t) <in> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+    logical <out> :: moved_one_step
 
-  subroutine move_if_possible( which_way,       &
-                               path,            &
-                               vert,            &
-                               edge,            &
-                               moved_one_step )
+    moved_one_step = .false.  ! Default.
+
+    ei = path.head.edge_i
+    ej = path.head.edge_j
+
+    select case (path.head.direct)
+      case (SLICE_MESH__BORDER_NORTHWARD)    
+        !!>
+              .     |
+              +-----+ 
+              .     | you are here on the corner.
+              .     |/
+              +-----+
+              .     |
+        !!<
+        call iJump_to_north_v_edge_if_possible( ei  , ej+1 )
+        call iJump_to_north_u_edge_if_possible( ei-1, ej+1 ) 
+        call iJumpt_to_west_v_edge_if_possible( ei-1, ej   )
+        call iJump_to_south_u_edge_if_possible( ei-1, ej  )
+
+  subroutine move_if_possible_in_bulk( which_way,       &
+                                       path,            &
+                                       vert,            &
+                                       edge,            &
+                                       moved_one_step )
     char(len=*) <in> :: which_way
     type(contour_path_t) <in> :: path
     type(slice_mesh__vert_t) <in> :: vert
@@ -83,7 +78,6 @@ contains
     !!<
 
     moved_one_step = .false.  ! Default.
-    path_is_closed = .false.  ! Default.
 
     ei = path.head.edge_i
     ej = path.head.edge_j
@@ -697,7 +691,7 @@ contains
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
 
-    logical :: moved_one_step, path_is_closed
+    ! logical :: moved_one_step, 
 
     do
       call this.
