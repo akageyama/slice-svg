@@ -247,7 +247,7 @@ contains
   end function slice_mesh_ivect__shift
 
 
-  subroutine slice_mesh_edge__erase( this, which_edge, vert_pos )
+  subroutine slice_mesh_edge__erase2( this, which_edge, vert_pos )
     class(slice_mesh__edge_t) <io> :: this
     char(len=1) <in> :: which_edge
     type(slice_mesh_ivect_t) <in> :: vert_pos
@@ -261,7 +261,22 @@ contains
     else 
       call ut__fatal( '__MODFUNC__: argument error.' )
     end if
-  end subroutine slice_mesh_edge__erase
+  end subroutine slice_mesh_edge__erase2
+
+
+  subroutine slice_mesh_edge__erase( this, which_edge, ei, ej )
+    class(slice_mesh__edge_t) <io> :: this
+    char(len=1) <in> :: which_edge
+    integer <in> :: ei, ej
+    
+    if ( which_edge == 'u' ) then
+      this.u_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_MM
+    else if ( which_edge == 'v' ) then
+      this.v_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_MM
+    else 
+      call ut__fatal( '__MODFUNC__: argument error.' )
+    end if
+  end subroutine slice_mesh_edge__erase  
 
 
   subroutine slice_mesh_vert__initialize( this, nu, nv,  &
