@@ -32,18 +32,135 @@ module contour_path_m
 
 contains
 
+
+  subroutine jump_to_u_edge_pm_if_possible( path, edge, jumped, ei0, ej0 )
+    type(contour_path_t) <io> :: path
+    type(slice_mesh__edge_t) <in> :: edge
+    logical <io> :: jumped
+    integer <in> :: ei0, ej0
+
+    real :: u, v
+    if ( jumped ) return  ! you have jumped for this cell.
+
+    if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
+      jumped = .true.
+      u = edge.u_cross_coord(ei0,ej0)
+      v = vert.pos_v(ej0)
+      call register( path, u, v )
+      if ( ej0 == edge.u_nv ) then
+        path.head = contour_path_element_t( 'u', ei0, ej0, SLICE_MESH__BORDER_WESTWARD )
+      else
+        path.head = contour_path_element_t( 'u', ei0, ej0, SLICE_MESH__NORTHWARD )
+      end if    
+    end if
+  end subroutine jump_to_u_edge_pm_if_possible
+
+
+  subroutine jump_to_u_edge_mp_if_possible( path, edge, jumped, ei0, ej0 )
+    type(contour_path_t) <io> :: path
+    type(slice_mesh__edge_t) <in> :: edge
+    logical <io> :: jumped
+    integer <in> :: ei0, ej0
+
+    real :: u, v
+    if ( jumped ) return  ! you have jumped for this cell.
+
+    if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_MP ) then
+      jumped = .true.
+      u = edge.u_cross_coord(ei0,ej0)
+      v = vert.pos_v(ej0)
+      call register( path, u, v )
+      if ( ej0 == 1 ) then
+        path.head = contour_path_element_t( 'u', ei0, ej0, SLICE_MESH__BORDER_EASTWARD )
+      else
+        path.head = contour_path_element_t( 'u', ei0, ej0, SLICE_MESH__SOUTHWARD )
+      end if    
+    end if
+  end subroutine jump_to_u_edge_mp_if_possible  
+
+
+  subroutine jump_to_v_edge_pm_if_possible( path, edge, jumped, ei0, ej0 )
+    type(contour_path_t) <io> :: path
+    type(slice_mesh__edge_t) <in> :: edge
+    logical <io> :: jumped
+    integer <in> :: ei0, ej0
+
+    real :: u, v
+    if ( jumped ) return  ! you have jumped for this cell.
+
+    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
+      jumped = .true.
+      u = vert.pos_u(ei0)
+      v = edge.v_cross_coord(ei0,ej0)
+      call register( path, u, v )
+      if ( ei0 == 1 ) then
+        path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__BORDER_SOUTHWARD )
+      else
+        path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__WESTWARD )
+      end if
+    end if
+  end subroutine jump_to_v_edge_pm_if_possible   
+
+
+  subroutine jump_to_v_edge_mp_if_possible( path, edge, jumped, ei0, ej0 )
+    type(contour_path_t) <io> :: path
+    type(slice_mesh__edge_t) <in> :: edge
+    logical <io> :: jumped
+    integer <in> :: ei0, ej0
+
+    real :: u, v
+    if ( jumped ) return  ! you have jumped for this cell.
+
+    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_MP ) then
+      jumped = .true.
+      u = vert.pos_u(ei0)
+      v = edge.v_cross_coord(ei0,ej0)
+      call register( path, u, v )
+      if ( ei0 == edge.u_nu ) then
+        path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__BORDER_NORTHWARD )
+      else
+        path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__EASTWARD )
+      end if
+    end if
+  end subroutine jump_to_v_edge_mp_if_possible    
+
+
+  subroutine jump_to_v_edge_pp_if_possible( path, edge, jumped, ei0, ej0 )
+    type(contour_path_t) <io> :: path
+    type(slice_mesh__edge_t) <in> :: edge
+    logical <io> :: jumped
+    integer <in> :: ei0, ej0
+
+    real :: u, v
+    if ( jumped ) return  ! you have jumped for this cell.
+
+    if ( ej0 == vert.v_nv ) return ! you are in the northern end.
+
+    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_PP ) then
+      jumped = .true.
+      u = vert.pos_u(ei0)
+      v = vert.pos_v(ej0)
+      call register( path, u, v )
+      if ( ej0 == edge.u_nu ) then
+        path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__BORDER_NORTHWARD )
+      else
+        path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__EASTWARD )
+      end if
+    end if
+  end subroutine jump_to_v_edge_mp_if_possible   
+
   subroutine move_if_possible_on_boundary( which_way,       &
                                            path,            &
                                            vert,            &
                                            edge,            &
                                            moved_one_step )
     char(len=*) <in> :: which_way
-    type(contour_path_t) <in> :: path
+    type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
-    logical <out> :: moved_one_step
+    logical <out> :: jumped
 
-    moved_one_step = .false.  ! Default.
+    jumped = .false.  ! Default.
 
     ei = path.head.edge_i
     ej = path.head.edge_j
@@ -53,15 +170,29 @@ contains
         !!>
               .     |
               +-----+ 
-              .     | you are here on the corner.
-              .     |/
-              +-----+
+              .     | 
+              .     |
+              +-----+ <== you are just on this corner.
+              .     | <== you came along this edge_v.
+        !!<
+        call jump_to_v_edge_pp_if_possible( path, edge, jumped, ei,   ej   )        
+        call jump_to_u_edge_pm_if_possible( path, edge, jumped, ei-1, ej+1 ) 
+        call jump_to_v_edge_pm_if_possible( path, edge, jumped, ei-1, ej   )
+        call jump_to_u_edge_mp_if_possible( path, edge, jumped, ei-1, ej   )
+      case (SLICE_MESH__BORDER_WESTWARD)    
+        !!>
+                      __ you are here on the corner.
+                     /
+            --+-----+-- <== you came along this edge_u.
+              .     . 
+              .     . 
+            - + - - + - 
               .     |
         !!<
-        call iJump_to_north_v_edge_if_possible( ei  , ej+1 )
-        call iJump_to_north_u_edge_if_possible( ei-1, ej+1 ) 
-        call iJumpt_to_west_v_edge_if_possible( ei-1, ej   )
-        call iJump_to_south_u_edge_if_possible( ei-1, ej  )
+        call jump_to_u_edge_mp_if_possible( path, edge, jumped, ei-1, ej   )        
+        call jump_to_u_edge_pm_if_possible( path, edge, jumped, ei-1, ej+1 ) 
+        call jump_to_v_edge_pm_if_possible( path, edge, jumped, ei-1, ej   )
+        call jump_to_u_edge_mp_if_possible( path, edge, jumped, ei-1, ej   )
 
   subroutine move_if_possible_in_bulk( which_way,       &
                                        path,            &
