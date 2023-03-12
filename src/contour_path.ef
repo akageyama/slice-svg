@@ -9,7 +9,9 @@ module contour_path_m
 
   type, public :: contour_path__element_t
     char(len=1) :: which_edge ! 'u' or 'v'
-    integer :: edge_i, edge_j
+    logical :: border_type
+    integer :: i, j  ! edge id for non-border type, 
+                     ! vertex id for border type.
     integer :: direct
   end type contour_path__element_t
 
@@ -40,7 +42,7 @@ contains
     integer <in> :: ei0, ej0
 
     real :: u, v
-    if ( jumped ) return  ! you have jumped for this cell.
+    if ( jumped ) return  ! you have already jumped for this cell.
 
     if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
       jumped = .true.
@@ -48,9 +50,9 @@ contains
       v = vert.pos_v(ej0)
       call register( path, u, v )
       if ( ej0 == edge.u_nv ) then
-        path.head = contour_path_element_t( 'u', ei0, ej0, SLICE_MESH__BORDER_WESTWARD )
+        path.head = contour_path_element_t( 'u', .false., ei0, ej0, SLICE_MESH__BORDER_WESTWARD )
       else
-        path.head = contour_path_element_t( 'u', ei0, ej0, SLICE_MESH__NORTHWARD )
+        path.head = contour_path_element_t( 'u', .false., ei0, ej0, SLICE_MESH__NORTHWARD )
       end if    
     end if
   end subroutine jump_to_u_edge_pm_if_possible
@@ -63,7 +65,7 @@ contains
     integer <in> :: ei0, ej0
 
     real :: u, v
-    if ( jumped ) return  ! you have jumped for this cell.
+    if ( jumped ) return  ! you have already jumped for this cell.
 
     if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_MP ) then
       jumped = .true.
@@ -71,9 +73,9 @@ contains
       v = vert.pos_v(ej0)
       call register( path, u, v )
       if ( ej0 == 1 ) then
-        path.head = contour_path_element_t( 'u', ei0, ej0, SLICE_MESH__BORDER_EASTWARD )
+        path.head = contour_path_element_t( 'u', .false., ei0, ej0, SLICE_MESH__BORDER_EASTWARD )
       else
-        path.head = contour_path_element_t( 'u', ei0, ej0, SLICE_MESH__SOUTHWARD )
+        path.head = contour_path_element_t( 'u', .false., ei0, ej0, SLICE_MESH__SOUTHWARD )
       end if    
     end if
   end subroutine jump_to_u_edge_mp_if_possible  
@@ -86,7 +88,7 @@ contains
     integer <in> :: ei0, ej0
 
     real :: u, v
-    if ( jumped ) return  ! you have jumped for this cell.
+    if ( jumped ) return  ! you have already jumped for this cell.
 
     if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
       jumped = .true.
@@ -94,9 +96,9 @@ contains
       v = edge.v_cross_coord(ei0,ej0)
       call register( path, u, v )
       if ( ei0 == 1 ) then
-        path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__BORDER_SOUTHWARD )
+        path.head = contour_path_element_t( 'v', .false., ei0, ej0, SLICE_MESH__BORDER_SOUTHWARD )
       else
-        path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__WESTWARD )
+        path.head = contour_path_element_t( 'v', .false., ei0, ej0, SLICE_MESH__WESTWARD )
       end if
     end if
   end subroutine jump_to_v_edge_pm_if_possible   
@@ -109,7 +111,7 @@ contains
     integer <in> :: ei0, ej0
 
     real :: u, v
-    if ( jumped ) return  ! you have jumped for this cell.
+    if ( jumped ) return  ! you have already jumped for this cell.
 
     if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_MP ) then
       jumped = .true.
@@ -117,26 +119,98 @@ contains
       v = edge.v_cross_coord(ei0,ej0)
       call register( path, u, v )
       if ( ei0 == edge.u_nu ) then
-        path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__BORDER_NORTHWARD )
+        path.head = contour_path_element_t( 'v', .false., ei0, ej0, SLICE_MESH__BORDER_NORTHWARD )
       else
-        path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__EASTWARD )
+        path.head = contour_path_element_t( 'v', .false., ei0, ej0, SLICE_MESH__EASTWARD )
       end if
     end if
   end subroutine jump_to_v_edge_mp_if_possible    
 
 
-  subroutine go_along_boundary_on_v_edge_to_north( path, edge, ei0, ej0 )
+  subroutine go_along_boundary_on_v_edge( path, edge )
     type(contour_path_t) <io> :: path
     type(slice_mesh__edge_t) <in> :: edge
-    integer <in> :: ei0, ej0
 
     real :: u, v
+    integer :: vi, vj  ! vertex indeces i and j
 
-    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_PP ) then
+    call ut__assert( path.head.border_type,  &
+                     "__MODFUNC__: The path should be border type here." )
+
+    call ut__assert( path.head.direct == SLICE_MESH__BORDER_NORTH .or.  &
+                     path.head.direct == SLICE_MESH__BORDER_SOUTH,      &
+                     "__MODFUNC__: Wrong call." )
+
+    vi = path.head.i
+    vj = path.head.j
+
+    if ( edge.v_quarter(vi,vj) == SLICE_MESH__EDGE_LEVEL_QUARTER_PP ) then
+      !!>
+            .       |            
+          - + - - - p            
+            .       .            
+            .       .            
+            .       .            
+          - + - - - p <== (vi,vj)
+            .       *            
+            .       * <== you came
+            .       *     along this edge.
+      !!<
+      jumped = .true.
+      u = vert.pos_u(vi)
+      if ( path.head.direct == SLICE_MESH_BORDER_NORTH ) then
+        v = vert.pos_v(vj+1)
+      else
+        v = vert.pos_v(vj-1)
+      end if
+      call register( path, u, v )
+      if ( vj == edge.v_nv ) then ! you have reached the north-east corner.
+        !!>
+                      __ you will go this way.
+                     /    
+              - + - <=**p <== head (vi,vj+1)
+                .       *
+                .       *
+                .       *
+              - + - - - p
+                .       *
+                                        
+        !!<
+        path.head = contour_path_element_t( 'v', .true., vi, vj+1, SLICE_MESH__BORDER_WESTWARD )
+      else if ( vj == 1 ) ! you have reached the south-west corner.
+        !!>
+                              |   
+                              p - - - +
+                              *       .
+                              *       .
+                              *       .
+           head (vi,vj+1) ==> p**=> - +
+                                  \____ you will go this way.
+                                        
+        !!<
+        path.head = contour_path_element_t( 'v', .true., vi, vj-1, SLICE_MESH__BORDER_EASTWARD )
+      else
+        !!>
+                              |   
+                              p - - - +
+                              *       .
+                              *       .
+                              *       .
+           head (vi,vj+1) ==> p - - - +
+                              *  
+                              * <== you will go this way        
+        !!<
+        if ( path.head.direct == SLICE_MESH_BORDER_NORTH ) then
+          path.head = contour_path_element_t( 'v', .true., vi, vj+1, SLICE_MESH__BORDER_NORTHWARD )
+        else
+          path.head = contour_path_element_t( 'v', .true., vi, vj-1, SLICE_MESH__BORDER_SOUTHWARD )
+        end if
+      end if
+    else if ( edge.v_quarter(vi,vj) == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
       !!>
             .       |                     .       |
-          - + - - - p                   - + - - - p
-            .       .                     .       *
+          - + - - - p                   - + - - - m
+            .       .                     .       .
             .       . <== edge_v(ei,ej)   .       * <== head edge
             .       .                     .       *
           - + - - - p                   - + - - - p
@@ -144,10 +218,61 @@ contains
             .       * <== head edge       .       *
       !!<
       jumped = .true.
-      u = vert.pos_u(ei0)
-      v = vert.pos_v(ej0+1)
+      u = vert.pos_u(vi)
+      v = edge.v_cross_coord(vi,vj)
       call register( path, u, v )
-      path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__BORDER_NORTHWARD )
+      if ( path.head.direct == SLICE_MESH_BORDER_NORTH ) then
+        path.head = contour_path_element_t( 'v', .false., vi, vj,   SLICE_MESH__WESTWARD )
+      else
+        path.head = contour_path_element_t( 'v', .false., vi, vj-1, SLICE_MESH__EASTWARD )
+    else
+      call fatal( '__MODFUNC__: Strange. Could not find path.' )
+    end if
+
+  end subroutine go_along_boundary_on_v_edge_to_north
+
+
+  subroutine go_along_boundary_on_v_edge_to_south( path, edge, ei0, ej0 )
+    type(contour_path_t) <io> :: path
+    type(slice_mesh__edge_t) <in> :: edge
+    integer <in> :: ei0, ej0
+
+    real :: u, v
+
+    call ut__assert( path.head.border_type,  &
+                     "__MODFUNC__: The path should be border type here." )
+
+    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_PP ) then
+      !!>
+          You came       *       .                      *       .
+          along this ==> *       .                      *       .
+          (ei0,ej0) ==>  p - - - + -                    p - - - +
+                         .       .                      *       *
+                         .       .                      *       *
+                         .       .      new head        *       *
+                         p - - - + -    (ei0,ej0-1) ==> p - - - +
+                         |       .                      |       .
+      !!<
+      jumped = .true.
+      u = vert.pos_u(ei0)
+      v = vert.pos_v(ej0-1)
+      call register( path, u, v )
+      if ( ej0 < edge.v_nv ) then
+        path.head = contour_path_element_t( 'v', .true., ei0, ej0+1, SLICE_MESH__BORDER_NORTHWARD )
+      else ! you have reached the north-east corner.
+        !!>
+                                                __ you will go this way.
+                                               /    
+                                        - + - <=* p <== head (ei0,ej0+1)
+                                          .       *
+                                          .       *
+                                          .       *
+                                        - + - - - p
+                                          .       *
+                                        
+        !!<
+        path.head = contour_path_element_t( 'v', .true., ei0, ej0+1, SLICE_MESH__BORDER_WESTWARD )
+      end if
     else if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
       !!>
             .       |                     .       |
@@ -163,7 +288,7 @@ contains
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
       call register( path, u, v )
-      path.head = contour_path_element_t( 'v', ei0, ej0, SLICE_MESH__WESTWARD )
+      path.head = contour_path_element_t( 'v', .false., ei0, ej0, SLICE_MESH__WESTWARD )
     else
       call fatal( '__MODFUNC__: Strange. Could not find path.' )
     end if
