@@ -61,7 +61,6 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh_cell__initialize
     procedure :: finalize => slice_mesh_cell__finalize
-    procedure :: set_meanval => slice_mesh_cell__set_meanval
   end type slice_mesh__cell_t  
 
   type, public :: slice_mesh__edge_t
@@ -121,18 +120,19 @@ contains
     real <in> :: x1, x2, diff1, diff2
     real :: xi
     !!>   
-        Diff1 and diff2 can be negative but they must have the same sign.
+        Diff1 and diff2 can be negative but they 
+        must have the same sign.
 
          \
-          . . . . . . . . . . . .
-          .\                    . \
-          . \      x=x2         .  |  diff1 > 0.0
-          .  \     |            . /
-      ----o===+====o-------+----+------ 0.0
-          |   .\   .       . \
-       x=x1   . \  .       .  | diff2 > 0.0
-              .  \ .       . /
-              .   \. . . . . 
+          \ - - - - - - - - -  val(x1)
+          .\                 |
+          . \      x=x2      | diff1 > 0.0
+          .  \     |         |
+      ----o===+====o-------------- level 
+          |   .\   .         |
+       x=x1   . \  .         | diff2 > 0.0
+              .  \ .         |
+              .   \ - - - - -  val(x2)
             x=xi   \ 
 
     !!<
@@ -146,6 +146,7 @@ contains
     if ( diff1+diff2 == 0.0  ) then
       ! which means diff1 = 0.0 & diff2 = 0.0
       xi = (x1+x2)/2 ! Take the middle point
+                     ! I'm not very sure if this is OK.
     else
       ! The following applies in either cases of
       !  (1) diff1 > 0 & diff2 > 0
@@ -318,13 +319,23 @@ contains
     real <in> :: level
     integer, dimension(edge_u_nu,edge_u_nv)  :: u_quarter
     !!>
-        Each cell is surrounded by four edges; two vertical
-        edges (edge_v) and two horizontal edges (edge_u).
 
-                                  v ("vertical")
-                                  |
-                                  |
-                                  +----- u ("horizontal")
+        Here we compare the scalar field value "vert_val" 
+        on each vertex at (i,j) 
+
+                  val_vert(i,j)
+
+        with "level" of the target contour. The comparison
+        is applied through edges. 
+
+        There are two kinds of edges, vertical edges (edgve_v)
+        and horizontal edges (edge_u).
+
+                         v ("vertical")
+                         |
+                         |
+                         +----- u ("horizontal")
+
               edge_u
             o--------o
             |        |
@@ -333,34 +344,61 @@ contains
             o--------o
               edge_u
 
-        Here we compare the scalar field "vert_val" on the
-        vertices at (ei,ej) with "level" of the contour. 
-        Denoting "p" when 
-                  val_vert(ei,ej) > level,
-        and "m" when 
-                  val_vert(ei,ej) < level.
+        Every edge is labeled by a pair of indeces
+        in u and v directions, (ei,ej), while every
+        vertex is also labeled by a pair of indeces.
 
-          Combination | quarter
+        The two kinds of indexes are related by the
+        following figure.
+
+                        edge.u(i,j+1)
+                            .
+                   vertex   .     vertex
+                   (i,j+1)  .     (i+1,j+1)
+                       \    .    /
+                        + - - - +
+                        |       |
+          edge.v(i,j) --|       |-- edge.v(i+1,j)
+                        |       |
+                        + - - - +
+                       /    .    \
+                   vertex   .   vertex
+                    (i,j)   .   (i+1,j)
+                            .
+                        edge.u(i,j)
+
+        Now we denote a vertex binary label
+        p (plus) or m (minus); "p" when
+                  val_vert(i,j) > level,
+        and "m" when 
+                  val_vert(i,j) < level.
+
+        And we assign a quarter (four) label
+        for every edge as
+
+              Edge    | quarter
           ------------+--------
              m----m   |  0
              m----p   |  1
              p----m   |  2
-             p----p   |  3 (Special quarter for boundary edges)
+             p----p   |  3
 
-                                 MM
-                             m--------m
-                             |        |
-                          PM |        | MM
-                             |        |
-                             p--------m
-                                 PM
+        For example,
+                    MM
+                m--------m
+                |        |
+             PM |        | MM
+                |        |
+                p--------m
+                    PM
 
     !!<
-    integer :: ei, ej  ! edge indexes
+
+    integer :: ei, ej  ! edge indexes. They 
+                       ! are simply converted
+                       ! to  vertex indexes
     ! edge_u
     do ej = 1, edge_u_nv  
-      ! Some edges on ej=1 (bottom) and ej=u_nv (top) 
-      ! will be overwritten later.
       do ei = 1, edge_u_nu
         if ( val_vert(ei,  ej) < level .and. &
              val_vert(ei+1,ej) < level ) then
@@ -368,7 +406,7 @@ contains
                The path does not cross this edge.
                          ei   ei+1
                           |    |      .      
-                      ----m====m---.---- level
+                      ----M====M---.---- level
                           |    |._______ val_vert(ei+1,ej)
                           |  . |
                           .----|-------- val_vert(ei,ej)
@@ -378,9 +416,13 @@ contains
         else if ( val_vert(ei,  ej) > level .and. &
                   val_vert(ei+1,ej) > level ) then
           !!>
+               The path does not cross this edge.
+
+               But special care would be taken when
+               this edge is on the border (ej=1 or u_nv).
                           .
                           |    . 
-                      ----p====p----.------ level
+                      ----P====P----.------ level
                          ei   ei+1       .
           !!<
           u_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_PP
@@ -442,8 +484,6 @@ contains
     ! edge_v
     do ej = 1, edge_v_nv  
       do ei = 1, edge_v_nu
-        ! Some edges on ei=1 (left) and ei=u_nv (right) 
-        ! will be overwritten later.
         if ( val_vert(ei,ej  ) < level .and. &
              val_vert(ei,ej+1) < level ) then
           v_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_MM
@@ -476,7 +516,9 @@ contains
     real <in> :: level
 
     this.u_quarter(:,:) = -999  ! Any negative. Used later to
-    this.v_quarter(:,:) = -999  ! check if all edges are set.
+    this.v_quarter(:,:) = -999  ! check if all edges are set,
+                                ! using ...QUATER_MM, MP, PM, 
+                                ! PP are all non-negative.
 
     this.u_quarter = edge_level_check_set_u_quarter(      &
                                          this.u_nu,       &
@@ -498,9 +540,9 @@ contains
     call iInterpol_cross_point_edge_v
 
     call ut__assert( minval(this.u_quarter) ) >= 0,  &
-                     "__MODFUNC__: You missed some edge_u?" )
+                     "__MODFUNC__: You missed some edge_u." )
     call ut__assert( minval(this.v_quarter) ) >= 0,  &
-                     "__MODFUNC__: You missed some edge_v?" )
+                     "__MODFUNC__: You missed some edge_v." )
 
   contains
 
@@ -529,6 +571,7 @@ contains
             diff1 = val_vert(ei,ej) - level
             diff2 = level - val_vert(ei+1,ej)
             this.u_cross_coord(ei,ej) = linear_interpol( u1, u2, diff1, diff2 )
+              ! For both MP and PM cases.
           end if
         end do
       end do
