@@ -120,8 +120,6 @@ contains
     !!<
     type(contour_path_t), save :: contour_path
     logical :: just_once = .true.
-    type(slice_mesh_ivect_t) :: vpos_now
-    type(slice_mesh_direct_t) :: direct_now
     char(len=10) :: status
 
     ==<just_once>==
@@ -139,21 +137,16 @@ contains
     end select
 
     call contour_path.reset
-    direct_now.d = SLICE_MESH__PATH_NORTHWARD 
     call contour_path.set_starting_edge( this.mesh_vert,  &
                                          this.mesh_edge,  &
                                          this.val_vert,   &
-                                         direct_now,      &
-                                         status,          &
-                                         vpos_now )
+                                         status )
     do while ( status == 'have found' )
       !!>
           Tring to find the 1st contour for this level.
       !!<
       call contour_path.trace_and_erase( this.mesh_vert,  &
-                                         this.mesh_edge,  &
-                                         direct_now,      &
-                                         vpos_now )
+                                         this.mesh_edge )
       call iDraw_contour( this.mesh_vert.nu,    &
                           this.mesh_vert.nv,    &
                           width_in_pixels,      &
@@ -164,12 +157,9 @@ contains
           Generally, more contours exist for this level.
       !!<
       call contour_path.reset
-      direct_now.d = SLICE_MESH__EAST ! Try to find east-ward edge.
       call contour_path.set_starting_edge( this.mesh_vert,  &
                                            this.mesh_edge,  &
-                                           direct_now,      &
-                                           status,          &
-                                           vpos_now )
+                                           status )
     end do
 
   contains
