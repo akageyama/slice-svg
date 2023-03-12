@@ -34,7 +34,7 @@ module contour_path_m
     procedure :: reset => contour_path__reset
     procedure :: trace_and_erase  &
                        => contour_path__trace_and_erase
-    procedure, pass :: set_starting_edge &
+    procedure :: set_starting_edge &
                        => contour_path__set_starting_edge
     procedure :: is_closed => contour_path__is_closed
   end type contour_path_t
@@ -74,9 +74,9 @@ contains
       v = vert.pos_v(ej0)
       call register( path, u, v )
       if ( ej0 == edge.u_nv ) then
-        path.head = contour_path_element_t( 'u', .false., ei0, ej0, SLICE_MESH__BORDER_WESTWARD )
+        path.head = contour_path_element_t( 'u', 'in', ei0, ej0, SLICE_MESH__BORDER_WESTWARD )
       else
-        path.head = contour_path_element_t( 'u', .false., ei0, ej0, SLICE_MESH__NORTHWARD )
+        path.head = contour_path_element_t( 'u', 'in', ei0, ej0, SLICE_MESH__NORTHWARD )
       end if    
     end if
   end subroutine jump_to_u_edge_pm_if_possible
@@ -97,9 +97,9 @@ contains
       v = vert.pos_v(ej0)
       call register( path, u, v )
       if ( ej0 == 1 ) then
-        path.head = contour_path_element_t( 'u', .false., ei0, ej0, SLICE_MESH__BORDER_EASTWARD )
+        path.head = contour_path_element_t( 'u', 'in', ei0, ej0, SLICE_MESH__BORDER_EASTWARD )
       else
-        path.head = contour_path_element_t( 'u', .false., ei0, ej0, SLICE_MESH__SOUTHWARD )
+        path.head = contour_path_element_t( 'u', 'in', ei0, ej0, SLICE_MESH__SOUTHWARD )
       end if    
     end if
   end subroutine jump_to_u_edge_mp_if_possible  
@@ -120,9 +120,9 @@ contains
       v = edge.v_cross_coord(ei0,ej0)
       call register( path, u, v )
       if ( ei0 == 1 ) then
-        path.head = contour_path_element_t( 'v', .false., ei0, ej0, SLICE_MESH__BORDER_SOUTHWARD )
+        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, SLICE_MESH__BORDER_SOUTHWARD )
       else
-        path.head = contour_path_element_t( 'v', .false., ei0, ej0, SLICE_MESH__WESTWARD )
+        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, SLICE_MESH__WESTWARD )
       end if
     end if
   end subroutine jump_to_v_edge_pm_if_possible   
@@ -143,9 +143,9 @@ contains
       v = edge.v_cross_coord(ei0,ej0)
       call register( path, u, v )
       if ( ei0 == edge.u_nu ) then
-        path.head = contour_path_element_t( 'v', .false., ei0, ej0, SLICE_MESH__BORDER_NORTHWARD )
+        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, SLICE_MESH__BORDER_NORTHWARD )
       else
-        path.head = contour_path_element_t( 'v', .false., ei0, ej0, SLICE_MESH__EASTWARD )
+        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, SLICE_MESH__EASTWARD )
       end if
     end if
   end subroutine jump_to_v_edge_mp_if_possible    
@@ -200,7 +200,7 @@ contains
                   .       *
                                           
           !!<
-          path.head = contour_path_element_t( 'u', .true., vi, vj+1, PATH_WESTWARD )
+          path.head = contour_path_element_t( 'u', 'on', vi, vj+1, PATH_WESTWARD )
         else
           !!>
                    .       * <== you will go this way.
@@ -213,7 +213,7 @@ contains
                    .       *
                    .       *
           !!<
-          path.head = contour_path_element_t( 'v', .true., vi, vj+1, PATH_NORTHWARD )
+          path.head = contour_path_element_t( 'v', 'on', vi, vj+1, PATH_NORTHWARD )
         end if
       case (SLICE_MESH__EDGE_LEVEL_QUARTER_PM )
         !!>
@@ -231,7 +231,7 @@ contains
         v = edge.v_cross_coord(vi,vj)
         call register( path, u, v )
         call mesh_edge.erase( 'v', vi, vj )
-        path.head = contour_path_element_t( 'v', .false., vi, vj, PATH_WESTWARD )
+        path.head = contour_path_element_t( 'v', 'in', vi, vj, PATH_WESTWARD )
       case default
         call fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
@@ -266,9 +266,9 @@ contains
         call register( path, u, v )
         call mesh_edge.erase( 'v', vi, vj-1 )
         if ( vj-1 == 1 ) then ! you have reached the south-west corner.
-          path.head = contour_path_element_t( 'u', .true., vi, vj+1, PATH_EASTWARD )
+          path.head = contour_path_element_t( 'u', 'on', vi, vj+1, PATH_EASTWARD )
         else
-          path.head = contour_path_element_t( 'v', .true., vi, vj-1, PATH_SOUTHWARD )
+          path.head = contour_path_element_t( 'v', 'on', vi, vj-1, PATH_SOUTHWARD )
         end if
       case (SLICE_MESH__EDGE_LEVEL_QUARTER_MP )
         !!>
@@ -287,7 +287,7 @@ contains
         v = edge.v_cross_coord(vi,vj)
         call register( path, u, v )
         call mesh_edge.erase( 'v', vi, vj-1 )
-        path.head = contour_path_element_t( 'v', .false., vi, vj, PATH_EASTWARD )
+        path.head = contour_path_element_t( 'v', 'in', vi, vj, PATH_EASTWARD )
       case default
         call fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
@@ -345,7 +345,7 @@ contains
                             + - - - + - -
                             .       .
           !!<
-          path.head = contour_path_element_t( 'v', .true., vi-1, vj, PATH_SOUTHWARD )
+          path.head = contour_path_element_t( 'v', 'on', vi-1, vj, PATH_SOUTHWARD )
         else
           !!>
                          __ new head of vertex type (vi-1,vj)
@@ -360,7 +360,7 @@ contains
                   - + - - - + - - 
                     .       .     
           !!<
-          path.head = contour_path_element_t( 'u', .true., vi-1, vj, PATH_WESTWARD )
+          path.head = contour_path_element_t( 'u', 'on', vi-1, vj, PATH_WESTWARD )
         end if
       case (SLICE_MESH__EDGE_LEVEL_QUARTER_MP )
         !!>
@@ -379,7 +379,7 @@ contains
         v = vert.pos_v(vj)
         call register( path, u, v )
         call mesh_edge.erase( 'u', vi-1, vj )
-        path.head = contour_path_element_t( 'u', .false., vi-1, vj, PATH_SOUTHWARD )
+        path.head = contour_path_element_t( 'u', 'in', vi-1, vj, PATH_SOUTHWARD )
       case default
         call fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
@@ -414,9 +414,9 @@ contains
         call register( path, u, v )
         call mesh_edge.erase( 'u', vi, vj )
         if ( vi+1 == edge.u_nu ) then ! you have reached the south-east corner.
-          path.head = contour_path_element_t( 'v', .true., vi+1, vj, PATH_NORTHWARD )
+          path.head = contour_path_element_t( 'v', 'on', vi+1, vj, PATH_NORTHWARD )
         else
-          path.head = contour_path_element_t( 'u', .true., vi+1, vj, PATH_EASTWARD )
+          path.head = contour_path_element_t( 'u', 'on', vi+1, vj, PATH_EASTWARD )
         end if
       case (SLICE_MESH__EDGE_LEVEL_QUARTER_PM )
         jumped = .true.
@@ -424,7 +424,7 @@ contains
         v = vert.pos_v(vj)
         call register( path, u, v )
         call mesh_edge.erase( 'u', vi, vj )
-        path.head = contour_path_element_t( 'u', .false., vi, vj, PATH_NORTHWARD )
+        path.head = contour_path_element_t( 'u', 'in', vi, vj, PATH_NORTHWARD )
       case default
         call fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
@@ -708,7 +708,7 @@ contains
            quarter == MP  .or.  &
            quarter == PP ) then
         status = 'have found'
-        path.start = contour_path_element_t( 'u', .true., ei, ej, BORDER_EASTWARD )
+        path.start = contour_path_element_t( 'u', 'on', ei, ej, BORDER_EASTWARD )
         !!>           
             [case PM]
                         |      *|     
@@ -762,13 +762,13 @@ contains
 
         select case (quarter)
           case (PM)
-            path.head = contour_path_element_t( 'u', .false., ei, ej, PATH_NORTHWARD )
+            path.head = contour_path_element_t( 'u', 'in', ei, ej, PATH_NORTHWARD )
           case (MP,PP)
             if ( ei < mesh_edge.u_nu ) then
-              path.head = contour_path_element_t( 'u', .true., ei+1, ej, PATH_EASTWARD )
+              path.head = contour_path_element_t( 'u', 'on', ei+1, ej, PATH_EASTWARD )
             else 
               ! you are on the south-east corner. turn north.
-              path.head = contour_path_element_t( 'v', .true., ei+1, ej, PATH_NORTHWARD )
+              path.head = contour_path_element_t( 'v', 'on', ei+1, ej, PATH_NORTHWARD )
             end if
           case default
             call ut__fatal( "__MODFUNC__: case error." )
@@ -816,7 +816,7 @@ contains
            quarter == MP  .or.  &
            quarter == PP ) then
         status = 'have found'
-        path.start = contour_path_element_t( 'v', .true., ei, ej, PATH_NORTHWARD )
+        path.start = contour_path_element_t( 'v', 'on', ei, ej, PATH_NORTHWARD )
         select case (quarter)
           case (PM)
             v1 = mesh_vert.pos_u(ej)
@@ -838,13 +838,13 @@ contains
 
         select case (quarter)
           case (PM)
-            path.head = contour_path_element_t( 'v', .false., ei, ej, PATH_WESTWARD )
+            path.head = contour_path_element_t( 'v', 'in', ei, ej, PATH_WESTWARD )
           case (MP,PP)
             if ( ej < mesh_edge.v_nv ) then
-              path.head = contour_path_element_t( 'v', .true., ei, ej+1, PATH_NORTHWARD )
+              path.head = contour_path_element_t( 'v', 'on', ei, ej+1, PATH_NORTHWARD )
             else 
               ! you are on the north-east corner. turn west.
-              path.head = contour_path_element_t( 'u', .true., ei-1, ej, PATH_WESTWARD )
+              path.head = contour_path_element_t( 'u', 'on', ei-1, ej, PATH_WESTWARD )
             end if
           case default
             call ut__fatal( "__MODFUNC__: case error." )
@@ -861,7 +861,7 @@ contains
            quarter == MP  .or.  &
            quarter == PP ) then
         status = 'have found'
-        path.start = contour_path_element_t( 'u', .true., ei, ej, PATH_WESTWARD )
+        path.start = contour_path_element_t( 'u', 'on', ei, ej, PATH_WESTWARD )
 
         select case (quarter)
           case (PM)
@@ -893,13 +893,13 @@ contains
 
         select case (quarter)
           case (MP)
-            path.head = contour_path_element_t( 'u', .false., ei, ej, PATH_SOUTHWARD )
+            path.head = contour_path_element_t( 'u', 'in', ei, ej, PATH_SOUTHWARD )
           case (PM,PP)
             if ( ei > 1 ) then
-              path.head = contour_path_element_t( 'u', .true., ei-1, ej, PATH_WESTWARD )
+              path.head = contour_path_element_t( 'u', 'on', ei-1, ej, PATH_WESTWARD )
             else 
               ! you are on the north-west corner. turn south.
-              path.head = contour_path_element_t( 'v', .true., 1, ej-1, PATH_SOUTHWARD )
+              path.head = contour_path_element_t( 'v', 'on', 1, ej-1, PATH_SOUTHWARD )
             end if
           case default
             call ut__fatal( "__MODFUNC__: case error." )
@@ -917,7 +917,7 @@ contains
            quarter == MP  .or.  &
            quarter == PP ) then
         status = 'have found'
-        path.start = contour_path_element_t( 'v', .true., ei, ej, PATH_SOUTHWARD )
+        path.start = contour_path_element_t( 'v', 'on', ei, ej, PATH_SOUTHWARD )
         select case (quarter)
           case (MP)
             v1 = mesh_vert.pos_u(ej+1)
@@ -939,13 +939,13 @@ contains
 
         select case (quarter)
           case (MP)
-            path.head = contour_path_element_t( 'v', .false., ei, ej, PATH_EASTWARD )
+            path.head = contour_path_element_t( 'v', 'in', ei, ej, PATH_EASTWARD )
           case (PM,PP)
             if ( ej > 1 ) then
-              path.head = contour_path_element_t( 'v', .true., ei, ej-1, PATH_SOUTHWARD )
+              path.head = contour_path_element_t( 'v', 'on', ei, ej-1, PATH_SOUTHWARD )
             else 
               ! you are on the south-west corner. turn east.
-              path.head = contour_path_element_t( 'u', .true., ei, ej, PATH_EASTWARD )
+              path.head = contour_path_element_t( 'u', 'on', ei, ej, PATH_EASTWARD )
             end if
           case default
             call ut__fatal( "__MODFUNC__: case error." )
@@ -1060,12 +1060,12 @@ contains
                         | *           |
           !!<
           status = 'have found'
-          path.start = contour_path_element_t( 'u', .false., ei, ej, NORTHWARD )
+          path.start = contour_path_element_t( 'u', 'in', ei, ej, NORTHWARD )
           u = mesh_edge.u_cross_coord(ei,ej)
           v = mesh_vert.pos_v(ej)
           call register( path, u, v )
           call mesh_edge.erase( 'u', ei, ej )
-          path.head = contour_path_element_t( 'u', .false., ei, ej, NORTHWARD )
+          path.head = contour_path_element_t( 'u', 'in', ei, ej, NORTHWARD )
         end if
       end do
     end do

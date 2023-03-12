@@ -109,7 +109,6 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh_edge__initialize
     procedure :: finalize => slice_mesh_edge__finalize
-    procedure :: apply_stokes => slice_mesh_edge__apply_stokes
     procedure :: level_check => slice_mesh_edge__level_check
     procedure :: erase => slice_mesh_edge__erase
   end type slice_mesh__edge_t    
@@ -340,28 +339,21 @@ contains
                   val_vert(ei,ej) > level,
         and "m" when 
                   val_vert(ei,ej) < level.
-        Define u_quarter as the sign of dF/du and v_quarter
-        as the sign of dF/dv.
 
           Combination | quarter
           ------------+--------
              m----m   |  0
-             p----p   |  1
-             m----p   |  2
-             p----m   |  3
-             p----p   |  4 (Special quarter for boundary edges)
+             m----p   |  1
+             p----m   |  2
+             p----p   |  3 (Special quarter for boundary edges)
 
-                                   _______ u_quarter = 0
-                                  /
+                                 MM
                              m--------m
                              |        |
-           v_quarter = 3 --> |        | <------ v_quarter = 0
+                          PM |        | MM
                              |        |
                              p--------m
-                                  \______ u_quarter = 3
-
-        Here we calculate crossing point of the contour for
-        edges with [uv]_quarter = 2 or 3, by the linear interpolation.
+                                 PM
 
     !!<
     integer :: ei, ej  ! edge indexes
@@ -421,7 +413,7 @@ contains
           !!<
           u_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_MP
         else
-          call ut__assert( "__MODFUNC__: What? Case error?!" )
+          call ut__assert( "__MODFUNC__: case error." )
         end if
       end do
     end do
@@ -465,7 +457,7 @@ contains
                   val_vert(ei,ej+1) >= level ) then
           v_quarter(ei,ej) = SLICE_MESH__EDGE_LEVEL_QUARTER_MP
         else
-          call ut__assert( "__MODFUNC__: What? Case error?!" )
+          call ut__assert( "__MODFUNC__: case error." )
         end if
       end do
     end do

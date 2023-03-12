@@ -30,8 +30,7 @@ module slice_m
     procedure :: initialize => slice__scalar_initialize
     procedure :: finalize => slice__scalar_finalize
     procedure :: set_val => slice__scalar_set_val
-    procedure :: vis_contour_above => slice__scalar_vis_contour_above
-    procedure :: vis_contour_below => slice__scalar_vis_contour_below
+    procedure :: vis_contour => slice__scalar_vis_contour
   end type slice__scalar_t
 
   type, public :: slice__vector_t
@@ -50,74 +49,19 @@ module slice_m
 contains
 
 
-  subroutine vis_contour_template( this,            &
-                                   sketch,          &
-                                   switch,          &
-                                   level,           &
-                                   width_in_pixels, &
-                                   line_color,      &
-                                   fill_color,      &
-                                   level2 )
-    type(slice__scalar_t) <io> :: this
+  subroutine slice__scalar_vis_contour( this,            &
+                                        sketch,          &
+                                        level,           &
+                                        width_in_pixels, &
+                                        line_color,      &
+                                        fill_color )
+    class(slice__scalar_t) <io> :: this
     type(sketch_t) <io> :: sketch
-    char(len=*) <in> :: switch
     real <in> :: level
     real <optin> :: width_in_pixels
     type(color_t) <optin> :: line_color
     type(color_t) <optin> :: fill_color
-    real <optin> :: level2
     
-    !!>
-        In the followings, "e" stands for "edge",
-        and "c" stands for "cell". "i" is index
-        in the u-direction and "j" is in v-direction.
-        So, "ei" is edge-index in u and "cj" is 
-        cell-index in v.
-
-                    north               
-                edgeu(ei=1,ej=4)       +---+---+---+ ej=4
-                +------------+ .       | 3 |   |   |
-              w | cell(ci,cj)|e  .     +---+---+---+ ej=3
-              e |    with    |a    .   | 2 |   |   |
-              s |  ci=1,cj=3 |s\     . +---+---+---+ ej=2
-              t/|            |t \      | 1 | 2 | 3 |
-              / +------------+ ..\.... +---+---+---+ ej=1
-             /      / south       \   ei=1 2   3   4 
-            /  edgeu(ei=1,ej=3)    \
-           /                        \
-        edgev(ei=1,ej=3)           edgev(ei=2,ej=3)
-
-                              edgeu(ei=3,ej=8)
-            vert(vi=3,vj=8)   .    vert(vi=4,vj=8)
-                         \    .   / 
-                          o------o  
-            edgev(3,7)....|      |....edgev(ei=4,ej=7)
-                          |      |
-                          o=====>V
-                         /|  .   | \ vert(vi=4,vj=7)
-           vert(vi=3,vj=7)|  .   |..............edgev(ei=4,ej=6)   
-                             .   o 
-              edgeu(ei=3,ej=7)    \
-                                   vert(vi=4,vj=6)
-
-        P: positive edge, eastward edgeu / northward edgev
-        M: negative edge, westward edgeu / southward edgev
-        1: vertex on which paths run straight forward.
-        2: vertex on which paths turn left.
-        3: vertex on which paths turn right.
-
-       +---+---+---+---+---2=M=1=M=2
-       |   |   |   |   |   M       P
-       +---+---+---2=M=1=M=3=P=1=P=2
-       |   |   |   M       P   |   |
-       2=M=1=M=2---2=P=1=P=2---+---+
-       M       P   |   |   |   |   |
-       2=P=1=P=2=M=1=M=1=M=1=M=2---+
-       |   |   M               P
-       +---+---1           3=P=2
-       |   |   M           P   |
-       +---+---2=P=1=P=1=P=2---+
-    !!<
     type(contour_path_t), save :: contour_path
     logical :: just_once = .true.
     char(len=10) :: status
@@ -127,14 +71,9 @@ contains
                                     this.mesh_vert.nv )
     ==</just_once>==
 
-    select case (switch)
-      case ('above')
-        call this.mesh_edge.apply_stokes( this.mesh_cell, switch, level )
-      case ('below')
-        call this.mesh_edge.apply_stokes( this.mesh_cell, switch, level )
-      case default
-        call ut__fatal( '__MODFUNC__: case error.' )
-    end select
+    call this.mesh_edge.level_check( this.mesh_vert,  &
+                                     this.val_vert,   &
+                                     level )
 
     call contour_path.reset
     call contour_path.set_starting_edge( this.mesh_vert,  &
@@ -142,9 +81,7 @@ contains
                                          this.val_vert,   &
                                          status )
     do while ( status == 'have found' )
-      !!>
-          Tring to find the 1st contour for this level.
-      !!<
+      !!  Tring to find the 1st contour for this level.
       call contour_path.trace_and_erase( this.mesh_vert,  &
                                          this.mesh_edge )
       call iDraw_contour( this.mesh_vert.nu,    &
@@ -153,9 +90,7 @@ contains
                           line_color,           &
                           fill_color )
 
-      !!>
-          Generally, more contours exist for this level.
-      !!<
+      !!  Generally, more contours exist for this level.
       call contour_path.reset
       call contour_path.set_starting_edge( this.mesh_vert,  &
                                            this.mesh_edge,  &
@@ -192,52 +127,6 @@ contains
     end subroutine iDraw_contour
 
   end subroutine vis_contour_template
-
-
-  subroutine slice__scalar_vis_contour_above( this,            &
-                                              sketch,          &
-                                              level,           &
-                                              width_in_pixels, &
-                                              line_color,      &
-                                              fill_color )
-    class(slice__scalar_t) <io> :: this
-    type(sketch_t) <io> :: sketch
-    real <in> :: level
-    real <optin> :: width_in_pixels
-    type(color_t) <optin> :: line_color
-    type(color_t) <optin> :: fill_color
-
-    call vis_contour_template( this,            &
-                               sketch,          &
-                               'above',         &
-                               level,           &
-                               width_in_pixels, &
-                               line_color,      &
-                               fill_color )
-  end subroutine slice__scalar_vis_contour_above
-
-
-  subroutine slice__scalar_vis_contour_below( this,            &
-                                              sketch,          &
-                                              level,           &
-                                              width_in_pixels, &
-                                              line_color,      &
-                                              fill_color )
-    class(slice__scalar_t) <io> :: this
-    type(sketch_t) <io> :: sketch
-    real <in> :: level
-    real <optin> :: width_in_pixels
-    type(color_t) <optin> :: line_color
-    type(color_t) <optin> :: fill_color
-
-    call vis_contour_template( this,            &
-                               sketch,          &
-                               'below',         &
-                               level,           &
-                               width_in_pixels, &
-                               line_color,      &
-                               fill_color )
-  end subroutine slice__scalar_vis_contour_below  
 
 
   subroutine slice__scalar_initialize( this, nu, nv,  &
