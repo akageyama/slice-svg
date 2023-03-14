@@ -11,6 +11,7 @@ module const_base_m
   integer <const> :: SR = real32
   integer <const> :: DR = real64
   integer <const> :: NIL = -huge(1)
+  real    <const> :: NAN = huge(1.0)
 
   !<< Mathematical constants >>!
   real(DR) <const> :: PI = atan(1.0_DR)*4

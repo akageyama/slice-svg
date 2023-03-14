@@ -4,10 +4,61 @@ module contour_path_m
   implicit none
   private
 
-  !!>
+  !!> 
+     To draw contour paths for a given level.
+             |       |       |       |       |    
+           - m - - - m - - - m - - - m - - - m - 
+             |       |       *       |       |   
+             |       |    *  |  *    |       |         
+           - m - - - m *-- - p - - * m - - - m -  
+             |      *|       |       *       |   
+             |    *  |       |       |*      |   
+           - m -*- - p - - - p - - - p * - - m -  
+             |   *   |       |       | *     |   
+             |    *  |       |       | *     |   
+           - m - - * p - - - p - - - p * - - m -  
+             |     * |       |       |*      |   
+             |     * |       |       *       |   
+           - m - - * m - - - P - - * M - - - m -  
+             |      *|       |  *    |       |   
+             |       * * * * *       |       |   
+           - m - - - m - - - m - - - m - - - m -  
+             |       |       |       |       |   
 
+      Mathematically, every contour line is closed unless it touches 
+      on the boundary of the simulatin box (u=umin/umax or v=vmin/vmax).
 
-  !!<
+      We set a virtual contour line along the boundary if the boudary grid
+      vertices satisfy the condition 
+          vert_val >= level  (denoted by "p" in the figure),
+      see the upper right figure. 
+
+      Since all contour lines are thus always closed, we first find an
+      edge (starting edge) for each contour and draw the contour with
+      keeping grid vertices with 
+          vert_val >= level
+      always in its left-hand side of the path.
+      
+      Starting edge of a trully closed contour (without touching the
+      boundaries) is any u_edge with its quarter value "PM" (plus-in-left
+      and minus-in-right of the edge).
+
+      Cares should be taken for contour lines with virual (on-boundary)
+      contours. 
+
+           ei     ei+1    *      
+           |       |    *       
+       - - p - - - p -*-       
+           |       |*         
+           |      *|         
+           |    *  |        
+    ej - - p==*====m - -   
+           | *  \  |              
+           |*   PM |             
+           *      \             
+                   \           
+                 start edge   
+  !!< 
 
   integer <const> :: PATH_NORTHWARD = 0    !       0        0 (NORTH)
   integer <const> :: PATH_WESTWARD  = 1    !       |        1 (WEST)
@@ -34,8 +85,8 @@ module contour_path_m
     procedure :: reset => contour_path__reset
     procedure :: trace_and_erase  &
                        => contour_path__trace_and_erase
-    procedure :: set_starting_edge &
-                       => contour_path__set_starting_edge
+    procedure :: set_start_edge &
+                       => contour_path__set_start_edge
     procedure :: is_closed => contour_path__is_closed
   end type contour_path_t
 
@@ -74,9 +125,9 @@ contains
       v = vert.pos_v(ej0)
       call register( path, u, v )
       if ( ej0 == edge.u_nv ) then
-        path.head = contour_path_element_t( 'u', 'in', ei0, ej0, SLICE_MESH__BORDER_WESTWARD )
+        path.head = contour_path_element_t( 'u', 'on', ei0, ej0, PATH_WESTWARD )
       else
-        path.head = contour_path_element_t( 'u', 'in', ei0, ej0, SLICE_MESH__NORTHWARD )
+        path.head = contour_path_element_t( 'u', 'in', ei0, ej0, PATH_NORTHWARD )
       end if    
     end if
   end subroutine jump_to_u_edge_pm_if_possible
@@ -660,10 +711,10 @@ contains
   end subroutine contour_path__initialize
 
 
-  subroutine set_starting_edge_on_boundaries( path,         &
-                                              mesh_vert,    &
-                                              mesh_edge,    &
-                                              status )
+  subroutine find_start_edge_on_boundaries( path,         &
+                                            mesh_vert,    &
+                                            mesh_edge,    &
+                                            status )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
@@ -675,55 +726,64 @@ contains
     integer <const> :: MP = SLICE_MESH__EDGE_LEVEL_QUARTER_MP
     integer <const> :: PM = SLICE_MESH__EDGE_LEVEL_QUARTER_PM
 
-    integer <const> :: NORTHWARD = PATH_NORTHWARD
-    integer <const> :: WESTWARD  = PATH_WESTWARD 
-    integer <const> :: SOUTHWARD = PATH_SOUTHWARD
-    integer <const> :: EASTWARD  = PATH_EASTWARD 
-
     !!>
-         |       |       |    _ Contour line       
-         m - - - m - - - m   /    at "level"
-         |       |       * */             
-         |       |    *  |   *   |       |       |      
-         m - - - m -*- - p - - * m - - - m - - - m   ej=3
-         |       *       |       *       |       |
-         |     * |       |       | *     |       |
-         m - -*- p - - - p - - - p - * - m - - - m   ej=2
-         |    *  |       |       |    *  |       |
-         |    *  |       |       |    *  |       |
-         m - - * p * * * p * * * p * * - m - - - m   ej=1
+             |       |       |    _ Contour line       
+           - m - - - m - - - m   /    at "level"
+             |       |       * */             
+             |       |    *  |   *   |       |       |      
+           - m - - - m -*- - p - - * m - - - m - - - m   ej=3
+             |       *       |       *       |       |
+             |     * |       |       | *     |       |
+           - m - -*- p - - - p - - - p - * - m - - - m   ej=2
+             |    *  |       |       |    *  |       |
+             |    *  |       |       |    *  |       |
+           - m - - * p * * * p * * * p * * - m - - - m   ej=1
+                 \
+                  \__ Will find this edge_u
+
+
+
+        We will search for the start edge in this order,
+           1. South border
+           2. East border
+           3. North border
+           4. West border
+
+                       <---
+                   +----------+
+                   |  North   |    
+               |   |W        E|   ^
+               |   |e        a|   |
+               v   |s        s|   |
+                   |t South  t|    
+                   +----------+
+                       ---> 
     !!<    
 
-    integer :: ei, ej
+    integer :: ei, ej ! edge_i & edge_j
     real :: pos_u, pos_v
 
     call ut__assert( path.num == 0,  &
                     '__MODFUNC__: You forgot to reset contour_path.' )
 
-    ! South boundary
+    !----------------!
+    ! South boundary !
+    !----------------!
+
     ej = 1
     do ei = 1, mesh_edge.u_nu
       quarter = mesh_edge.u_quarter(ei,ej)
-      if ( quarter == PM  .or.  &
-           quarter == MP  .or.  &
+      if ( quarter == MP  .or.  &
+           quarter == PM  .or.  &
            quarter == PP ) then
         status = 'have found'
-        path.start = contour_path_element_t( 'u', 'on', ei, ej, BORDER_EASTWARD )
-        !!>           
-            [case PM]
-                        |      *|     
-                      - p - - * m -   
-                        |    *  |     
-                        |   *   |     
-                        |  *    |     
-                    * * p * ====m===  ej=1 (bottom)
-                       /   \
-            1st register    \
-                             2nd register
+        path.start = contour_path_element_t( 'u', 'on', ei, ej, PATH_EASTWARD )
 
-            [case MP]
+        !!>           
+            [case MP] (This is the most plausible case.)
+
                         |*      |     
-                      - m * - - p - - 
+                    - - m * - - p - - 
                         |  *    |     
                         |   *   |     
                         |    *  |     
@@ -731,8 +791,40 @@ contains
                              /   \
                   1st register    \
                                    2nd register
+            [case PM]
+
+
+               ei=1 (left border)
+                | *
+                |*
+                *       |     
+                p - - - p -   
+                *       *     
+                *      *|     
+                *     * |     
+                p=== * =m===  ej=1 (bottom)
+                 \    \
+                  \    2nd register
+                   1st register     
+
+                     Incidentally, there will be no chance
+                     to find the following start edge unless
+                     we survey the south edge from the
+                     right (i=u_nu) to the left (i=1).
+
+                     |       |      *|       |
+                 - - p - - - p - - * m - - - m - -
+                     |       |    *  |       |
+                     |       |   *   |       |
+                     |       |  *    |       |   ej=1
+                  ***p*******p** - - m - - - m - (bottom
+                                 \                boundary)
+                                   start edge
 
             [case PP]
+
+               ei=1 (left border)
+                | *
                 |*      |       |             
                 *       |       |             
                 p - - - p - - - p -           
@@ -740,14 +832,20 @@ contains
                 *       |       |             
                 *       |       |             
                 p * * * p * * * p * * ej=1 (bottom)   
+                 \       \
+                  \       2nd register
+                   1st register     
         !!<
+
         select case (quarter)
-          case (PM)
-            u1 = mesh_vert.pos_u(ei)
-            u2 = mesh_edge.u_cross_coord(ei,ej)
           case (MP)
             u1 = mesh_edge.u_cross_coord(ei,ej)
             u2 = mesh_vert.pos_u(ei+1)
+            call ut__assert( u1 /= NAN, "__MODFUNC__: Invalid cross coord." )
+          case (PM)
+            u1 = mesh_vert.pos_u(ei)
+            u2 = mesh_edge.u_cross_coord(ei,ej)
+            call ut__assert( u2 /= NAN, "__MODFUNC__: Invalid cross coord." )
           case (PP)
             u1 = mesh_vert.pos_u(ei)
             u2 = mesh_vert.pos_u(ei+1)
@@ -760,14 +858,17 @@ contains
         call register( path, u2, v1 )
         call mesh_edge.erase( 'u', ei, ej )
 
+        ! Add path head.
         select case (quarter)
           case (PM)
+            ! You will leave the south border and go north.
             path.head = contour_path_element_t( 'u', 'in', ei, ej, PATH_NORTHWARD )
           case (MP,PP)
             if ( ei < mesh_edge.u_nu ) then
-              path.head = contour_path_element_t( 'u', 'on', ei+1, ej, PATH_EASTWARD )
+              ! You will go along the south bourder.
+              path.head = contour_path_element_t( 'u', 'on', ei, ej, PATH_NORTHWARD )
             else 
-              ! you are on the south-east corner. turn north.
+              ! you are on the south-east corner. Go toward north along the east border.
               path.head = contour_path_element_t( 'v', 'on', ei+1, ej, PATH_NORTHWARD )
             end if
           case default
@@ -777,7 +878,9 @@ contains
       end if
     end do
 
-    ! East boundary
+    !---------------!
+    ! East boundary !
+    !---------------!
     !!>  
       [case MP]         
                .         *     
@@ -821,9 +924,11 @@ contains
           case (PM)
             v1 = mesh_vert.pos_u(ej)
             v2 = mesh_edge.v_cross_coord(ei,ej)
+            call ut__assert( v2 /= NAN, "__MODFUNC__: Invalid cross coord." )
           case (MP)
             v1 = mesh_edge.v_cross_coord(ei,ej)
             v2 = mesh_vert.pos_v(ej+1)
+            call ut__assert( v1 /= NAN, "__MODFUNC__: Invalid cross coord." )
           case (PP)
             v1 = mesh_vert.pos_v(ej)
             v2 = mesh_vert.pos_v(ej+1)
@@ -836,6 +941,7 @@ contains
         call register( path, u1, v2 )
         call mesh_edge.erase( 'v', ei, ej )
 
+        ! Add path head.
         select case (quarter)
           case (PM)
             path.head = contour_path_element_t( 'v', 'in', ei, ej, PATH_WESTWARD )
@@ -844,7 +950,7 @@ contains
               path.head = contour_path_element_t( 'v', 'on', ei, ej+1, PATH_NORTHWARD )
             else 
               ! you are on the north-east corner. turn west.
-              path.head = contour_path_element_t( 'u', 'on', ei-1, ej, PATH_WESTWARD )
+              path.head = contour_path_element_t( 'u', 'on', ei-1, ej+1, PATH_WESTWARD )
             end if
           case default
             call ut__fatal( "__MODFUNC__: case error." )
@@ -853,9 +959,11 @@ contains
       end if
     end do  
 
-    ! North boundary
+    !----------------!
+    ! North boundary !
+    !----------------!
     ej = mesh_edge.v_nv
-    do ei = mesh_edge.u_nu, 1, -1
+    do ei = mesh_edge.u_nu, 1, -1 ! No strong reason to cound down here.
       quarter = mesh_edge.u_quarter(ei,ej)
       if ( quarter == PM  .or.  &
            quarter == MP  .or.  &
@@ -867,19 +975,21 @@ contains
           case (PM)
             !   2nd register     1st register
             !             \     /
-            !          * * p * * - - m - 
+            !          * * p * * - - m - -
             u1 = mesh_edge.u_cross_coord(ei,ej)
             u2 = mesh_vert.pos_u(ei)
+            call ut__assert( u1 /= NAN, "__MODFUNC__: Invalid cross coord." )
           case (MP)
             !       2nd register       1st register
             !                 \       /
-            !          - - m - * * * p *
+            !          - - m - * * * p * *
             u1 = mesh_vert.pos_u(ei+1)
             u2 = mesh_edge.u_cross_coord(ei,ej)
+            call ut__assert( u2 /= NAN, "__MODFUNC__: Invalid cross coord." )
           case (PP)
             !   2nd register           1st register
             !             \           /
-            !          * * p * * * * p *
+            !          * * p * * * * p * *
             u1 = mesh_vert.pos_u(ei+1)
             u2 = mesh_vert.pos_u(ei)
           case default
@@ -891,6 +1001,7 @@ contains
         call register( path, u2, v1 )
         call mesh_edge.erase( 'u', ei, ej )
 
+        ! Add path head.
         select case (quarter)
           case (MP)
             path.head = contour_path_element_t( 'u', 'in', ei, ej, PATH_SOUTHWARD )
@@ -909,7 +1020,9 @@ contains
     end do
 
 
-    ! West boundary
+    !---------------!
+    ! West boundary !
+    !---------------!
     ei = 1
     do ej = mesh_edge.v_nv, 1, -1
       quarter = mesh_edge.v_quarter(ei,ej)
@@ -922,9 +1035,11 @@ contains
           case (MP)
             v1 = mesh_vert.pos_u(ej+1)
             v2 = mesh_edge.v_cross_coord(ei,ej)
+            call ut__assert( v2 /= NAN, "__MODFUNC__: Invalid cross coord." )
           case (PM)
             v1 = mesh_edge.v_cross_coord(ei,ej)
             v2 = mesh_vert.pos_v(ej)
+            call ut__assert( v1 /= NAN, "__MODFUNC__: Invalid cross coord." )
           case (PP)
             v1 = mesh_vert.pos_v(ej+1)
             v2 = mesh_vert.pos_v(ej)
@@ -937,6 +1052,7 @@ contains
         call register( path, u1, v2 )
         call mesh_edge.erase( 'v', ei, ej )
 
+        ! Add path head.
         select case (quarter)
           case (MP)
             path.head = contour_path_element_t( 'v', 'in', ei, ej, PATH_EASTWARD )
@@ -945,7 +1061,7 @@ contains
               path.head = contour_path_element_t( 'v', 'on', ei, ej-1, PATH_SOUTHWARD )
             else 
               ! you are on the south-west corner. turn east.
-              path.head = contour_path_element_t( 'u', 'on', ei, ej, PATH_EASTWARD )
+              path.head = contour_path_element_t( 'u', 'on', 1, 1, PATH_EASTWARD )
             end if
           case default
             call ut__fatal( "__MODFUNC__: case error." )
@@ -954,13 +1070,13 @@ contains
       end if
     end do  
 
-  end subroutine set_starting_edge_on_boundaries
+  end subroutine find_start_edge_on_boundaries
 
 
-  subroutine set_starting_edge_in_bulk( path,         &
-                                        mesh_vert,    &
-                                        mesh_edge,    &
-                                        status )  
+  subroutine set_start_edge_in_bulk( path,         &
+                                     mesh_vert,    &
+                                     mesh_edge,    &
+                                     status )  
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
@@ -973,13 +1089,27 @@ contains
     integer <const> :: PM = SLICE_MESH__EDGE_LEVEL_QUARTER_PM
 
     !!>
-          Tring to find a path that goes through an u-edge with "PM".
-
-         | .    |       .
-         |  .   |     . |
-         |   .  |   .   |
-       --m----.-p=.=====m--
-         |      .   \_____ Find this edge.
+             |       |       |       |       |    
+           - m - - - m - - - m - - - m - - - m - 
+             |       |       *       |       |   
+             |       |    *  |  *    |       |         
+           - m - - - m -*- - p - - * m - - - m -  
+             |       *       |       *       |   
+             |     * |       |       |*      |   
+           - m - -*- p - - - p - - - p * - - m -  
+             |    *  |       |       | *     |   
+             |    *  |       |       | *     |   
+           - m - - * p - - - p - - - p * - - m -  
+             |      *|       |       |*      |   
+             |       *       |       *       |   
+           - m - - - m * - - P=====*=M - - - m -  
+             |       |    *  |  * \  |       |   
+             |       |       *     \ |       |   
+           - m - - - m - - - m - - -\m - - - m -  
+             |       |       |       \       |   
+                                      \
+                                       \___ Try to find this edge of "PM".
+                 
     !!< 
     integer :: ei, ej
     integer :: quarter
@@ -987,68 +1117,11 @@ contains
 
     call ut__assert( path.num == 0,  &
                     '__MODFUNC__: You forgot to reset contour_path.' )
-    !!> 
-        Find a starting edge of a contour line for the input level.
-        Mathematically, every contour line is closed unless it touches 
-        on the boundary of the simulatin box (u=umin/umax or v=vmin/vmax).
-
-        We set a virtual contour line along the boundary if the boudary grid
-        vertices satisfy the condition 
-            vert_val >= level  (denoted by "p" in the figure),
-        see the upper right figure. 
-
-        Since all contour lines are thus always closed, we first find an
-        edge (starting edge) for each contour and draw the contour with
-        keeping grid vertices with 
-            vert_val >= level
-        always in its left-hand side of the path.
-        
-        Starting edge of a trully closed contour (without touching the
-        boundaries) is any u_edge with its quarter value "PM" (plus-in-left
-        and minus-in-right of the edge).
-
-        Cares should be taken for contour lines with virual (on-boundary)
-        contours. 
-                            contour line
-      [Case A]                *                 
-             ei     ei+1    *           [Case B]                ei=1
-             |       |    *                               *   (right boundary)
-         - - p - - - p -*-                |       |     * |       *
-             |       |*                   |       |   *   |       *
-             |      *|                  - m - - - m -*- - p - - - p
-             |    *  |                    |       |  *    |       *
-      ej - - p==*====m - -                |       |  *    |       *
-             | *  \  |                    |       |  *    |       *
-             |*   PM |                  - m - - - m -*- - p - - - p
-             *      \                     |       | *     |       *
-                     \                    |       |*      |       *
-                   start edge             |      *|       |       *  ej=1    
-                                        --m----***p*******p*******p (bottom
-      [Case C]                             \     / \     / \     /   boundary) 
-       ei=1 (left boundary)                   MP      PP      PP
-        |     * |       |                              \
-        |   *   |       |                               start edge
-        m -*- - p - - - p -          [Case D]    
-        | *     |       |                 |       |      *|       |
-        |*      |       |             - - p - - - p - - * m - - - m - -
-        *       |       |                 |       |    *  |       |
-        p - - - p - - - p -               |       |   *   |       |
-        *       |       |                 |       |  *    |       |   ej=1
-        *       |       |              ***p*******p** - - m - - - m - (bottom
-        *       |       |                  \     / \     / \     /     boundary)
-        p*******p*******p*** ej=1             PP      PM      MM
-         \     / \     /    (bottom                    \
-            BB      BB       boundary)                  start edge
-             \
-              start edge
-    !!< 
 
     do ej = 2, mesh_edge.u_nv-1
       do ei = 2, mesh_edge.u_nu-1
         quarter = mesh_edge.u_quarter(ei,ej)
         if ( quarter == PM ) then
-          ! Found a cell that inlcude at least one contour path.
-          ! [Case A] and [Case D] in above figure.
           !!> 
               path tip you
               have just found.  *
@@ -1060,23 +1133,25 @@ contains
                         | *           |
           !!<
           status = 'have found'
-          path.start = contour_path_element_t( 'u', 'in', ei, ej, NORTHWARD )
+          path.start = contour_path_element_t( 'u', 'in', ei, ej, PATH_NORTHWARD )
           u = mesh_edge.u_cross_coord(ei,ej)
           v = mesh_vert.pos_v(ej)
+          call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
           call register( path, u, v )
           call mesh_edge.erase( 'u', ei, ej )
-          path.head = contour_path_element_t( 'u', 'in', ei, ej, NORTHWARD )
+          path.head = contour_path_element_t( 'u', 'in', ei, ej, PATH_NORTHWARD )
+          return
         end if
       end do
     end do
 
-  end subroutine set_starting_edge_in_bulk
+  end subroutine set_start_edge_in_bulk
 
 
-  subroutine contour_path__set_starting_edge( this,         &
-                                              mesh_vert,    &
-                                              mesh_edge,    &
-                                              status )
+  subroutine contour_path__set_start_edge( this,         &
+                                           mesh_vert,    &
+                                           mesh_edge,    &
+                                           status )
     class(contour_path_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
@@ -1084,18 +1159,18 @@ contains
 
     status = 'no contour'  ! default 
 
-    call set_starting_edge_on_boundaries( this,         &
-                                          mesh_vert,    &
-                                          mesh_edge,    &
-                                          status )
+    call find_start_edge_on_boundaries( this,         &
+                                        mesh_vert,    &
+                                        mesh_edge,    &
+                                        status )
     if ( status == 'have found' ) return
 
-    call set_starting_edge_in_bulk( this,         &
-                                    mesh_vert,    &
-                                    mesh_edge,    &
-                                    status )
+    call set_start_edge_in_bulk( this,         &
+                                 mesh_vert,    &
+                                 mesh_edge,    &
+                                 status )
 
-  end subroutine contour_path__set_starting_edge
+  end subroutine contour_path__set_starg_edge
 
 
   subroutine contour_path__trace_and_erase( this,  &

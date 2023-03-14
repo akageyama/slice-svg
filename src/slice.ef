@@ -76,10 +76,9 @@ contains
                                      level )
 
     call contour_path.reset
-    call contour_path.set_starting_edge( this.mesh_vert,  &
-                                         this.mesh_edge,  &
-                                         this.val_vert,   &
-                                         status )
+    call contour_path.set_start_edge( this.mesh_vert,  &
+                                      this.mesh_edge,  &
+                                      status )
     do while ( status == 'have found' )
       !!  Tring to find the 1st contour for this level.
       call contour_path.trace_and_erase( this.mesh_vert,  &
@@ -92,9 +91,9 @@ contains
 
       !!  Generally, more contours exist for this level.
       call contour_path.reset
-      call contour_path.set_starting_edge( this.mesh_vert,  &
-                                           this.mesh_edge,  &
-                                           status )
+      call contour_path.set_start_edge( this.mesh_vert,  &
+                                        this.mesh_edge,  &
+                                        status )
     end do
 
   contains

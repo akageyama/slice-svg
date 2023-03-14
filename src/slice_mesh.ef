@@ -520,6 +520,9 @@ contains
                                 ! using ...QUATER_MM, MP, PM, 
                                 ! PP are all non-negative.
 
+    this.u_cross_coord(:,:) = NAN ! Reset
+    this.v_cross_coord(:,:) = NAN
+
     this.u_quarter = edge_level_check_set_u_quarter(      &
                                          this.u_nu,       &
                                          this.u_nv,       &
