@@ -35,8 +35,8 @@ module slice_mesh_m
     real :: u_min, u_max
     real :: v_min, v_max
   contains
-    procedure :: initialize => slice_mesh_vert__initialize
-    procedure :: finalize => slice_mesh_vert__finalize
+    procedure :: initialize => slice_mesh__vert_initialize
+    procedure :: finalize => slice_mesh__vert_finalize
   end type slice_mesh__vert_t  
 
   type, public :: slice_mesh__edge_t
@@ -73,18 +73,18 @@ module slice_mesh_m
 
           Combination | quarter
           ------------+--------
-             m----m   |  0
-             m----p   |  1
-             p----m   |  2
-             p----p   |  3 (Special quarter for boundary edges)
+             m - - m  |  0
+             m - - p  |  1
+             p - - m  |  2
+             p - - p  |  3 (Special quarter for boundary edges)
       !!<
     real, dimension(:,:), allocatable :: u_cross_coord
     real, dimension(:,:), allocatable :: v_cross_coord
                                             
   contains
-    procedure :: initialize => slice_mesh_edge__initialize
-    procedure :: finalize => slice_mesh_edge__finalize
-    procedure :: level_check => slice_mesh_edge__level_check
+    procedure :: initialize => slice_mesh__edge_initialize
+    procedure :: finalize => slice_mesh__edge_finalize
+    procedure :: set_quater => slice_mesh__edge_set_quater
     procedure :: erase => slice_mesh_edge__erase
   end type slice_mesh__edge_t    
 
@@ -151,7 +151,7 @@ contains
   end subroutine slice_mesh_edge__erase  
 
 
-  subroutine slice_mesh_vert__initialize( this, nu, nv,  &
+  subroutine slice_mesh__vert_initialize( this, nu, nv,  &
                                           u_min, u_max,  &
                                           v_min, v_max )
     class(slice_mesh__vert_t) <out> :: this
@@ -188,39 +188,39 @@ contains
     do j = 1, nv
       this.pos_v(j) = v_min + dv*(j-1)
     end do
-  end subroutine slice_mesh_vert__initialize
+  end subroutine slice_mesh__vert_initialize
 
 
-  subroutine slice_mesh_vert__finalize( this )
+  subroutine slice_mesh__vert_finalize( this )
     class(slice_mesh__vert_t) <io> :: this
 
     deallocate(this.pos_u)
     deallocate(this.pos_v)
-  end subroutine slice_mesh_vert__finalize
+  end subroutine slice_mesh__vert_finalize
 
 
-  subroutine slice_mesh_edge__initialize( this, mesh_vert )
+  subroutine slice_mesh__edge_initialize( this, mesh_vert )
     class(slice_mesh__edge_t) <out> :: this
     class(slice_mesh__vert_t) <in> :: mesh_vert
     !!>
                             edgev                                    
                               |
-          +: vertex           |
+                              |
                               +---- edgeu
 
         When mesh_vert.nu = 5, and mesh_vert.nv = 4
 
              + edgeu + edgeu + edgeu + edgeu +
              e       e       e       e       e
-             |   c   |   c   |   c   |   c   |
+             d       d       d       d       d
              v       v       v       v       v
              + edgeu + edgeu + edgeu + edgeu +
              e       e       e       e       e
-             |   c   |   c   |   c   |   c   |
+             d       d       d       d       d
              v       v       v       v       v
              + edgeu + edgeu + edgeu + edgeu +
              e       e       e       e       e
-             |   c   |   c   |   c   |   c   |
+             d       d       d       d       d
              v       v       v       v       v
              + edgeu + edgeu + edgeu + edgeu +
     !!<
@@ -232,15 +232,15 @@ contains
                               this.u_nv))
       allocate(this.v_quarter(this.v_nu,  &
                               this.v_nv))
-  end subroutine slice_mesh_edge__initialize
+  end subroutine slice_mesh__edge_initialize
 
 
-  subroutine slice_mesh_edge__finalize( this )
+  subroutine slice_mesh__edge_finalize( this )
     class(slice_mesh__edge_t) <io> :: this
 
     deallocate(this.u_quarter)
     deallocate(this.v_quarter)
-  end subroutine slice_mesh_edge__finalize  
+  end subroutine slice_mesh__edge_finalize  
 
 
   function edge_level_check_set_u_quarter( edge_u_nu,  &
@@ -248,14 +248,14 @@ contains
                                            vert_nu,    &
                                            vert_nv,    &
                                            val_vert,   &
-                                           level ) result(u_quarter) 
+                                           level )     &
+                                    result(u_quarter) 
 
     integer <in> :: edge_u_nu, edge_u_nv
     real, dimension(vert_nu,vert_nv) <in> :: val_vert
     real <in> :: level
     integer, dimension(edge_u_nu,edge_u_nv)  :: u_quarter
     !!>
-
         Here we compare the scalar field value "vert_val" 
         on each vertex at (i,j) 
 
@@ -404,7 +404,8 @@ contains
                                            vert_nu,    &
                                            vert_nv,    &
                                            val_vert,   &
-                                           level ) result(v_quarter)
+                                           level ) 
+                                    result(v_quarter)
 
     integer <in> :: edge_v_nu, edge_v_nv
     real, dimension(vert_nu,vert_nv) <in> :: val_vert
@@ -441,10 +442,10 @@ contains
   end function edge_level_check_set_v_quarter  
 
 
-  subroutine slice_mesh_edge__level_check( this,       &
-                                           mesh_vert,  &
-                                           val_vert,   &
-                                           level )
+  subroutine slice_mesh__edge_set_quater( this,       &
+                                          mesh_vert,  &
+                                          val_vert,   &
+                                          level )
     class(slice_mesh__edge_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: mesh_vert
     real, dimension(mesh_vert.nu,  &
@@ -536,6 +537,6 @@ contains
       end do
     end subroutine iInterpol_cross_point_edge_v    
 
-  end subroutine slice_mesh_edge__level_check  
+  end subroutine slice_mesh__edge_set_quater  
 
 end module slice_mesh_m
