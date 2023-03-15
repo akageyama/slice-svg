@@ -2,7 +2,7 @@ module const_base_m
   use iso_fortran_env
   implicit none
   private
-  public :: SI, DI, SR, DR, NIL, PI, TWOPI
+  public :: SI, DI, SR, DR, NIL, NAN, PI, TWOPI
   public :: const_base__check
 
   !<< Fortran constants >>!

@@ -1,4 +1,5 @@
 module slice_mesh_m
+  use const_base_m
   use ut_m
   implicit none
   private
@@ -109,7 +110,7 @@ contains
        x=x1   . \  .         | diff2 > 0.0
               .  \ .         |
               .   \ - - - - -  val(x2)
-            x=xi   \ 
+            x=xi   \
 
     !!<
     real :: weight1, weight2
@@ -252,6 +253,7 @@ contains
                                     result(u_quarter) 
 
     integer <in> :: edge_u_nu, edge_u_nv
+    integer <in> :: vert_nu, vert_nv
     real, dimension(vert_nu,vert_nv) <in> :: val_vert
     real <in> :: level
     integer, dimension(edge_u_nu,edge_u_nv)  :: u_quarter
@@ -391,7 +393,7 @@ contains
           !!<
           u_quarter(ei,ej) = SLICE_MESH__EDGE_MP
         else
-          call ut__assert( "__MODFUNC__: case error." )
+          call ut__fatal( "__MODFUNC__: case error." )
         end if
       end do
     end do
@@ -404,10 +406,11 @@ contains
                                            vert_nu,    &
                                            vert_nv,    &
                                            val_vert,   &
-                                           level ) 
+                                           level )     &
                                     result(v_quarter)
 
     integer <in> :: edge_v_nu, edge_v_nv
+    integer <in> :: vert_nu, vert_nv
     real, dimension(vert_nu,vert_nv) <in> :: val_vert
     real <in> :: level
     integer, dimension(edge_v_nu,edge_v_nv) :: v_quarter
@@ -434,7 +437,7 @@ contains
                   val_vert(ei,ej+1) >= level ) then
           v_quarter(ei,ej) = SLICE_MESH__EDGE_MP
         else
-          call ut__assert( "__MODFUNC__: case error." )
+          call ut__fatal( "__MODFUNC__: case error." )
         end if
       end do
     end do
@@ -479,16 +482,16 @@ contains
     call iInterpol_cross_point_edge_u
     call iInterpol_cross_point_edge_v
 
-    call ut__assert( minval(this.u_quarter) ) >= 0,  &
+    call ut__assert( minval(this.u_quarter) >= 0,  &
                      "__MODFUNC__: You missed some edge_u." )
-    call ut__assert( minval(this.v_quarter) ) >= 0,  &
+    call ut__assert( minval(this.v_quarter) >= 0,  &
                      "__MODFUNC__: You missed some edge_v." )
 
   contains
 
     subroutine iInterpol_cross_point_edge_u
       real :: u1, u2, diff1, diff2
-      integer :: quarter
+      integer :: ei, ej, quarter
       !!> 
               .                                 .
                 .       u2            u1      . 
@@ -519,7 +522,7 @@ contains
 
     subroutine iInterpol_cross_point_edge_v
       real :: v1, v2, diff1, diff2
-      integer :: quarter
+      integer :: ei, ej, quarter
       ! edge_v
       do ej = 1, this.v_nv
         do ei = 1, this.v_nu

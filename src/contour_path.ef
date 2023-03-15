@@ -55,8 +55,8 @@ module contour_path_m
     ej - - p==*====m - -   
            | *  \  |              
            |*   PM |             
-           *      \             
-                   \           
+           *      \
+                   \
                  start edge   
   !!< 
 
@@ -110,9 +110,10 @@ contains
   end subroutine register
 
 
-  subroutine jump_to_u_edge_pm_if_possible( path, edge, jumped, 
+  subroutine jump_to_u_edge_pm_if_possible( path, vert, edge, jumped,  &
                                             ei0, ej0 )
     type(contour_path_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <in> :: edge
     logical <io> :: jumped
     integer <in> :: ei0, ej0
@@ -127,16 +128,20 @@ contains
       call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
       call register( path, u, v )
       if ( ej0 == edge.u_nv ) then
-        path.head = contour_path_element_t( 'u', 'on', ei0, ej0, PATH_WESTWARD )
+        path.head = contour_path_element_t( 'u', 'on', ei0, ej0,  &
+                                            PATH_WESTWARD )
       else
-        path.head = contour_path_element_t( 'u', 'in', ei0, ej0, PATH_NORTHWARD )
+        path.head = contour_path_element_t( 'u', 'in', ei0, ej0,  &
+                                            PATH_NORTHWARD )
       end if    
     end if
   end subroutine jump_to_u_edge_pm_if_possible
 
 
-  subroutine jump_to_u_edge_mp_if_possible( path, edge, jumped, ei0, ej0 )
+  subroutine jump_to_u_edge_mp_if_possible( path, vert, edge, jumped,  &
+                                            ei0, ej0 )
     type(contour_path_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <in> :: edge
     logical <io> :: jumped
     integer <in> :: ei0, ej0
@@ -150,17 +155,20 @@ contains
       v = vert.pos_v(ej0)
       call register( path, u, v )
       if ( ej0 == 1 ) then
-        path.head = contour_path_element_t( 'u', 'in', ei0, ej0, SLICE_MESH__BORDER_EASTWARD )
+        path.head = contour_path_element_t( 'u', 'in', ei0, ej0,  &
+                                            SLICE_MESH__BORDER_EASTWARD )
       else
-        path.head = contour_path_element_t( 'u', 'in', ei0, ej0, SLICE_MESH__SOUTHWARD )
+        path.head = contour_path_element_t( 'u', 'in', ei0, ej0,  &
+                                            SLICE_MESH__SOUTHWARD )
       end if    
     end if
   end subroutine jump_to_u_edge_mp_if_possible  
 
 
-  subroutine jump_to_v_edge_pm_if_possible( path, edge, jumped,  &
+  subroutine jump_to_v_edge_pm_if_possible( path, vert, edge, jumped,  &
                                             ei0, ej0 )
     type(contour_path_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <in> :: edge
     logical <io> :: jumped
     integer <in> :: ei0, ej0
@@ -175,16 +183,19 @@ contains
       call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
       call register( path, u, v )
       if ( ei0 == 1 ) then
-        path.head = contour_path_element_t( 'v', 'on', ei0, ej0, PATH_SOUTHWARD )
+        path.head = contour_path_element_t( 'v', 'on', ei0, ej0,  &
+                                            PATH_SOUTHWARD )
       else
-        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, PATH_WESTWARD )
+        path.head = contour_path_element_t( 'v', 'in', ei0, ej0,  &
+                                            PATH_WESTWARD )
       end if
     end if
   end subroutine jump_to_v_edge_pm_if_possible   
 
 
-  subroutine jump_to_v_edge_mp_if_possible( path, edge, jumped, ei0, ej0 )
+  subroutine jump_to_v_edge_mp_if_possible( path, vert, edge, jumped, ei0, ej0 )
     type(contour_path_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <in> :: edge
     logical <io> :: jumped
     integer <in> :: ei0, ej0
@@ -199,16 +210,18 @@ contains
       call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
       call register( path, u, v )
       if ( ei0 == edge.u_nu ) then
-        path.head = contour_path_element_t( 'v', 'on', ei0, ej0, PATH_NORTHWARD )
+        path.head = contour_path_element_t( 'v', 'on', ei0, ej0,  &
+                                            PATH_NORTHWARD )
       else
-        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, PATH_EASTWARD )
+        path.head = contour_path_element_t( 'v', 'in', ei0, ej0,  &
+                                            PATH_EASTWARD )
       end if
     end if
   end subroutine jump_to_v_edge_mp_if_possible 
 
 
   subroutine go_along_boundary_on_v_edge_north( path,   &
-                                                vert    &
+                                                vert,   &
                                                 edge )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
@@ -243,7 +256,7 @@ contains
         u = vert.pos_u(vi)
         v = vert.pos_v(vj+1)
         call register( path, u, v )
-        call mesh_edge.erase( 'v', vi, vj )
+        call edge.erase( 'v', vi, vj )
         if ( vj+1 == vert.nv ) then ! you have reached the north-east corner.
           !!>
                         __ you will go this way.
@@ -287,7 +300,7 @@ contains
         v = edge.v_cross_coord(vi,vj)
         call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
         call register( path, u, v )
-        call mesh_edge.erase( 'v', vi, vj )
+        call edge.erase( 'v', vi, vj )
         path.head = contour_path_element_t( 'v', 'in', vi, vj, PATH_WESTWARD )
       case default
         call fatal( '__MODFUNC__: Strange. Could not find path.' )
@@ -321,7 +334,7 @@ contains
         u = vert.pos_u(vi)
         v = vert.pos_v(vj-1)
         call register( path, u, v )
-        call mesh_edge.erase( 'v', vi, vj-1 )
+        call edge.erase( 'v', vi, vj-1 )
         if ( vj-1 == 1 ) then ! you have reached the south-west corner.
           path.head = contour_path_element_t( 'u', 'on', vi,    1, PATH_EASTWARD )
         else
@@ -344,7 +357,7 @@ contains
         v = edge.v_cross_coord(vi,vj)
         call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
         call register( path, u, v )
-        call mesh_edge.erase( 'v', vi, vj-1 )
+        call edge.erase( 'v', vi, vj-1 )
         path.head = contour_path_element_t( 'v', 'in', vi, vj, PATH_EASTWARD )
       case default
         call fatal( '__MODFUNC__: Strange. Could not find path.' )
@@ -380,7 +393,7 @@ contains
                       /      You have come along this edge.
                      /       /        
             - - p - - - p * * *             
-                .\      .\           
+                .\      .\
                 . \     . \__ Current head of vertex-type (vi,vj)
                 .  \    .
                 + - - - +
@@ -391,7 +404,7 @@ contains
         u = vert.pos_u(vi-1)
         v = vert.pos_v(vj)
         call register( path, u, v )
-        call mesh_edge.erase( 'u', vi-1, vj )
+        call edge.erase( 'u', vi-1, vj )
         if ( vi-1 == 1 ) then ! you have reached the north-west corner.
           !!>                
                               __ new head of vertex-type (vi-1,vj)
@@ -437,7 +450,7 @@ contains
         v = vert.pos_v(vj)
         call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
         call register( path, u, v )
-        call mesh_edge.erase( 'u', vi-1, vj )
+        call edge.erase( 'u', vi-1, vj )
         path.head = contour_path_element_t( 'u', 'in', vi-1, vj, PATH_SOUTHWARD )
       case default
         call fatal( '__MODFUNC__: Strange. Could not find path.' )
@@ -471,7 +484,7 @@ contains
         u = vert.pos_u(vi)
         v = vert.pos_v(vj)
         call register( path, u, v )
-        call mesh_edge.erase( 'u', vi, vj )
+        call edge.erase( 'u', vi, vj )
         if ( vi+1 == vert.nu ) then ! you have reached the south-east corner.
           path.head = contour_path_element_t( 'v', 'on', vi+1, vj, PATH_NORTHWARD )
         else
@@ -483,7 +496,7 @@ contains
         v = vert.pos_v(vj)
         call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
         call register( path, u, v )
-        call mesh_edge.erase( 'u', vi, vj )
+        call edge.erase( 'u', vi, vj )
         path.head = contour_path_element_t( 'u', 'in', vi, vj, PATH_NORTHWARD )
       case default
         call fatal( '__MODFUNC__: Strange. Could not find path.' )
@@ -580,7 +593,7 @@ contains
                               p - * m
                                 From 
                          !!<
-        if ( jumped ) call mesh_edge.erase( 'u', ei, ej )
+        if ( jumped ) call edge.erase( 'u', ei, ej )
       case (PATH_WESTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODFUNC__: Must be edge-v here." )
@@ -610,7 +623,7 @@ contains
                               m -*- p
                                 To
                          !!<
-        if ( jumped ) call mesh_edge.erase( 'v', ei, ej )
+        if ( jumped ) call edge.erase( 'v', ei, ej )
       case (PATH_SOUTHWARD)
         call ut__assert( path.head.which_edge == 'u',  &
                          "__MODFUNC__: Must be edge-u here." )
@@ -642,7 +655,7 @@ contains
                               |    *|To
                               m - - m
                          !!<
-        if ( jumped ) call mesh_edge.erase( 'u', ei, ej )
+        if ( jumped ) call edge.erase( 'u', ei, ej )
       case (PATH_EASTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODFUNC__: Must be edge-v here." )
@@ -672,7 +685,7 @@ contains
                          From *     |
                               m - - m
                          !!<
-        if ( jumped ) call mesh_edge.erase( 'v', ei, ej )
+        if ( jumped ) call edge.erase( 'v', ei, ej )
       case default
         call ut__fatal( '__MODFUNC__: case error.' )
     end select
