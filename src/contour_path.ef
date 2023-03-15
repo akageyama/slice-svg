@@ -110,7 +110,8 @@ contains
   end subroutine register
 
 
-  subroutine jump_to_u_edge_pm_if_possible( path, edge, jumped, ei0, ej0 )
+  subroutine jump_to_u_edge_pm_if_possible( path, edge, jumped, 
+                                            ei0, ej0 )
     type(contour_path_t) <io> :: path
     type(slice_mesh__edge_t) <in> :: edge
     logical <io> :: jumped
@@ -123,6 +124,7 @@ contains
       jumped = .true.
       u = edge.u_cross_coord(ei0,ej0)
       v = vert.pos_v(ej0)
+      call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
       call register( path, u, v )
       if ( ej0 == edge.u_nv ) then
         path.head = contour_path_element_t( 'u', 'on', ei0, ej0, PATH_WESTWARD )
@@ -156,7 +158,8 @@ contains
   end subroutine jump_to_u_edge_mp_if_possible  
 
 
-  subroutine jump_to_v_edge_pm_if_possible( path, edge, jumped, ei0, ej0 )
+  subroutine jump_to_v_edge_pm_if_possible( path, edge, jumped,  &
+                                            ei0, ej0 )
     type(contour_path_t) <io> :: path
     type(slice_mesh__edge_t) <in> :: edge
     logical <io> :: jumped
@@ -169,11 +172,12 @@ contains
       jumped = .true.
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
+      call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
       call register( path, u, v )
       if ( ei0 == 1 ) then
-        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, SLICE_MESH__BORDER_SOUTHWARD )
+        path.head = contour_path_element_t( 'v', 'on', ei0, ej0, PATH_SOUTHWARD )
       else
-        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, SLICE_MESH__WESTWARD )
+        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, PATH_WESTWARD )
       end if
     end if
   end subroutine jump_to_v_edge_pm_if_possible   
@@ -192,14 +196,15 @@ contains
       jumped = .true.
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
+      call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
       call register( path, u, v )
       if ( ei0 == edge.u_nu ) then
-        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, SLICE_MESH__BORDER_NORTHWARD )
+        path.head = contour_path_element_t( 'v', 'on', ei0, ej0, PATH_NORTHWARD )
       else
-        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, SLICE_MESH__EASTWARD )
+        path.head = contour_path_element_t( 'v', 'in', ei0, ej0, PATH_EASTWARD )
       end if
     end if
-  end subroutine jump_to_v_edge_mp_if_possible    
+  end subroutine jump_to_v_edge_mp_if_possible 
 
 
   subroutine go_along_boundary_on_v_edge_north( path,   &
@@ -216,7 +221,7 @@ contains
                      "__MODFUNC__: The path should be on border." )
 
     call ut__assert( path.head.direct == PATH_NORTHWARD,  &
-                     "__MODFUNC__: Wrong call." )
+                     "__MODFUNC__: The path is supposed to go north." )
 
     vi = path.head.i
     vj = path.head.j
@@ -231,7 +236,7 @@ contains
               .       .            
             - + - - - p <== current head of vertex-type (vi,vj)
               .       *            
-              .       * <== you came
+              .       * <== You have come
               .       *     along this edge.
         !!<
         jumped = .true.
@@ -239,7 +244,7 @@ contains
         v = vert.pos_v(vj+1)
         call register( path, u, v )
         call mesh_edge.erase( 'v', vi, vj )
-        if ( vj+1 == edge.v_nv ) then ! you have reached the north-east corner.
+        if ( vj+1 == vert.nv ) then ! you have reached the north-east corner.
           !!>
                         __ you will go this way.
                        /    
@@ -254,7 +259,7 @@ contains
           path.head = contour_path_element_t( 'u', 'on', vi, vj+1, PATH_WESTWARD )
         else
           !!>
-                   .       * <== you will go this way.
+                   .       * <== you will continue going this way.
                    .       *
                  - + - - - p <= new head of vertex type (vi,vj+1)
                    .       *
@@ -280,6 +285,7 @@ contains
         jumped = .true.
         u = vert.pos_u(vi)
         v = edge.v_cross_coord(vi,vj)
+        call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
         call register( path, u, v )
         call mesh_edge.erase( 'v', vi, vj )
         path.head = contour_path_element_t( 'v', 'in', vi, vj, PATH_WESTWARD )
@@ -304,7 +310,7 @@ contains
                      "__MODFUNC__: The path should be on border." )
 
     call ut__assert( path.head.direct == PATH_NORTHWARD,  &
-                     "__MODFUNC__: Wrong call." )
+                     "__MODFUNC__: The path is supposed to go north." )
 
     vi = path.head.i
     vj = path.head.j
@@ -317,7 +323,7 @@ contains
         call register( path, u, v )
         call mesh_edge.erase( 'v', vi, vj-1 )
         if ( vj-1 == 1 ) then ! you have reached the south-west corner.
-          path.head = contour_path_element_t( 'u', 'on', vi, vj+1, PATH_EASTWARD )
+          path.head = contour_path_element_t( 'u', 'on', vi,    1, PATH_EASTWARD )
         else
           path.head = contour_path_element_t( 'v', 'on', vi, vj-1, PATH_SOUTHWARD )
         end if
@@ -336,6 +342,7 @@ contains
         jumped = .true.
         u = vert.pos_u(vi)
         v = edge.v_cross_coord(vi,vj)
+        call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
         call register( path, u, v )
         call mesh_edge.erase( 'v', vi, vj-1 )
         path.head = contour_path_element_t( 'v', 'in', vi, vj, PATH_EASTWARD )
@@ -360,7 +367,7 @@ contains
                      "__MODFUNC__: The path should be on border." )
 
     call ut__assert( path.head.direct == PATH_WESTWARD,  &
-                     "__MODFUNC__: Wrong call." )
+                     "__MODFUNC__: The path is supposed to go north." )
 
     vi = path.head.i
     vj = path.head.j
@@ -370,7 +377,7 @@ contains
         !!>
                         __ You will go this way.
                        /
-                      /      You came along this edge.
+                      /      You have come along this edge.
                      /       /        
             - - p - - - p * * *             
                 .\      .\           
@@ -396,12 +403,12 @@ contains
                             + - - - + - -
                             .       .
           !!<
-          path.head = contour_path_element_t( 'v', 'on', vi-1, vj, PATH_SOUTHWARD )
+          path.head = contour_path_element_t( 'v', 'on', 1, vj, PATH_SOUTHWARD )
         else
           !!>
                          __ new head of vertex type (vi-1,vj)
                         /
-                       /  ___ you will go this way
+                       /  ___ you will continue going this way.
                       /  /
                      /  /      
                   - p * * * p * * You came along this border.
@@ -428,6 +435,7 @@ contains
         jumped = .true.
         u = edge.u_cross_coord(vi-1,vj)
         v = vert.pos_v(vj)
+        call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
         call register( path, u, v )
         call mesh_edge.erase( 'u', vi-1, vj )
         path.head = contour_path_element_t( 'u', 'in', vi-1, vj, PATH_SOUTHWARD )
@@ -452,7 +460,7 @@ contains
                      "__MODFUNC__: The path should be on border." )
 
     call ut__assert( path.head.direct == PATH_EASTWARD,  &
-                     "__MODFUNC__: Wrong call." )
+                     "__MODFUNC__: The path is supposed to go north." )
 
     vi = path.head.i
     vj = path.head.j
@@ -464,7 +472,7 @@ contains
         v = vert.pos_v(vj)
         call register( path, u, v )
         call mesh_edge.erase( 'u', vi, vj )
-        if ( vi+1 == edge.u_nu ) then ! you have reached the south-east corner.
+        if ( vi+1 == vert.nu ) then ! you have reached the south-east corner.
           path.head = contour_path_element_t( 'v', 'on', vi+1, vj, PATH_NORTHWARD )
         else
           path.head = contour_path_element_t( 'u', 'on', vi+1, vj, PATH_EASTWARD )
@@ -473,6 +481,7 @@ contains
         jumped = .true.
         u = edge.u_cross_coord(vi,vj)
         v = vert.pos_v(vj)
+        call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
         call register( path, u, v )
         call mesh_edge.erase( 'u', vi, vj )
         path.head = contour_path_element_t( 'u', 'in', vi, vj, PATH_NORTHWARD )
@@ -508,10 +517,9 @@ contains
   subroutine jump_to_other_edge( path,  &
                                  vert,  &
                                  edge )
-    char(len=*) <in> :: which_way
-    type(contour_path_t) <in> :: path
+    type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <io> :: edge
+    type(slice_mesh__edge_t) <in> :: edge
 
     logical :: jumped
 
@@ -727,9 +735,9 @@ contains
     integer <const> :: PM = SLICE_MESH__EDGE_LEVEL_QUARTER_PM
 
     !!>
-             |       |       |    _ Contour line       
-           - m - - - m - - - m   /    at "level"
-             |       |       * */             
+             |       |       |    _ Contour line     | 
+           - m - - - m - - - m   /    at "level" - - m
+             |       |       * */                    |
              |       |    *  |   *   |       |       |      
            - m - - - m -*- - p - - * m - - - m - - - m   ej=3
              |       *       |       *       |       |
@@ -742,7 +750,6 @@ contains
                   \__ Will find this edge_u
 
 
-
         We will search for the start edge in this order,
            1. South border
            2. East border
@@ -752,10 +759,10 @@ contains
                        <---
                    +----------+
                    |  North   |    
-               |   |W        E|   ^
-               |   |e        a|   |
-               v   |s        s|   |
-                   |t South  t|    
+               |  W|          |E   ^
+               |  e|          |a   |
+               v  s|          |s   |
+                  t|  South   |t    
                    +----------+
                        ---> 
     !!<    
@@ -769,7 +776,6 @@ contains
     !----------------!
     ! South boundary !
     !----------------!
-
     ej = 1
     do ei = 1, mesh_edge.u_nu
       quarter = mesh_edge.u_quarter(ei,ej)
