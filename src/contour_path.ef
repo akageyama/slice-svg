@@ -305,7 +305,7 @@ contains
         call edge.erase( 'v', vi, vj )
         path.head = contour_path__element_t( 'v', 'in', vi, vj, PATH_WESTWARD )
       case default
-        call fatal( '__MODFUNC__: Strange. Could not find path.' )
+        call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
 
   end subroutine go_along_boundary_on_v_edge_north
@@ -363,7 +363,7 @@ contains
         call edge.erase( 'v', vi, vj-1 )
         path.head = contour_path__element_t( 'v', 'in', vi, vj, PATH_EASTWARD )
       case default
-        call fatal( '__MODFUNC__: Strange. Could not find path.' )
+        call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
 
   end subroutine go_along_boundary_on_v_edge_south
@@ -458,7 +458,7 @@ contains
         call edge.erase( 'u', vi-1, vj )
         path.head = contour_path__element_t( 'u', 'in', vi-1, vj, PATH_SOUTHWARD )
       case default
-        call fatal( '__MODFUNC__: Strange. Could not find path.' )
+        call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
 
   end subroutine go_along_boundary_on_u_edge_west
@@ -506,7 +506,7 @@ contains
         call edge.erase( 'u', vi, vj )
         path.head = contour_path__element_t( 'u', 'in', vi, vj, PATH_NORTHWARD )
       case default
-        call fatal( '__MODFUNC__: Strange. Could not find path.' )
+        call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
 
   end subroutine go_along_boundary_on_u_edge_east
@@ -540,7 +540,7 @@ contains
                                  edge )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <in> :: edge
+    type(slice_mesh__edge_t) <io> :: edge
 
     integer :: ei, ej
     logical :: jumped
@@ -574,8 +574,8 @@ contains
       case (PATH_NORTHWARD)
         call ut__assert( path.head.which_edge == 'u',  &
                          "__MODFUNC__: Must be edge-u here." )
-        call jump_to_v_edge_mp_if_possible( path, edge, jumped,  &
-                                            ei+1, ej)
+        call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
+                                            jumped, ei+1, ej )
                          !!>
                               p - - p
                               |    *|To
@@ -583,8 +583,8 @@ contains
                               p -*- m
                                 From 
                          !!<
-        call jump_to_u_edge_pm_if_possible( path, edge, jumped,  &
-                                            ei, ej+1 )
+        call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej+1 )
                          !!>
                                 To
                               p -*- m
@@ -593,8 +593,8 @@ contains
                               p -*- m
                                 From 
                          !!<
-        call jump_to_v_edge_pm_if_possible( path, edge, jumped,  &
-                                            ei, ej )
+        call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej )
                          !!>
                               m - - m
                             To*     |
@@ -606,8 +606,8 @@ contains
       case (PATH_WESTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODFUNC__: Must be edge-v here." )
-        call jump_to_u_edge_pm_if_possible( path, edge, jumped,  &
-                                            ei-1, ej+1 )
+        call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei-1, ej+1 )
                          !!>
                                 To
                               p -*- m
@@ -615,16 +615,16 @@ contains
                               |    *|From
                               p - - p
                          !!<
-        call jump_to_v_edge_pm_if_possible( path, edge, jumped,  &
-                                            ei-1, ej )
+        call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei-1, ej )
                          !!>
                               m - - m
                               |     |
                             To|* * *|From
                               p - - p
                          !!<
-        call jump_to_u_edge_mp_if_possible( path, edge, jumped,  &
-                                            ei-1, ej )
+        call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
+                                            jumped, ei-1, ej )
                          !!>
                               m - - m
                               |    *|
@@ -636,8 +636,8 @@ contains
       case (PATH_SOUTHWARD)
         call ut__assert( path.head.which_edge == 'u',  &
                          "__MODFUNC__: Must be edge-u here." )
-        call jump_to_v_edge_pm_if_possible( path, edge, jumped,  &
-                                            ei, ej-1 )
+        call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej-1 )
                          !!>
                                 From
                               m -*- p
@@ -645,8 +645,8 @@ contains
                            To |*    |
                               p - - p
                          !!<
-        call jump_to_u_edge_mp_if_possible( path, edge, jumped,  &
-                                            ei, ej-1 )
+        call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej-1 )
                          !!>
                                 From
                               m -*- p
@@ -655,8 +655,8 @@ contains
                               m -*- p
                                  To
                          !!<
-        call jump_to_v_edge_mp_if_possible( path, edge, jumped,  &
-                                            ei+1, ej-1 )
+        call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
+                                            jumped, ei+1, ej-1 )
                          !!>
                                 From
                               m -*- p
@@ -668,8 +668,8 @@ contains
       case (PATH_EASTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODFUNC__: Must be edge-v here." )
-        call jump_to_u_edge_mp_if_possible( path, edge, jumped,  &
-                                            ei, ej )
+        call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej )
                          !!>
                               p - - p
                          From *     |
@@ -677,16 +677,16 @@ contains
                               m * - p
                                 To
                          !!<
-        call jump_to_v_edge_mp_if_possible ( path, edge, jumped,  &
-                                             ei+1, ej )
+        call jump_to_v_edge_mp_if_possible ( path, vert, edge,  &
+                                            jumped, ei+1, ej )
                          !!>
                               p - - p
                          From * * * * To
                               |     |
                               m - - m
                          !!<
-        call jump_to_u_edge_pm_if_possible( path, edge, jumped,  &
-                                            ei, ej+1 )
+        call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej+1 )
                          !!>
                                 To
                               p * - m
@@ -1217,7 +1217,7 @@ contains
         case ('in')
           call jump_to_other_edge( path, vert, edge )
         case default
-          call ut__assert( "__MODFUNC__: case error." )
+          call ut__fatal( "__MODFUNC__: case error." )
       end select
       if ( path.is_closed() ) return
     end do

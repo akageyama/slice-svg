@@ -85,7 +85,7 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh__edge_initialize
     procedure :: finalize => slice_mesh__edge_finalize
-    procedure :: set_quater => slice_mesh__edge_set_quater
+    procedure :: set_quarter => slice_mesh__edge_set_quarter
     procedure :: erase => slice_mesh_edge__erase
   end type slice_mesh__edge_t    
 
@@ -445,10 +445,10 @@ contains
   end function edge_level_check_set_v_quarter  
 
 
-  subroutine slice_mesh__edge_set_quater( this,       &
-                                          mesh_vert,  &
-                                          val_vert,   &
-                                          level )
+  subroutine slice_mesh__edge_set_quarter( this,       &
+                                           mesh_vert,  &
+                                           val_vert,   &
+                                           level )
     class(slice_mesh__edge_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: mesh_vert
     real, dimension(mesh_vert.nu,  &
@@ -540,6 +540,6 @@ contains
       end do
     end subroutine iInterpol_cross_point_edge_v    
 
-  end subroutine slice_mesh__edge_set_quater  
+  end subroutine slice_mesh__edge_set_quarter  
 
 end module slice_mesh_m
