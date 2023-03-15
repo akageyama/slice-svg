@@ -120,7 +120,7 @@ contains
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
-    if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
+    if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = edge.u_cross_coord(ei0,ej0)
       v = vert.pos_v(ej0)
@@ -144,7 +144,7 @@ contains
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
-    if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_MP ) then
+    if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = edge.u_cross_coord(ei0,ej0)
       v = vert.pos_v(ej0)
@@ -168,7 +168,7 @@ contains
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
-    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_PM ) then
+    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
@@ -192,7 +192,7 @@ contains
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
-    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_LEVEL_QUARTER_MP ) then
+    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
@@ -227,7 +227,7 @@ contains
     vj = path.head.j
 
     select case ( edge.v_quarter(vi,vj) )
-      case (SLICE_MESH__EDGE_LEVEL_QUARTER_PP) 
+      case (SLICE_MESH__EDGE_PP) 
         !!>
               .       |            
             - + - - - p            
@@ -271,7 +271,7 @@ contains
           !!<
           path.head = contour_path_element_t( 'v', 'on', vi, vj+1, PATH_NORTHWARD )
         end if
-      case (SLICE_MESH__EDGE_LEVEL_QUARTER_PM )
+      case (SLICE_MESH__EDGE_PM )
         !!>
                    .       |
                  - + - - - m
@@ -316,7 +316,7 @@ contains
     vj = path.head.j
 
     select case ( edge.v_quarter(vi,vj-1) )
-      case (SLICE_MESH__EDGE_LEVEL_QUARTER_PP) 
+      case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
         u = vert.pos_u(vi)
         v = vert.pos_v(vj-1)
@@ -327,7 +327,7 @@ contains
         else
           path.head = contour_path_element_t( 'v', 'on', vi, vj-1, PATH_SOUTHWARD )
         end if
-      case (SLICE_MESH__EDGE_LEVEL_QUARTER_MP )
+      case (SLICE_MESH__EDGE_MP )
         !!>
                    *       |
                    *       |
@@ -373,7 +373,7 @@ contains
     vj = path.head.j
 
     select case ( edge.u_quarter(vi-1,vj) )
-      case (SLICE_MESH__EDGE_LEVEL_QUARTER_PP) 
+      case (SLICE_MESH__EDGE_PP) 
         !!>
                         __ You will go this way.
                        /
@@ -420,7 +420,7 @@ contains
           !!<
           path.head = contour_path_element_t( 'u', 'on', vi-1, vj, PATH_WESTWARD )
         end if
-      case (SLICE_MESH__EDGE_LEVEL_QUARTER_MP )
+      case (SLICE_MESH__EDGE_MP )
         !!>
                            __ new head of edge type (vi-1,vj)
                           /
@@ -466,7 +466,7 @@ contains
     vj = path.head.j
 
     select case ( edge.u_quarter(vi,vj) )
-      case (SLICE_MESH__EDGE_LEVEL_QUARTER_PP) 
+      case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
         u = vert.pos_u(vi)
         v = vert.pos_v(vj)
@@ -477,7 +477,7 @@ contains
         else
           path.head = contour_path_element_t( 'u', 'on', vi+1, vj, PATH_EASTWARD )
         end if
-      case (SLICE_MESH__EDGE_LEVEL_QUARTER_PM )
+      case (SLICE_MESH__EDGE_PM )
         jumped = .true.
         u = edge.u_cross_coord(vi,vj)
         v = vert.pos_v(vj)
@@ -729,10 +729,10 @@ contains
     char(len=10) <io> :: status ! 'no contour' or 'have found'
 
     ! To shorten.
-    integer <const> :: MM = SLICE_MESH__EDGE_LEVEL_QUARTER_MM
-    integer <const> :: PP = SLICE_MESH__EDGE_LEVEL_QUARTER_PP
-    integer <const> :: MP = SLICE_MESH__EDGE_LEVEL_QUARTER_MP
-    integer <const> :: PM = SLICE_MESH__EDGE_LEVEL_QUARTER_PM
+    integer <const> :: MM = SLICE_MESH__EDGE_MM
+    integer <const> :: PP = SLICE_MESH__EDGE_PP
+    integer <const> :: MP = SLICE_MESH__EDGE_MP
+    integer <const> :: PM = SLICE_MESH__EDGE_PM
 
     !!>
              |       |       |    _ Contour line     | 
@@ -1089,10 +1089,10 @@ contains
     char(len=10) <io> :: status ! 'no contour' or 'have found'
 
     ! To shorten.
-    integer <const> :: MM = SLICE_MESH__EDGE_LEVEL_QUARTER_MM
-    integer <const> :: PP = SLICE_MESH__EDGE_LEVEL_QUARTER_PP
-    integer <const> :: MP = SLICE_MESH__EDGE_LEVEL_QUARTER_MP
-    integer <const> :: PM = SLICE_MESH__EDGE_LEVEL_QUARTER_PM
+    integer <const> :: MM = SLICE_MESH__EDGE_MM
+    integer <const> :: PP = SLICE_MESH__EDGE_PP
+    integer <const> :: MP = SLICE_MESH__EDGE_MP
+    integer <const> :: PM = SLICE_MESH__EDGE_PM
 
     !!>
              |       |       |       |       |    
