@@ -107,7 +107,7 @@ svglist := sample_line.svg \
 
 fig: runme
 	./runme
-	open $(svglist)
+	# open $(svglist)
 
 runme: $(objlist)
 	$(FC) $(FFLAGS) -o runme $(objlist)
