@@ -12,7 +12,7 @@ program main
   integer <const> :: NU_VECTOR = 60,   NV_VECTOR = 30
   ! integer <const> :: NU_VECTOR = 240,   NV_VECTOR = 120
   ! integer <const> :: NU_SCALAR = 2001, NV_SCALAR = 1001
-  integer <const> :: NU_SCALAR = 101, NV_SCALAR = 51
+  integer <const> :: NU_SCALAR = 41, NV_SCALAR = 21
   ! integer <const> :: NU_SCALAR = 21, NV_SCALAR = 11
   integer :: i, j
   real :: pos_u, pos_v
@@ -308,15 +308,17 @@ contains
 
     call sketch.group_push( line_color=magenta,  &
                             line_width_in_pixel=2.0 )
-      
-      do l = 0, 9
-        level_min = 0.1*l
-        level_max = 0.1*(l+1)
+!debug       
+!      do l = 0, 9
+!        level_min = 0.1*l
+!        level_max = 0.1*(l+1)
+level_min = 0.7
+level_max = 0.7
         level_middle = ( level_min + level_max ) / 2
         color = color__normalized_real_to_color( level_middle )
         call slice_pressure.vis_contour( sketch, level_min, level_max,  &
                                          fill_color=color )
-      end do
+!      end do
 
       !!>
         call slice_pressure.vis_contour( sketch, 0.6, fill_color=COLOR__CONST.gray(0.9) )

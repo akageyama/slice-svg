@@ -241,6 +241,8 @@ contains
     vi = path.head.i
     vj = path.head.j
 
+!debugp "__FUNC__", vi, vj
+!debugp edge.v_quarter(vi,vj)
     select case ( edge.v_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         !!>
@@ -325,11 +327,14 @@ contains
     call ut__assert( path.head.lane == 'on',  &
                      "__MODFUNC__: The path should be on border." )
 
-    call ut__assert( path.head.direct == PATH_NORTHWARD,  &
+    call ut__assert( path.head.direct == PATH_SOUTHWARD,  &
                      "__MODFUNC__: The path is supposed to go north." )
 
     vi = path.head.i
     vj = path.head.j
+
+!debugp "__FUNC__", vi, vj
+!debugp edge.v_quarter(vi,vj)
 
     select case ( edge.v_quarter(vi,vj-1) )
       case (SLICE_MESH__EDGE_PP) 
@@ -385,11 +390,15 @@ contains
                      "__MODFUNC__: The path should be on border." )
 
     call ut__assert( path.head.direct == PATH_WESTWARD,  &
-                     "__MODFUNC__: The path is supposed to go north." )
+                     "__MODFUNC__: The path is supposed to go west." )
 
     vi = path.head.i
     vj = path.head.j
 
+!debugp vi, vj
+!debugp edge.u_quarter(vi,vj)
+!debugp edge.u_quarter(vi-1,vj)
+!debugp "hello?"
     select case ( edge.u_quarter(vi-1,vj) )
       case (SLICE_MESH__EDGE_PP) 
         !!>
@@ -405,6 +414,7 @@ contains
                 .    \  . 
                 .     New head of vertex-type
         !!<
+!debugp "[2] PP"        
         jumped = .true.
         u = vert.pos_u(vi-1)
         v = vert.pos_v(vj)
@@ -421,6 +431,7 @@ contains
                             + - - - + - -
                             .       .
           !!<
+!debugp "[3] ", vj         
           path.head = contour_path__element_t( 'v', 'on', 1, vj, PATH_SOUTHWARD )
         else
           !!>
@@ -439,6 +450,7 @@ contains
           path.head = contour_path__element_t( 'u', 'on', vi-1, vj, PATH_WESTWARD )
         end if
       case (SLICE_MESH__EDGE_MP )
+!debugp "[X] SLICE_MESH__EDGE_MP = ", SLICE_MESH__EDGE_MP
         !!>
                            __ new head of edge type (vi-1,vj)
                           /
@@ -484,7 +496,8 @@ contains
 
     vi = path.head.i
     vj = path.head.j
-
+!debugp "__FUNC__", vi, vj
+!debugp edge.u_quarter(vi,vj)
     select case ( edge.u_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
@@ -520,14 +533,19 @@ contains
     call ut__assert( path.head.lane == 'on',  &
                      "__MODFUNC__: The path should be on border." )
 
+!debugp "__FUNC__", path.head.direct
     select case (path.head.direct)
       case (PATH_NORTHWARD)
+!debugp " [a] calling go_along_boundary_on_v_edge_north"
         call go_along_boundary_on_v_edge_north( path, vert, edge )
       case (PATH_SOUTHWARD)
+!debugp " [b] calling go_along_boundary_on_v_edge_south"
         call go_along_boundary_on_v_edge_south( path, vert, edge )
       case (PATH_WESTWARD)
+!debugp " [c] calling go_along_boundary_on_u_edge_west"
         call go_along_boundary_on_u_edge_west( path, vert, edge )
       case (PATH_EASTWARD)
+!debugp " [d] calling go_along_boundary_on_u_edge_east"
         call go_along_boundary_on_u_edge_east( path, vert, edge )
       case default
         call ut__fatal( "__MODFUNC__: case error." )
@@ -552,6 +570,13 @@ contains
 
     ei = path.head.i
     ej = path.head.j
+
+!debugp "** in jump_to_other_edge"
+!debugp path.head.direct
+!debugp ei, ej
+!debugp "PATH_NORTHWARD = ", PATH_NORTHWARD
+!debugp "PATH_WESTWARD = ", PATH_WESTWARD
+!debugp "PATH_SOUTHWARD = ", PATH_SOUTHWARD
 
     select case (path.head.direct)
       !!>
@@ -710,6 +735,15 @@ contains
 
     logical :: con1, con2, con3
 
+! debug s 
+if ( this.head.which_edge == 'u' .and. this.start.j==1 ) then
+!debugp this.head.which_edge
+!debugp this.start.i
+!debugp this.start.j
+!debugp this.head.i
+!debugp this.head.j
+end if
+! debug e
     con1 = ( this.head.which_edge == this.start.which_edge )
     con2 = ( this.head.i == this.start.i )
     con3 = ( this.head.j == this.start.j )
@@ -803,12 +837,15 @@ contains
     ej = 1
     do ei = 1, mesh_edge.u_nu
       quarter = mesh_edge.u_quarter(ei,ej)
+!debugp "finding start in south" 
+!debugp ei, ej, quarter
       if ( quarter == MP  .or.  &
            quarter == PM  .or.  &
            quarter == PP ) then
+!debugp "*** Found in South boundary!"
         status = 'have found'
         path.start = contour_path__element_t( 'u', 'on', ei, ej, PATH_EASTWARD )
-
+!debugp " start at ei,ej=", ei, ej
         !!>           
             [case MP] (This is the most plausible case.)
 
@@ -886,7 +923,6 @@ contains
         v1 = mesh_vert.pos_v(ej)
         call register( path, u1, v1 )
         call register( path, u2, v1 )
-        call mesh_edge.erase( 'u', ei, ej )
 
         ! Add path head.
         select case (quarter)
@@ -896,11 +932,12 @@ contains
           case (MP,PP)
             if ( ei < mesh_edge.u_nu ) then
               ! You will go along the south bourder.
-              path.head = contour_path__element_t( 'u', 'on', ei, ej, PATH_NORTHWARD )
+              path.head = contour_path__element_t( 'u', 'on', ei+1, ej, PATH_EASTWARD )
             else 
               ! you are on the south-east corner. Go toward north along the east border.
               path.head = contour_path__element_t( 'v', 'on', ei+1, ej, PATH_NORTHWARD )
             end if
+!            call mesh_edge.erase( 'u', ei, ej )
           case default
             call ut__fatal( "__MODFUNC__: case error." )
         end select
@@ -942,6 +979,7 @@ contains
              - p - - - - p  <== 1st register
                .         *
     !!<
+!debugp "finding start in east" 
     ei = mesh_edge.v_nu
     do ej = 1, mesh_edge.v_nv
       quarter = mesh_edge.v_quarter(ei,ej)
@@ -949,6 +987,8 @@ contains
            quarter == MP  .or.  &
            quarter == PP ) then
         status = 'have found'
+!debugp "*** Found in East boundary!"
+
         path.start = contour_path__element_t( 'v', 'on', ei, ej, PATH_NORTHWARD )
         select case (quarter)
           case (PM)
@@ -969,7 +1009,6 @@ contains
         u1 = mesh_vert.pos_u(ei)
         call register( path, u1, v1 )
         call register( path, u1, v2 )
-        call mesh_edge.erase( 'v', ei, ej )
 
         ! Add path head.
         select case (quarter)
@@ -982,6 +1021,7 @@ contains
               ! you are on the north-east corner. turn west.
               path.head = contour_path__element_t( 'u', 'on', ei-1, ej+1, PATH_WESTWARD )
             end if
+!            call mesh_edge.erase( 'v', ei, ej )
           case default
             call ut__fatal( "__MODFUNC__: case error." )
         end select
@@ -992,14 +1032,18 @@ contains
     !----------------!
     ! North boundary !
     !----------------!
-    ej = mesh_edge.v_nv
+!debugp "finding start in North" 
+    ej = mesh_edge.u_nv
     do ei = mesh_edge.u_nu, 1, -1 ! No strong reason to cound down here.
       quarter = mesh_edge.u_quarter(ei,ej)
+!debugp  ei, ej, quarter
       if ( quarter == PM  .or.  &
            quarter == MP  .or.  &
            quarter == PP ) then
         status = 'have found'
         path.start = contour_path__element_t( 'u', 'on', ei, ej, PATH_WESTWARD )
+!debugp "*** Found in North boundary!"
+!debugp "  --> ", ei, ej, quarter
 
         select case (quarter)
           case (PM)
@@ -1029,7 +1073,6 @@ contains
         v1 = mesh_vert.pos_v(ej)
         call register( path, u1, v1 )
         call register( path, u2, v1 )
-        call mesh_edge.erase( 'u', ei, ej )
 
         ! Add path head.
         select case (quarter)
@@ -1037,11 +1080,13 @@ contains
             path.head = contour_path__element_t( 'u', 'in', ei, ej, PATH_SOUTHWARD )
           case (PM,PP)
             if ( ei > 1 ) then
+!debugp "You must be here.", PP            
               path.head = contour_path__element_t( 'u', 'on', ei-1, ej, PATH_WESTWARD )
             else 
               ! you are on the north-west corner. turn south.
               path.head = contour_path__element_t( 'v', 'on', 1, ej-1, PATH_SOUTHWARD )
             end if
+!            call mesh_edge.erase( 'u', ei, ej )
           case default
             call ut__fatal( "__MODFUNC__: case error." )
         end select
@@ -1053,6 +1098,7 @@ contains
     !---------------!
     ! West boundary !
     !---------------!
+!debugp "finding start in West" 
     ei = 1
     do ej = mesh_edge.v_nv, 1, -1
       quarter = mesh_edge.v_quarter(ei,ej)
@@ -1060,6 +1106,7 @@ contains
            quarter == MP  .or.  &
            quarter == PP ) then
         status = 'have found'
+!debugp "*** Found in West boundary!"
         path.start = contour_path__element_t( 'v', 'on', ei, ej, PATH_SOUTHWARD )
         select case (quarter)
           case (MP)
@@ -1080,7 +1127,6 @@ contains
         u1 = mesh_vert.pos_u(ei)
         call register( path, u1, v1 )
         call register( path, u1, v2 )
-        call mesh_edge.erase( 'v', ei, ej )
 
         ! Add path head.
         select case (quarter)
@@ -1093,6 +1139,7 @@ contains
               ! you are on the south-west corner. turn east.
               path.head = contour_path__element_t( 'u', 'on', 1, 1, PATH_EASTWARD )
             end if
+!            call mesh_edge.erase( 'v', ei, ej )
           case default
             call ut__fatal( "__MODFUNC__: case error." )
         end select
@@ -1168,7 +1215,7 @@ contains
           v = mesh_vert.pos_v(ej)
           call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
           call register( path, u, v )
-          call mesh_edge.erase( 'u', ei, ej )
+!          call mesh_edge.erase( 'u', ei, ej )
           path.head = contour_path__element_t( 'u', 'in', ei, ej, PATH_NORTHWARD )
           return
         end if
@@ -1188,13 +1235,15 @@ contains
     char(len=10) <out> :: status ! 'no contour' or 'have found'
 
     status = 'no contour'  ! default 
-
+!debugp "### calling find_start_edge_on_boundaries"
     call find_start_edge_on_boundaries( this,         &
                                         mesh_vert,    &
                                         mesh_edge,    &
                                         status )
+!debugp this.head.i, this.head.j
     if ( status == 'have found' ) return
 
+!debugp "### calling set_start_edge_in_bulk"
     call set_start_edge_in_bulk( this,         &
                                  mesh_vert,    &
                                  mesh_edge,    &
@@ -1210,16 +1259,26 @@ contains
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
 
+!debugp path.head.direct
+!debugp edge.u_quarter(1,1)
     do
       select case (path.head.lane)
         case ('on')
+!debugp "calling go_along_boundary"        
           call go_along_boundary( path, vert, edge )
         case ('in')
+!debugp "calling jump_to_other_edge"        
+!debugp path.head.i, path.head.j
           call jump_to_other_edge( path, vert, edge )
         case default
           call ut__fatal( "__MODFUNC__: case error." )
       end select
-      if ( path.is_closed() ) return
+      if ( path.is_closed() ) then
+        call edge.erase( path.start.which_edge,  &
+                         path.start.i,           &
+                         path.start.j )
+        return
+      end if
     end do
 
   end subroutine contour_path__trace_and_erase
