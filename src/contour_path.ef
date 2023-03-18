@@ -221,9 +221,9 @@ contains
   end subroutine jump_to_v_edge_mp_if_possible 
 
 
-  subroutine go_along_boundary_on_v_edge_north( path,   &
-                                                vert,   &
-                                                edge )
+  subroutine go_along_boundary_on_v_edge_northward( path,   &
+                                                    vert,   &
+                                                    edge )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
@@ -308,10 +308,10 @@ contains
         call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
 
-  end subroutine go_along_boundary_on_v_edge_north
+  end subroutine go_along_boundary_on_v_edge_northward
 
 
-  subroutine go_along_boundary_on_v_edge_south( path,  &
+  subroutine go_along_boundary_on_v_edge_southward( path,  &
                                                 vert,  &
                                                 edge )
     type(contour_path_t) <io> :: path
@@ -366,12 +366,12 @@ contains
         call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
 
-  end subroutine go_along_boundary_on_v_edge_south
+  end subroutine go_along_boundary_on_v_edge_southward
 
 
-  subroutine go_along_boundary_on_u_edge_west( path,  &
-                                               vert,  &
-                                               edge )
+  subroutine go_along_boundary_on_u_edge_westward( path,  &
+                                                   vert,  &
+                                                   edge )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
@@ -461,12 +461,12 @@ contains
         call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
 
-  end subroutine go_along_boundary_on_u_edge_west
+  end subroutine go_along_boundary_on_u_edge_westward
 
 
-  subroutine go_along_boundary_on_u_edge_east( path,  &
-                                               vert,  &
-                                               edge )
+  subroutine go_along_boundary_on_u_edge_eastward( path,  &
+                                                   vert,  &
+                                                   edge )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
@@ -508,7 +508,7 @@ contains
         call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
 
-  end subroutine go_along_boundary_on_u_edge_east
+  end subroutine go_along_boundary_on_u_edge_eastward
 
 
   subroutine go_along_boundary( path, vert, edge )
@@ -521,13 +521,13 @@ contains
 
     select case (path.head.direct)
       case (PATH_NORTHWARD)
-        call go_along_boundary_on_v_edge_north( path, vert, edge )
+        call go_along_boundary_on_v_edge_northward( path, vert, edge )
       case (PATH_SOUTHWARD)
-        call go_along_boundary_on_v_edge_south( path, vert, edge )
+        call go_along_boundary_on_v_edge_southward( path, vert, edge )
       case (PATH_WESTWARD)
-        call go_along_boundary_on_u_edge_west( path, vert, edge )
+        call go_along_boundary_on_u_edge_westward( path, vert, edge )
       case (PATH_EASTWARD)
-        call go_along_boundary_on_u_edge_east( path, vert, edge )
+        call go_along_boundary_on_u_edge_eastward( path, vert, edge )
       case default
         call ut__fatal( "__MODFUNC__: case error." )
     end select
