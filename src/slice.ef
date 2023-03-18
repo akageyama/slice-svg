@@ -74,23 +74,13 @@ contains
                                      this.val_vert,   &
                                      level )
 
-!debugp this.mesh_edge.u_quarter(1,1)      
     call contour_path.reset
-!debugp this.mesh_edge.u_quarter(1,1)      
-!debugp "### ### calling contour_path.set_start_edge"      
     call contour_path.set_start_edge( this.mesh_vert,  &
                                       this.mesh_edge,  &
                                       status )
     do while ( status == 'have found' )
-!debugp "__FUNC__", status    
-!debugp contour_path.start.direct    
-!debugp contour_path.head.direct    
-!debugp contour_path.head.lane
-!debugp contour_path.head.i
-!debugp contour_path.head.j
 
       !!  Tring to find the 1st contour for this level.
-!debugp "### ### calling contour_path.trace_and_erase"      
       call contour_path.trace_and_erase( this.mesh_vert,  &
                                          this.mesh_edge )
       call iDraw_contour( this.mesh_vert.nu,    &
