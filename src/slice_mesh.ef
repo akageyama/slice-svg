@@ -229,6 +229,10 @@ contains
       this.u_nv = mesh_vert.nv
       this.v_nu = mesh_vert.nu
       this.v_nv = mesh_vert.nv - 1
+      allocate(this.u_cross_coord(this.u_nu,  &
+                                  this.u_nv))
+      allocate(this.v_cross_coord(this.v_nu,  &
+                                  this.v_nv))
       allocate(this.u_quarter(this.u_nu,  &
                               this.u_nv))
       allocate(this.v_quarter(this.v_nu,  &
