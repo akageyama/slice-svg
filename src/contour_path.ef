@@ -246,13 +246,13 @@ contains
         !!>
               .       |            
             - + - - - p            
-              .       .            
-              .       .            
+              .       .\__ Will register this vertex             
+              .       .         in the present step.
               .       .            
             - + - - - p <== current head of vertex-type (vi,vj)
-              .       *            
-              .       * <== You have come
-              .       *     along this edge.
+              .       * \__ Already egistered this vertex           
+              .       *                 in the last step.
+              .       * <== You have come along this edge.
         !!<
         jumped = .true.
         u = vert.pos_u(vi)
@@ -487,7 +487,7 @@ contains
     select case ( edge.u_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
-        u = vert.pos_u(vi)
+        u = vert.pos_u(vi+1)
         v = vert.pos_v(vj)
         call register( path, u, v )
         call edge.erase( 'u', vi, vj )
