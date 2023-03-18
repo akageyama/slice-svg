@@ -81,8 +81,10 @@ contains
     do while ( status == 'have found' )
 
       !!  Tring to find the 1st contour for this level.
+!debugp "=> I am slice.ef. Calling  contour_path.trace_and_erase."     
       call contour_path.trace_and_erase( this.mesh_vert,  &
                                          this.mesh_edge )
+!debugp "=> I am slice.ef. Calling iDraw_contour."     
       call iDraw_contour( this.mesh_vert.nu,    &
                           this.mesh_vert.nv,    &
                           width_in_pixels,      &
@@ -90,10 +92,15 @@ contains
                           fill_color )
 
       !!  Generally, more contours exist for this level.
+!debugp "=> I am slice.ef. Calling contour_path.reset."     
       call contour_path.reset
+!debugp "=> I am slice.ef. Calling contour_path.set_start_edge."     
       call contour_path.set_start_edge( this.mesh_vert,  &
                                         this.mesh_edge,  &
                                         status )
+!debugp "=> I am slice.ef.", status 
+!debugp "=> I am slice.ef.", contour_path.head.i
+!debugp "=> I am slice.ef.", contour_path.head.j
     end do
 
   contains

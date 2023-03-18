@@ -55,7 +55,7 @@ program main
       pos_v = vmin + dv_scalar*(j-1)
 !debug s      
 !      pressure(i,j) = exp(-3*(pos_u**2+pos_v**2)/(umax**2))
-      pressure(i,j) = 1.0
+      pressure(i,j) = + 1*pos_u + 3*pos_v
 !debug e
     end do
   end do
@@ -313,7 +313,7 @@ contains
                             line_width_in_pixel=2.0 )
 !debug       
 !      do l = 0, 9
-!        level_min = 0.1*l
+!        level_min = 0.- pos_u - pos_v
 !        level_max = 0.1*(l+1)
 !        level_middle = ( level_min + level_max ) / 2
 

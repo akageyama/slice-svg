@@ -115,13 +115,15 @@ contains
                                             ei0, ej0 )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <in> :: edge
+    type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei0, ej0
 
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
+!debugp "I am jump_to_u_edge_pm_if_possible.", ei0, ej0
+!debugp "I am jump_to_u_edge_pm_if_possible.", edge.u_quarter(ei0,ej0)
     if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = edge.u_cross_coord(ei0,ej0)
@@ -134,7 +136,8 @@ contains
       else
         path.head = contour_path__element_t( 'u', 'in', ei0, ej0,  &
                                             PATH_NORTHWARD )
-      end if    
+      end if   
+      call edge.erase( 'u', ei0, ej0 ) 
     end if
   end subroutine jump_to_u_edge_pm_if_possible
 
@@ -143,7 +146,7 @@ contains
                                             ei0, ej0 )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <in> :: edge
+    type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei0, ej0
 
@@ -162,6 +165,7 @@ contains
         path.head = contour_path__element_t( 'u', 'in', ei0, ej0,  &
                                             PATH_SOUTHWARD )
       end if    
+      call edge.erase( 'u', ei0, ej0 ) 
     end if
   end subroutine jump_to_u_edge_mp_if_possible  
 
@@ -170,7 +174,7 @@ contains
                                             ei0, ej0 )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <in> :: edge
+    type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei0, ej0
 
@@ -190,6 +194,7 @@ contains
         path.head = contour_path__element_t( 'v', 'in', ei0, ej0,  &
                                             PATH_WESTWARD )
       end if
+      call edge.erase( 'v', ei0, ej0 ) 
     end if
   end subroutine jump_to_v_edge_pm_if_possible   
 
@@ -197,7 +202,7 @@ contains
   subroutine jump_to_v_edge_mp_if_possible( path, vert, edge, jumped, ei0, ej0 )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <in> :: edge
+    type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei0, ej0
 
@@ -217,6 +222,7 @@ contains
         path.head = contour_path__element_t( 'v', 'in', ei0, ej0,  &
                                             PATH_EASTWARD )
       end if
+      call edge.erase( 'v', ei0, ej0 ) 
     end if
   end subroutine jump_to_v_edge_mp_if_possible 
 
@@ -331,6 +337,8 @@ contains
     vi = path.head.i
     vj = path.head.j
 
+!debugp "I am in go_along_boundary_on_v_edge_southward.", vi, vj
+!debugp edge.v_quarter(vi,vj-1)
     select case ( edge.v_quarter(vi,vj-1) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
@@ -338,7 +346,10 @@ contains
         v = vert.pos_v(vj-1)
         call register( path, u, v )
         call edge.erase( 'v', vi, vj-1 )
+!debugp "I entered the case of SLICE_MESH__EDGE_PP."
         if ( vj-1 == 1 ) then ! you have reached the south-west corner.
+!debugp "I entered the if sentence of vj-1==1. setting PATH_EASTWARD"
+!debugp PATH_EASTWARD
           path.head = contour_path__element_t( 'u', 'on', vi,    1, PATH_EASTWARD )
         else
           path.head = contour_path__element_t( 'v', 'on', vi, vj-1, PATH_SOUTHWARD )
@@ -390,6 +401,8 @@ contains
     vi = path.head.i
     vj = path.head.j
 
+!debugp "I am in go_along_boundary_on_u_edge_westward.", vi, vj
+!debugp edge.u_quarter(vi-1,vj)
     select case ( edge.u_quarter(vi-1,vj) )
       case (SLICE_MESH__EDGE_PP) 
         !!>
@@ -408,8 +421,12 @@ contains
         jumped = .true.
         u = vert.pos_u(vi-1)
         v = vert.pos_v(vj)
+!debugp "   ... calling register."
         call register( path, u, v )
+!debugp "   ... calling erase with", vi-1, vj
+!debugp "   ... [before] ", edge.u_quarter(vi-1,vj)
         call edge.erase( 'u', vi-1, vj )
+!debugp "   ... [after] ", edge.u_quarter(vi-1,vj)
         if ( vi-1 == 1 ) then ! you have reached the north-west corner.
           !!>                
                               __ new head of vertex-type (vi-1,vj)
@@ -519,6 +536,7 @@ contains
     call ut__assert( path.head.lane == 'on',  &
                      "__MODFUNC__: The path should be on border." )
 
+!debugp "I am in go_along_boundary.", path.head.direct
     select case (path.head.direct)
       case (PATH_NORTHWARD)
         call go_along_boundary_on_v_edge_northward( path, vert, edge )
@@ -552,6 +570,9 @@ contains
     ei = path.head.i
     ej = path.head.j
 
+!debugp "I am jump_to_other_edge.", ei, ej
+!debugp "I am jump_to_other_edge.", path.head.direct
+!debugp "I am jump_to_other_edge.", path.head.which_edge
     select case (path.head.direct)
       !!>
                         edge.u(i,j+1)
@@ -601,10 +622,11 @@ contains
                               p - * m
                                 From 
                          !!<
-        if ( jumped ) call edge.erase( 'u', ei, ej )
+!        if ( jumped ) call edge.erase( 'u', ei, ej )
       case (PATH_WESTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODFUNC__: Must be edge-v here." )
+!debugp "XX I am calling jump_to_u_edge_pm_if_possible with", ei-1, ej+1                   
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei-1, ej+1 )
                          !!>
@@ -631,7 +653,7 @@ contains
                               m -*- p
                                 To
                          !!<
-        if ( jumped ) call edge.erase( 'v', ei, ej )
+!        if ( jumped ) call edge.erase( 'v', ei, ej )
       case (PATH_SOUTHWARD)
         call ut__assert( path.head.which_edge == 'u',  &
                          "__MODFUNC__: Must be edge-u here." )
@@ -663,7 +685,7 @@ contains
                               |    *|To
                               m - - m
                          !!<
-        if ( jumped ) call edge.erase( 'u', ei, ej )
+!        if ( jumped ) call edge.erase( 'u', ei, ej )
       case (PATH_EASTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODFUNC__: Must be edge-v here." )
@@ -693,7 +715,7 @@ contains
                          From *     |
                               m - - m
                          !!<
-        if ( jumped ) call edge.erase( 'v', ei, ej )
+!        if ( jumped ) call edge.erase( 'v', ei, ej )
       case default
         call ut__fatal( '__MODFUNC__: case error.' )
     end select
@@ -796,12 +818,15 @@ contains
     call ut__assert( path.num == 0,  &
                     '__MODFUNC__: You forgot to reset contour_path.' )
 
+!debugp "I am find_start_edge_on_boundaries."
     !----------------!
     ! South boundary !
     !----------------!
     ej = 1
     do ei = 1, mesh_edge.u_nu
+!debugp "I am find_start_edge_on_boundaries. Entered South B loop.", ei, ej
       quarter = mesh_edge.u_quarter(ei,ej)
+!debugp "I am find_start_edge_on_boundaries. Entered South B loop.", quarter
       if ( quarter == MP  .or.  &
            quarter == PM  .or.  &
            quarter == PP ) then
@@ -942,7 +967,9 @@ contains
     !!<
     ei = mesh_edge.v_nu
     do ej = 1, mesh_edge.v_nv
+!debugp "I am find_start_edge_on_boundaries. Entered East B loop.", ei, ej
       quarter = mesh_edge.v_quarter(ei,ej)
+!debugp "I am find_start_edge_on_boundaries. Entered East B loop.", quarter
       if ( quarter == PM  .or.  &
            quarter == MP  .or.  &
            quarter == PP ) then
@@ -993,7 +1020,9 @@ contains
     !----------------!
     ej = mesh_edge.u_nv
     do ei = mesh_edge.u_nu, 1, -1 ! No strong reason to cound down here.
+!debugp "I am find_start_edge_on_boundaries. Entered North B loop.", ei, ej
       quarter = mesh_edge.u_quarter(ei,ej)
+!debugp "I am find_start_edge_on_boundaries. Entered North B loop.", quarter
       if ( quarter == PM  .or.  &
            quarter == MP  .or.  &
            quarter == PP ) then
@@ -1187,10 +1216,12 @@ contains
     char(len=10) <out> :: status ! 'no contour' or 'have found'
 
     status = 'no contour'  ! default 
+!debugp "I am contour_path__set_start_edge. Calling find_start_edge_on_boundaries"
     call find_start_edge_on_boundaries( this,         &
                                         mesh_vert,    &
                                         mesh_edge,    &
                                         status )
+!debugp "I am contour_path__set_start_edge.", status
     if ( status == 'have found' ) return
 
     call set_start_edge_in_bulk( this,         &
@@ -1211,18 +1242,23 @@ contains
     do
       select case (path.head.lane)
         case ('on')
+!debugp "--> I am calling  go_along_boundary."       
           call go_along_boundary( path, vert, edge )
         case ('in')
+!debugp "--> I am calling  jump_to_other_edge."       
           call jump_to_other_edge( path, vert, edge )
         case default
           call ut__fatal( "__MODFUNC__: case error." )
       end select
+!debugp "--> I am calling path-close-check ."       
       if ( path.is_closed() ) then
+!debugp "--> closed."       
         call edge.erase( path.start.which_edge,  &
                          path.start.i,           &
                          path.start.j )
         return
       end if
+!debugp "--> NOT closed."       
     end do
 
   end subroutine contour_path__trace_and_erase
