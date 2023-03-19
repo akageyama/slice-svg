@@ -53,7 +53,10 @@ program main
     do i = 1, NU_SCALAR
       pos_u = umin + du_scalar*(i-1)
       pos_v = vmin + dv_scalar*(j-1)
-      pressure(i,j) = exp(-3*(pos_u**2+pos_v**2)/(umax**2))-0.8
+!      pressure(i,j) = exp(-3*(pos_u**2+pos_v**2)/(umax**2))-0.8
+!      pressure(i,j) = -exp(-3*(pos_u**2+pos_v**2)/(umax**2))+0.8
+      pressure(i,j) = exp(-3*((pos_u-umax/3)**2+(pos_v-vmax/4)**2)/(umax**2))-0.8 !&
+!                    + exp(-3*((pos_u+umax/3)**2+(pos_v+vmax/4)**2)/(umax**2))-0.8 
     end do
   end do
   call iSample_scalar( pressure )
@@ -313,9 +316,9 @@ contains
     dlevel = (level_max-level_min)/10
     do l = 1, 10
       level = level_min + dlevel*(real(l)-0.5)
-!debugp level      
       color = color__normalized_real_to_color( (level-level_min)/(level_max-level_min) )
-      call slice_pressure.vis_contour( sketch, level, fill_color=color )
+!      call slice_pressure.vis_contour( sketch, level, fill_color=color )
+      call slice_pressure.vis_contour( sketch, level, line_color=color )
     end do
 
       !!>
