@@ -153,6 +153,8 @@ contains
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
+!debugp "I am jump_to_u_edge_mp_if_possible", ei0, ej0
+!debugp "I am jump_to_u_edge_mp_if_possible", edge.u_quarter(ei0,ej0)
     if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = edge.u_cross_coord(ei0,ej0)
@@ -209,13 +211,16 @@ contains
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
+!debugp "I am jump_to_v_edge_mp_if_possible.", ei0, ej0
+!debugp "I am jump_to_v_edge_mp_if_possible.", edge.v_quarter(ei0,ej0)
     if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
       call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
+!debugp "I am jump_to_v_edge_mp_if_possible. registering..."   
       call register( path, u, v )
-      if ( ei0 == edge.u_nu ) then
+      if ( ei0 == edge.v_nu ) then
         path.head = contour_path__element_t( 'v', 'on', ei0, ej0,  &
                                             PATH_NORTHWARD )
       else
@@ -246,7 +251,7 @@ contains
 
     vi = path.head.i
     vj = path.head.j
-
+!debugp "I am go_along_boundary_on_v_edge_northward.", vi, vj
     select case ( edge.v_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         !!>
@@ -370,11 +375,13 @@ contains
         u = vert.pos_u(vi)
         v = edge.v_cross_coord(vi,vj-1)
 !debugp "I am go_along_boundary_on_v_edge_southward", vi, vj
+!debugp ">>", edge.v_quarter(vi,vj-1)
+!debugp ">>", SLICE_MESH__EDGE_MP
 !debugp ">>", u, v
         call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
         call register( path, u, v )
         call edge.erase( 'v', vi, vj-1 )
-        path.head = contour_path__element_t( 'v', 'in', vi, vj, PATH_EASTWARD )
+        path.head = contour_path__element_t( 'v', 'in', vi, vj-1, PATH_EASTWARD )
       case default
         call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
     end select
@@ -691,6 +698,7 @@ contains
       case (PATH_EASTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODFUNC__: Must be edge-v here." )
+!debugp ">>>> calling jump_to_u_edge_mp_if_possible"
         call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                             jumped, ei, ej )
                          !!>
@@ -700,6 +708,7 @@ contains
                               m * - p
                                 To
                          !!<
+!debugp ">>>> calling jump_to_v_edge_mp_if_possible"
         call jump_to_v_edge_mp_if_possible ( path, vert, edge,  &
                                             jumped, ei+1, ej )
                          !!>
@@ -708,6 +717,7 @@ contains
                               |     |
                               m - - m
                          !!<
+!debugp ">>>> calling jump_to_u_edge_pm_if_possible"
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej+1 )
                          !!>
@@ -1245,6 +1255,7 @@ contains
       select case (path.head.lane)
         case ('on')
 !debugp "--> I am calling  go_along_boundary."       
+!debugp "-->  ", path.head.i, path.head.j
           call go_along_boundary( path, vert, edge )
         case ('in')
 !debugp "--> I am calling  jump_to_other_edge."       
