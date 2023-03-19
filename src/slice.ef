@@ -118,11 +118,20 @@ contains
         verts_sim(i) = sketch__sim_pos_t(u_sim,v_sim)
       end do
 
+      !!> Polygon version (original)
       call sketch.polygon( contour_path.num,    &
                            verts_sim,           &
                            width_in_pixels,     &
                            line_color,          &
                            fill_color )
+      !!<
+
+      call sketch.path( contour_path.num,    &
+                        verts_sim,           &
+                        width_in_pixels,     &
+                        .true.,   &
+                        line_color,          &
+                        fill_color )
     end subroutine iDraw_contour
 
   end subroutine slice__scalar_vis_contour

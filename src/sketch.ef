@@ -33,6 +33,7 @@ module sketch_m
     procedure :: group_pop => sketch__group_pop
     procedure :: text => sketch__text
     procedure :: polygon => sketch__polygon
+    procedure :: path => sketch__path
     procedure :: rectangle => sketch__rectangle
     procedure :: arrow => sketch__arrow
     ! line
@@ -454,6 +455,62 @@ contains
                                 fill_color=fill_color_code )
     end if
   end subroutine sketch__polygon
+
+
+
+  subroutine sketch__path( this, nverts,    &
+                           verts_sim,       &
+                           width_in_pixels, &
+                           path_close,      &
+                           line_color,      &
+                           fill_color )
+    class(sketch_t) <io> :: this
+    integer <in> :: nverts
+    type(sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
+    logical <in> :: path_close
+    real <optin> :: width_in_pixels
+    type(color_t) <optin> :: line_color
+    type(color_t) <optin> :: fill_color
+
+    type(screen_pos_t) :: vert_on_screen
+    real, dimension(nverts) :: verts_screen_x,  &
+                               verts_screen_y
+    char(len=7) :: line_color_code , fill_color_code
+    integer :: i
+
+    do i = 1, nverts
+      vert_on_screen = this.to_screen_pos( verts_sim(i) )
+      verts_screen_x(i) = vert_on_screen.x
+      verts_screen_y(i) = vert_on_screen.y
+    end do
+
+    if ( present(line_color) ) then 
+      line_color_code = line_color.to_code()
+    end if
+
+    if ( present(fill_color) ) then
+      fill_color_code = fill_color.to_code()
+    else
+      fill_color_code = 'none'
+    end if
+
+    if ( present(line_color) ) then
+      call this.svglib.path( nverts,                       &
+                             verts_screen_x,               &
+                             verts_screen_y,               &
+                             path_close,                   &
+                             width_in_pixels,              &
+                             line_color=line_color_code,   &
+                             fill_color=fill_color_code )
+    else
+      call this.svglib.path( nverts,                       &
+                             verts_screen_x,               &
+                             verts_screen_y,               &
+                             path_close,                   &
+                             width_in_pixels,              &
+                             fill_color=fill_color_code )
+    end if
+  end subroutine sketch__path
 
 
   subroutine sketch__rectangle( this, lower_left,           &
