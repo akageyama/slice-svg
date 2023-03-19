@@ -168,7 +168,7 @@ contains
       if ( ej0 == 1 ) then !         *       .  __ new head.
         vi0 = ei0 + 1      !           *     . /
         vj0 = ej0          !     - - m - * * p - - 
-        path.head = contour_path__element_t( 'u', 'in', vi0, vj0,  &
+        path.head = contour_path__element_t( 'u', 'on', vi0, vj0,  &
                                             PATH_EASTWARD )
       else
         path.head = contour_path__element_t( 'u', 'in', ei0, ej0,  &
@@ -587,7 +587,7 @@ contains
     logical :: jumped
 
     call ut__assert( path.head.lane == 'in',  &
-                     "__MODFUNC__: The path should be in the region." )
+                     "__MODULE__(__LINE__): The path should be in the region." )
 
     jumped = .false.  ! Default.
 
@@ -617,7 +617,7 @@ contains
       !!<
       case (PATH_NORTHWARD)
         call ut__assert( path.head.which_edge == 'u',  &
-                         "__MODFUNC__: Must be edge-u here." )
+                         "__MODULE__(__LINE__): Must be edge-u here." )
         call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                             jumped, ei+1, ej )
                          !!>
@@ -649,7 +649,7 @@ contains
 !        if ( jumped ) call edge.erase( 'u', ei, ej )
       case (PATH_WESTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
-                         "__MODFUNC__: Must be edge-v here." )
+                         "__MODULE__(__LINE__): Must be edge-v here." )
 !debugp "XX I am calling jump_to_u_edge_pm_if_possible with", ei-1, ej+1                   
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei-1, ej+1 )
@@ -680,7 +680,7 @@ contains
 !        if ( jumped ) call edge.erase( 'v', ei, ej )
       case (PATH_SOUTHWARD)
         call ut__assert( path.head.which_edge == 'u',  &
-                         "__MODFUNC__: Must be edge-u here." )
+                         "__MODULE__(__LINE__): Must be edge-u here." )
         call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej-1 )
                          !!>
@@ -712,7 +712,7 @@ contains
 !        if ( jumped ) call edge.erase( 'u', ei, ej )
       case (PATH_EASTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
-                         "__MODFUNC__: Must be edge-v here." )
+                         "__MODULE__(__LINE__): Must be edge-v here." )
 !debugp ">>>> calling jump_to_u_edge_mp_if_possible"
         call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                             jumped, ei, ej )
@@ -1270,6 +1270,11 @@ contains
     type(slice_mesh__edge_t) <io> :: edge
 
     do
+!debugp "I am contour_path__trace_and_erase.", path.head.i
+!debugp "I am contour_path__trace_and_erase.", path.head.j
+!debugp "I am contour_path__trace_and_erase.", path.head.direct
+!debugp "I am contour_path__trace_and_erase.", path.head.which_edge
+!debugp "I am contour_path__trace_and_erase.", path.head.lane
       select case (path.head.lane)
         case ('on')
 !debugp "--> I am calling  go_along_boundary."       
