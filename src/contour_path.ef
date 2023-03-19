@@ -368,7 +368,9 @@ contains
         !!<
         jumped = .true.
         u = vert.pos_u(vi)
-        v = edge.v_cross_coord(vi,vj)
+        v = edge.v_cross_coord(vi,vj-1)
+!debugp "I am go_along_boundary_on_v_edge_southward", vi, vj
+!debugp ">>", u, v
         call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
         call register( path, u, v )
         call edge.erase( 'v', vi, vj-1 )
