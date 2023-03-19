@@ -207,7 +207,7 @@ contains
         case ('dashed')
           str(nop) = 'stroke-dasharray="10 5"'
         case default
-          call ut__fatal( '__MODFUNC__: case error.' )
+          call ut__fatal( '__MODULE__(__LINE__): case error.' )
       end select
     end if    
 
@@ -255,7 +255,7 @@ contains
     call ut__assert( text_anchor == 'start'  .or.     &
                      text_anchor == 'middle' .or.     &
                      text_anchor == 'end',            &
-                     '__MODFUNC__: text_anchor error.' )
+                     '__MODULE__(__LINE__): text_anchor error.' )
 
     pos = this.to_screen_pos( sketch__sim_pos_t(u,v) )
    
@@ -335,7 +335,7 @@ contains
 
     call ut__assert( this.u_max > this.u_min .and.  &
                      this.v_max > this.v_min,       &
-                     '__MODFUNC__: size error.' )
+                     '__MODULE__(__LINE__): size error.' )
 
     this.title = title
     this.filename = filename
@@ -388,7 +388,7 @@ contains
 
     call ut__assert( this.dxdu > 0.0 .and. &
                      this.dydv > 0.0,      &
-                     '__MODFUNC__: Something is strange.' )
+                     '__MODULE__(__LINE__): Something is strange.' )
 
     call this.svglib.open( this.filename,           &
                            this.screen_size.width,  &

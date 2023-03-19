@@ -116,9 +116,9 @@ contains
     real :: weight1, weight2
 
     call ut__assert( x1 < x2,  &
-                     "__MODFUNC__: Bad grids order." )
+                     "__MODULE__(__LINE__): Bad grids order." )
     call ut__assert( diff1*diff2 >= 0.0,  &
-                     "__MODFUNC__: Cannot interpolate." )
+                     "__MODULE__(__LINE__): Cannot interpolate." )
 
     if ( diff1+diff2 == 0.0  ) then
       ! which means diff1 = 0.0 & diff2 = 0.0
@@ -132,7 +132,7 @@ contains
       weight2 = 1.0 - weight1
       xi = weight1 * x1 + weight2 * x2
       call ut__assert( xi >= x1 .and. xi <= x2,  &
-                       "__MODFUNC__: Weight is out of range." )
+                       "__MODULE__(__LINE__): Weight is out of range." )
     end if
   end function linear_interpol
 
@@ -147,7 +147,7 @@ contains
     else if ( which_edge == 'v' ) then
       this.v_quarter(ei,ej) = SLICE_MESH__EDGE_MM
     else 
-      call ut__fatal( '__MODFUNC__: argument error.' )
+      call ut__fatal( '__MODULE__(__LINE__): argument error.' )
     end if
   end subroutine slice_mesh_edge__erase  
 
@@ -167,7 +167,7 @@ contains
                      (nv > 1) .and.         &
                      (u_max > u_min) .and.  &
                      (v_max > v_min),       &
-                    '__MODFUNC__: Invalid arguments.' )
+                    '__MODULE__(__LINE__): Invalid arguments.' )
 
     this.nu = nu
     this.nv = nv
@@ -397,7 +397,7 @@ contains
           !!<
           u_quarter(ei,ej) = SLICE_MESH__EDGE_MP
         else
-          call ut__fatal( "__MODFUNC__: case error." )
+          call ut__fatal( "__MODULE__(__LINE__): case error." )
         end if
       end do
     end do
@@ -441,7 +441,7 @@ contains
                   val_vert(ei,ej+1) >= level ) then
           v_quarter(ei,ej) = SLICE_MESH__EDGE_MP
         else
-          call ut__fatal( "__MODFUNC__: case error." )
+          call ut__fatal( "__MODULE__(__LINE__): case error." )
         end if
       end do
     end do
@@ -487,9 +487,9 @@ contains
     call iInterpol_cross_point_edge_v
 
     call ut__assert( minval(this.u_quarter) >= 0,  &
-                     "__MODFUNC__: You missed some edge_u." )
+                     "__MODULE__(__LINE__): You missed some edge_u." )
     call ut__assert( minval(this.v_quarter) >= 0,  &
-                     "__MODFUNC__: You missed some edge_v." )
+                     "__MODULE__(__LINE__): You missed some edge_v." )
 
   contains
 
@@ -539,13 +539,6 @@ contains
             diff1 = val_vert(ei,ej) - level
             diff2 = level - val_vert(ei,ej+1)
             this.v_cross_coord(ei,ej) = linear_interpol( v1, v2, diff1, diff2 )
-!debug
-if ( ei==1 ) then
-!debugp "I am iInterpol_cross_point_edge_v", ej,quarter
-!debugp " >> >> ", v1, v2
-!debugp " >> >> ", this.v_cross_coord(ei,ej)
-end if
-!debug
           end if
         end do
       end do

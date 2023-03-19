@@ -21,7 +21,7 @@ contains
     logical <in> :: condition
     char(len=*) <in> :: lastwill
     if ( .not. condition ) then
-      print *, "__MODULE__: "//trim(lastwill)
+      print *, "__MODULE__(__LINE__): "//trim(lastwill)
       stop
     end if
   end subroutine assert
@@ -38,7 +38,7 @@ contains
       end if
     end do
 
-    print *, '__MODFUNC__: Out of file_unit number.'
+    print *, '__MODULE__(__LINE__): Out of file_unit number.'
     stop
   end function get_a_new_unit
 

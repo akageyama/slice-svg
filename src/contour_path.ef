@@ -103,7 +103,7 @@ contains
 
     n = contour_path.num + 1
     call ut__assert( n <= size(contour_path.list_u,dim=1),  &
-                    '__MODFUNC__: Increase array size of path_vert.' )
+                    '__MODULE__(__LINE__): Increase array size of path_vert.' )
 
     contour_path.list_u(n) = u
     contour_path.list_v(n) = v
@@ -123,13 +123,11 @@ contains
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
-!debugp "I am jump_to_u_edge_pm_if_possible.", ei0, ej0
-!debugp "I am jump_to_u_edge_pm_if_possible.", edge.u_quarter(ei0,ej0)
     if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = edge.u_cross_coord(ei0,ej0)
       v = vert.pos_v(ej0)
-      call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
+      call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call register( path, u, v )  !       __ new head      
       if ( ej0 == edge.u_nv ) then !      /
         vi0 = ei0                  ! - - p * * - m - -
@@ -158,13 +156,7 @@ contains
 
     if ( jumped ) return  ! you have already jumped for this cell.
 
-!debugp "I am jump_to_u_edge_mp_if_possible", ei0, ej0
-!debugp "I am jump_to_u_edge_mp_if_possible", edge.u_quarter(ei0,ej0)
-!debugp " >>>>>>"
-!debugp "I am jump_to_u_edge_mp_if_possible", SLICE_MESH__EDGE_MP
-!debugp "I am jump_to_u_edge_mp_if_possible", edge.u_quarter(ei0,ej0)
     if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
-!debugp " >>>>>> >>>>>"
       jumped = .true.
       u = edge.u_cross_coord(ei0,ej0)
       v = vert.pos_v(ej0)
@@ -172,7 +164,6 @@ contains
       if ( ej0 == 1 ) then !         *       .  __ new head.
         vi0 = ei0 + 1      !           *     . /
         vj0 = ej0          !     - - m - * * p - - 
-!debugp "I am jump_to_u_edge_mp_if_possible", vi0, vj0
         path.head = contour_path__element_t( 'u', 'on', vi0, vj0,  &
                                             PATH_EASTWARD )
       else
@@ -200,7 +191,7 @@ contains
       jumped = .true.
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
-      call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
+      call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call register( path, u, v ) !              .     * .
                                   !              m - * - p - 
       if ( ei0 == 1 ) then        !              . *     .
@@ -228,14 +219,11 @@ contains
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
-!debugp "I am jump_to_v_edge_mp_if_possible.", ei0, ej0
-!debugp "I am jump_to_v_edge_mp_if_possible.", edge.v_quarter(ei0,ej0)
     if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
-      call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
-!debugp "I am jump_to_v_edge_mp_if_possible. registering..."   
+      call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call register( path, u, v )  !       .       .
                                    !       p - - - p <== new head
       if ( ei0 == edge.v_nu ) then !       .       * 
@@ -264,14 +252,13 @@ contains
     logical :: jumped
 
     call ut__assert( path.head.lane == 'on',  &
-                     "__MODFUNC__: The path should be on border." )
+                     "__MODULE__(__LINE__): The path should be on border." )
 
     call ut__assert( path.head.direct == PATH_NORTHWARD,  &
-                     "__MODFUNC__: The path is supposed to go north." )
+                     "__MODULE__(__LINE__): The path is supposed to go north." )
 
     vi = path.head.i
     vj = path.head.j
-!debugp "I am go_along_boundary_on_v_edge_northward.", vi, vj
     select case ( edge.v_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         !!>
@@ -331,12 +318,12 @@ contains
         jumped = .true.
         u = vert.pos_u(vi)
         v = edge.v_cross_coord(vi,vj)
-        call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
+        call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
         call edge.erase( 'v', vi, vj )
         path.head = contour_path__element_t( 'v', 'in', vi, vj, PATH_WESTWARD )
       case default
-        call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
+        call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
 
   end subroutine go_along_boundary_on_v_edge_northward
@@ -354,16 +341,14 @@ contains
     logical :: jumped
 
     call ut__assert( path.head.lane == 'on',  &
-                     "__MODFUNC__: The path should be on border." )
+                     "__MODULE__(__LINE__): The path should be on border." )
 
     call ut__assert( path.head.direct == PATH_SOUTHWARD,  &
-                     "__MODFUNC__: The path is supposed to go north." )
+                     "__MODULE__(__LINE__): The path is supposed to go north." )
 
     vi = path.head.i
     vj = path.head.j
 
-!debugp "I am in go_along_boundary_on_v_edge_southward.", vi, vj
-!debugp edge.v_quarter(vi,vj-1)
     select case ( edge.v_quarter(vi,vj-1) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
@@ -371,10 +356,7 @@ contains
         v = vert.pos_v(vj-1)
         call register( path, u, v )
         call edge.erase( 'v', vi, vj-1 )
-!debugp "I entered the case of SLICE_MESH__EDGE_PP."
         if ( vj-1 == 1 ) then ! you have reached the south-west corner.
-!debugp "I entered the if sentence of vj-1==1. setting PATH_EASTWARD"
-!debugp PATH_EASTWARD
           path.head = contour_path__element_t( 'u', 'on', vi,    1, PATH_EASTWARD )
         else
           path.head = contour_path__element_t( 'v', 'on', vi, vj-1, PATH_SOUTHWARD )
@@ -394,16 +376,12 @@ contains
         jumped = .true.
         u = vert.pos_u(vi)
         v = edge.v_cross_coord(vi,vj-1)
-!debugp "I am go_along_boundary_on_v_edge_southward", vi, vj
-!debugp ">>", edge.v_quarter(vi,vj-1)
-!debugp ">>", SLICE_MESH__EDGE_MP
-!debugp ">>", u, v
-        call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
+        call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
         call edge.erase( 'v', vi, vj-1 )
         path.head = contour_path__element_t( 'v', 'in', vi, vj-1, PATH_EASTWARD )
       case default
-        call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
+        call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
 
   end subroutine go_along_boundary_on_v_edge_southward
@@ -422,16 +400,14 @@ contains
     logical :: jumped
 
     call ut__assert( path.head.lane == 'on',  &
-                     "__MODFUNC__: The path should be on border." )
+                     "__MODULE__(__LINE__): The path should be on border." )
 
     call ut__assert( path.head.direct == PATH_WESTWARD,  &
-                     "__MODFUNC__: The path is supposed to go west." )
+                     "__MODULE__(__LINE__): The path is supposed to go west." )
 
     vi = path.head.i
     vj = path.head.j
 
-!debugp "I am in go_along_boundary_on_u_edge_westward.", vi, vj
-!debugp edge.u_quarter(vi-1,vj)
     select case ( edge.u_quarter(vi-1,vj) )
       case (SLICE_MESH__EDGE_PP) 
         !!>
@@ -450,12 +426,8 @@ contains
         jumped = .true.
         u = vert.pos_u(vi-1)
         v = vert.pos_v(vj)
-!debugp "   ... calling register."
         call register( path, u, v )
-!debugp "   ... calling erase with", vi-1, vj
-!debugp "   ... [before] ", edge.u_quarter(vi-1,vj)
         call edge.erase( 'u', vi-1, vj )
-!debugp "   ... [after] ", edge.u_quarter(vi-1,vj)
         if ( vi-1 == 1 ) then ! you have reached the north-west corner.
           !!>                
                               __ new head of vertex-type (vi-1,vj)
@@ -499,12 +471,12 @@ contains
         jumped = .true.
         u = edge.u_cross_coord(vi-1,vj)
         v = vert.pos_v(vj)
-        call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
+        call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
         call edge.erase( 'u', vi-1, vj )
         path.head = contour_path__element_t( 'u', 'in', vi-1, vj, PATH_SOUTHWARD )
       case default
-        call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
+        call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
 
   end subroutine go_along_boundary_on_u_edge_westward
@@ -523,16 +495,13 @@ contains
     logical :: jumped
 
     call ut__assert( path.head.lane == 'on',  &
-                     "__MODFUNC__: The path should be on border." )
+                     "__MODULE__(__LINE__): The path should be on border." )
 
     call ut__assert( path.head.direct == PATH_EASTWARD,  &
-                     "__MODFUNC__: The path is supposed to go north." )
+                     "__MODULE__(__LINE__): The path is supposed to go north." )
 
     vi = path.head.i
     vj = path.head.j
-!debugp "I am go_along_boundary_on_u_edge_eastward.", vi, vj
-!debugp " ...", path.start.i, path.start.j
-!debugp " ...", edge.u_quarter(vi,vj)
     select case ( edge.u_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
@@ -549,12 +518,12 @@ contains
         jumped = .true.
         u = edge.u_cross_coord(vi,vj)
         v = vert.pos_v(vj)
-        call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
+        call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
         call edge.erase( 'u', vi, vj )
         path.head = contour_path__element_t( 'u', 'in', vi, vj, PATH_NORTHWARD )
       case default
-        call ut__fatal( '__MODFUNC__: Strange. Could not find path.' )
+        call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
 
   end subroutine go_along_boundary_on_u_edge_eastward
@@ -566,9 +535,8 @@ contains
     type(slice_mesh__edge_t) <io> :: edge
 
     call ut__assert( path.head.lane == 'on',  &
-                     "__MODFUNC__: The path should be on border." )
+                     "__MODULE__(__LINE__): The path should be on border." )
 
-!debugp "I am in go_along_boundary.", path.head.direct
     select case (path.head.direct)
       case (PATH_NORTHWARD)
         call go_along_boundary_on_v_edge_northward( path, vert, edge )
@@ -579,7 +547,7 @@ contains
       case (PATH_EASTWARD)
         call go_along_boundary_on_u_edge_eastward( path, vert, edge )
       case default
-        call ut__fatal( "__MODFUNC__: case error." )
+        call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
   end subroutine go_along_boundary
 
@@ -602,9 +570,6 @@ contains
     ei = path.head.i
     ej = path.head.j
 
-!debugp "I am jump_to_other_edge.", ei, ej
-!debugp "I am jump_to_other_edge.", path.head.direct
-!debugp "I am jump_to_other_edge.", path.head.which_edge
     select case (path.head.direct)
       !!>
                         edge.u(i,j+1)
@@ -654,11 +619,9 @@ contains
                               p - * m
                                 From 
                          !!<
-!        if ( jumped ) call edge.erase( 'u', ei, ej )
       case (PATH_WESTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
-!debugp "XX I am calling jump_to_u_edge_pm_if_possible with", ei-1, ej+1                   
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei-1, ej+1 )
                          !!>
@@ -717,11 +680,9 @@ contains
                               |    *|To
                               m - - m
                          !!<
-!        if ( jumped ) call edge.erase( 'u', ei, ej )
       case (PATH_EASTWARD)
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
-!debugp ">>>> calling jump_to_u_edge_mp_if_possible"
         call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                             jumped, ei, ej )
                          !!>
@@ -731,7 +692,6 @@ contains
                               m * - p
                                 To
                          !!<
-!debugp ">>>> calling jump_to_v_edge_mp_if_possible"
         call jump_to_v_edge_mp_if_possible ( path, vert, edge,  &
                                             jumped, ei+1, ej )
                          !!>
@@ -740,7 +700,6 @@ contains
                               |     |
                               m - - m
                          !!<
-!debugp ">>>> calling jump_to_u_edge_pm_if_possible"
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej+1 )
                          !!>
@@ -752,11 +711,11 @@ contains
                          !!<
 !        if ( jumped ) call edge.erase( 'v', ei, ej )
       case default
-        call ut__fatal( '__MODFUNC__: case error.' )
+        call ut__fatal( '__MODULE__(__LINE__): case error.' )
     end select
 
     call ut__assert( jumped,  &
-                     "__MODFUNC__: Failed to find next path." )
+                     "__MODULE__(__LINE__): Failed to find next path." )
   end subroutine jump_to_other_edge
 
 
@@ -852,17 +811,14 @@ contains
     real :: u1, u2, v1, v2
 
     call ut__assert( path.num == 0,  &
-                    '__MODFUNC__: You forgot to reset contour_path.' )
+                    '__MODULE__(__LINE__): You forgot to reset contour_path.' )
 
-!debugp "I am find_start_edge_on_boundaries."
     !----------------!
     ! South boundary !
     !----------------!
     ej = 1
     do ei = 1, mesh_edge.u_nu
-!debugp " Entered South B loop.", ei, ej
       quarter = mesh_edge.u_quarter(ei,ej)
-!debugp " Entered South B loop.", quarter
       if ( quarter == MP  .or.  &
            quarter == PM  .or.  &
            quarter == PP ) then
@@ -929,16 +885,16 @@ contains
           case (MP)
             u1 = mesh_edge.u_cross_coord(ei,ej)
             u2 = mesh_vert.pos_u(ei+1)
-            call ut__assert( u1 /= NAN, "__MODFUNC__: Invalid cross coord." )
+            call ut__assert( u1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           case (PM)
             u1 = mesh_vert.pos_u(ei)
             u2 = mesh_edge.u_cross_coord(ei,ej)
-            call ut__assert( u2 /= NAN, "__MODFUNC__: Invalid cross coord." )
+            call ut__assert( u2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           case (PP)
             u1 = mesh_vert.pos_u(ei)
             u2 = mesh_vert.pos_u(ei+1)
           case default
-            call ut__fatal( "__MODFUNC__: case error." )
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
         end select
 
         v1 = mesh_vert.pos_v(ej)
@@ -958,16 +914,14 @@ contains
               vi = ei + 1
               vj = ej
               path.head = contour_path__element_t( 'u', 'on', vi, vj, PATH_EASTWARD )
-!debugp "path.head set. ", vi, vj              
             else 
               ! you are on the south-east corner. Go toward north along the east border.
               vi = ei + 1
               vj = ej
               path.head = contour_path__element_t( 'v', 'on', vi, vj, PATH_NORTHWARD )
             end if
-!            call mesh_edge.erase( 'u', ei, ej )
           case default
-            call ut__fatal( "__MODFUNC__: case error." )
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
         end select
         path.start = path.head
         return
@@ -1010,9 +964,7 @@ contains
     !!<
     ei = mesh_edge.v_nu
     do ej = 1, mesh_edge.v_nv
-!debugp "I am find_start_edge_on_boundaries. Entered East B loop.", ei, ej
       quarter = mesh_edge.v_quarter(ei,ej)
-!debugp "I am find_start_edge_on_boundaries. Entered East B loop.", quarter
       if ( quarter == PM  .or.  &
            quarter == MP  .or.  &
            quarter == PP ) then
@@ -1022,16 +974,16 @@ contains
           case (PM)
             v1 = mesh_vert.pos_u(ej)
             v2 = mesh_edge.v_cross_coord(ei,ej)
-            call ut__assert( v2 /= NAN, "__MODFUNC__: Invalid cross coord." )
+            call ut__assert( v2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           case (MP)
             v1 = mesh_edge.v_cross_coord(ei,ej)
             v2 = mesh_vert.pos_v(ej+1)
-            call ut__assert( v1 /= NAN, "__MODFUNC__: Invalid cross coord." )
+            call ut__assert( v1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           case (PP)
             v1 = mesh_vert.pos_v(ej)
             v2 = mesh_vert.pos_v(ej+1)
           case default
-            call ut__fatal( "__MODFUNC__: case error." )
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
         end select
 
         u1 = mesh_vert.pos_u(ei)
@@ -1057,7 +1009,7 @@ contains
             end if
 !            call mesh_edge.erase( 'v', ei, ej )
           case default
-            call ut__fatal( "__MODFUNC__: case error." )
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
         end select
         path.start = path.head
         return
@@ -1069,9 +1021,7 @@ contains
     !----------------!
     ej = mesh_edge.u_nv
     do ei = mesh_edge.u_nu, 1, -1 ! No strong reason to cound down here.
-!debugp "I am find_start_edge_on_boundaries. Entered North B loop.", ei, ej
       quarter = mesh_edge.u_quarter(ei,ej)
-!debugp "I am find_start_edge_on_boundaries. Entered North B loop.", quarter
       if ( quarter == PM  .or.  &
            quarter == MP  .or.  &
            quarter == PP ) then
@@ -1084,14 +1034,14 @@ contains
             !          * * p * * - - m - -
             u1 = mesh_edge.u_cross_coord(ei,ej)
             u2 = mesh_vert.pos_u(ei)
-            call ut__assert( u1 /= NAN, "__MODFUNC__: Invalid cross coord." )
+            call ut__assert( u1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           case (MP)
             !       2nd register       1st register
             !                 \       /
             !          - - m - * * * p * *
             u1 = mesh_vert.pos_u(ei+1)
             u2 = mesh_edge.u_cross_coord(ei,ej)
-            call ut__assert( u2 /= NAN, "__MODFUNC__: Invalid cross coord." )
+            call ut__assert( u2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           case (PP)
             !   2nd register           1st register
             !             \           /
@@ -1099,7 +1049,7 @@ contains
             u1 = mesh_vert.pos_u(ei+1)
             u2 = mesh_vert.pos_u(ei)
           case default
-            call ut__fatal( "__MODFUNC__: case error." )
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
         end select
 
         v1 = mesh_vert.pos_v(ej)
@@ -1125,7 +1075,7 @@ contains
             end if
 !            call mesh_edge.erase( 'u', ei, ej )
           case default
-            call ut__fatal( "__MODFUNC__: case error." )
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
         end select
         path.start = path.head
         return
@@ -1147,16 +1097,16 @@ contains
           case (MP)
             v1 = mesh_vert.pos_u(ej+1)
             v2 = mesh_edge.v_cross_coord(ei,ej)
-            call ut__assert( v2 /= NAN, "__MODFUNC__: Invalid cross coord." )
+            call ut__assert( v2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           case (PM)
             v1 = mesh_edge.v_cross_coord(ei,ej)
             v2 = mesh_vert.pos_v(ej)
-            call ut__assert( v1 /= NAN, "__MODFUNC__: Invalid cross coord." )
+            call ut__assert( v1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           case (PP)
             v1 = mesh_vert.pos_v(ej+1)
             v2 = mesh_vert.pos_v(ej)
           case default
-            call ut__fatal( "__MODFUNC__: case error." )
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
         end select
 
         u1 = mesh_vert.pos_u(ei)
@@ -1181,7 +1131,7 @@ contains
             end if
 !            call mesh_edge.erase( 'v', ei, ej )
           case default
-            call ut__fatal( "__MODFUNC__: case error." )
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
         end select
         path.start = path.head
         return
@@ -1234,13 +1184,11 @@ contains
     real :: u, v
 
     call ut__assert( path.num == 0,  &
-                    '__MODFUNC__: You forgot to reset contour_path.' )
+                    '__MODULE__(__LINE__): You forgot to reset contour_path.' )
 
-!debugp "I am set_start_edge_in_bulk. Entering do-loops."
     do ej = 2, mesh_edge.u_nv-1
       do ei = 2, mesh_edge.u_nu-1
         quarter = mesh_edge.u_quarter(ei,ej)
-!debugp "I am set_start_edge_in_bulk.", ei, ej, quarter 
         if ( quarter == PM ) then
           !!> 
               path tip you
@@ -1255,7 +1203,7 @@ contains
           status = 'have found'
           u = mesh_edge.u_cross_coord(ei,ej)
           v = mesh_vert.pos_v(ej)
-          call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
+          call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           call register( path, u, v )
 !          call mesh_edge.erase( 'u', ei, ej )
           path.head = contour_path__element_t( 'u', 'in', ei, ej, PATH_NORTHWARD )
@@ -1278,15 +1226,12 @@ contains
     char(len=10) <out> :: status ! 'no contour' or 'have found'
 
     status = 'no contour'  ! default 
-!debugp "I am contour_path__set_start_edge. Calling find_start_edge_on_boundaries"
     call find_start_edge_on_boundaries( this,         &
                                         mesh_vert,    &
                                         mesh_edge,    &
                                         status )
-!debugp "I am contour_path__set_start_edge.", status
     if ( status == 'have found' ) return
 
-!debugp "I am contour_path__set_start_edge. calling set_start_edge_in_bulk."
     call set_start_edge_in_bulk( this,         &
                                  mesh_vert,    &
                                  mesh_edge,    &
@@ -1303,31 +1248,20 @@ contains
     type(slice_mesh__edge_t) <io> :: edge
 
     do
-!debugp "I am contour_path__trace_and_erase.", path.head.i
-!debugp "I am contour_path__trace_and_erase.", path.head.j
-!debugp "I am contour_path__trace_and_erase.", path.head.direct
-!debugp "I am contour_path__trace_and_erase.", path.head.which_edge
-!debugp "I am contour_path__trace_and_erase.", path.head.lane
       select case (path.head.lane)
         case ('on')
-!debugp "--> I am calling  go_along_boundary."       
-!debugp "-->  ", path.head.i, path.head.j
           call go_along_boundary( path, vert, edge )
         case ('in')
-!debugp "--> I am calling  jump_to_other_edge."       
           call jump_to_other_edge( path, vert, edge )
         case default
-          call ut__fatal( "__MODFUNC__: case error." )
+          call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
-!debugp "--> I am calling path-close-check ."       
       if ( path.is_closed() ) then
-!debugp "--> closed."       
         call edge.erase( path.start.which_edge,  &
                          path.start.i,           &
                          path.start.j )
         return
       end if
-!debugp "--> NOT closed."       
     end do
 
   end subroutine contour_path__trace_and_erase
