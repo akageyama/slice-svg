@@ -160,7 +160,11 @@ contains
 
 !debugp "I am jump_to_u_edge_mp_if_possible", ei0, ej0
 !debugp "I am jump_to_u_edge_mp_if_possible", edge.u_quarter(ei0,ej0)
+!debugp " >>>>>>"
+!debugp "I am jump_to_u_edge_mp_if_possible", SLICE_MESH__EDGE_MP
+!debugp "I am jump_to_u_edge_mp_if_possible", edge.u_quarter(ei0,ej0)
     if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
+!debugp " >>>>>> >>>>>"
       jumped = .true.
       u = edge.u_cross_coord(ei0,ej0)
       v = vert.pos_v(ej0)
@@ -168,6 +172,7 @@ contains
       if ( ej0 == 1 ) then !         *       .  __ new head.
         vi0 = ei0 + 1      !           *     . /
         vj0 = ej0          !     - - m - * * p - - 
+!debugp "I am jump_to_u_edge_mp_if_possible", vi0, vj0
         path.head = contour_path__element_t( 'u', 'on', vi0, vj0,  &
                                             PATH_EASTWARD )
       else
@@ -525,6 +530,7 @@ contains
 
     vi = path.head.i
     vj = path.head.j
+!debugp "I am go_along_boundary_on_u_edge_eastward.", vi, vj
     select case ( edge.u_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
