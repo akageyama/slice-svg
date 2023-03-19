@@ -116,8 +116,9 @@ contains
 
     type(color__hsv_t) :: hsv
 
+!debugp value
     call ut__assert( value >= 0.0 .and. value <= 1.0,  &
-                    'Normalized value out of range.' )
+                    '__MODULE__(__LINE__): Normalized value out of range.' )
 
     hsv.hue = 0.3 + 0.5 * value
     hsv.sat = 0.7

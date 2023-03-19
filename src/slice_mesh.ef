@@ -539,6 +539,13 @@ contains
             diff1 = val_vert(ei,ej) - level
             diff2 = level - val_vert(ei,ej+1)
             this.v_cross_coord(ei,ej) = linear_interpol( v1, v2, diff1, diff2 )
+!debug
+if ( ei==1 ) then
+!debugp "I am iInterpol_cross_point_edge_v", ej,quarter
+!debugp " >> >> ", v1, v2
+!debugp " >> >> ", this.v_cross_coord(ei,ej)
+end if
+!debug
           end if
         end do
       end do

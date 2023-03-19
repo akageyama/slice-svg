@@ -1188,9 +1188,11 @@ contains
     call ut__assert( path.num == 0,  &
                     '__MODFUNC__: You forgot to reset contour_path.' )
 
+!debugp "I am set_start_edge_in_bulk. Entering do-loops."
     do ej = 2, mesh_edge.u_nv-1
       do ei = 2, mesh_edge.u_nu-1
         quarter = mesh_edge.u_quarter(ei,ej)
+!debugp "I am set_start_edge_in_bulk.", ei, ej, quarter 
         if ( quarter == PM ) then
           !!> 
               path tip you
@@ -1236,6 +1238,7 @@ contains
 !debugp "I am contour_path__set_start_edge.", status
     if ( status == 'have found' ) return
 
+!debugp "I am contour_path__set_start_edge. calling set_start_edge_in_bulk."
     call set_start_edge_in_bulk( this,         &
                                  mesh_vert,    &
                                  mesh_edge,    &
