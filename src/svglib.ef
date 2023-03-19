@@ -620,17 +620,19 @@ contains
   end subroutine svglib__polygon
 
 
-  subroutine svglib__path( this, nverts,  &
-                           verts_x,       &
-                           verts_y,       &
-                           path_close,    &
-                           line_width,    &
-                           line_color,    &
+  subroutine svglib__path( this, nverts,    &
+                           verts_x,         &
+                           verts_y,         &
+                           path_directive,  &
+                           path_close,      &
+                           line_width,      &
+                           line_color,      &
                            fill_color )
     class(svglib_t) <io> :: this
     integer <in> :: nverts
-    real, dimension(nverts) :: verts_x
-    real, dimension(nverts) :: verts_y 
+    real, dimension(nverts) <in> :: verts_x
+    real, dimension(nverts) <in> :: verts_y 
+    char(len=1), dimension(nverts) <in> :: path_directive 
     logical <in> :: path_close
     real <in> :: line_width
     char(len=*) <optin> :: line_color
@@ -663,11 +665,13 @@ contains
     
     call write_out( this, trim(adjustl(str_all)) )
       call indent_push( this )
-      call write_out( this, 'M' )
         n = 1
         str_coords = svglib__text_line( verts_x(n), verts_y(n) )
         call write_out( this, str_coords )
-        do n = 2, nverts
+        do n = 1, nverts
+          if ( path_directive(n) /= ' ' ) then
+            call write_out( this, path_directive(n) )
+          end if
           str_coords = svglib__text_line( verts_x(n), verts_y(n) )
           call write_out( this, str_coords )
         end do

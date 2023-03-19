@@ -65,6 +65,14 @@ contains
     logical :: just_once = .true.
     char(len=10) :: status
 
+    type path_data_for_svg_t
+      integer :: num_verts
+      type(sketch__sim_pos_t), dimension(nu*nv) :: verts_sim
+
+    contains
+      initialize => path_data_for_svg__initialize
+    end path_data_for_svg_t
+
     ==<just_once>==
       call contour_path.initialize( this.mesh_vert.nu,  &
                                     this.mesh_vert.nv )
@@ -98,6 +106,12 @@ contains
 
   contains
 
+    subroutine iSet_vertex_list_for_svg
+      integer, save :: counter
+      counter = 0
+
+    end subroutine iSet_vertex_list_for_svg
+
     subroutine iDraw_contour( nu,               &
                               nv,               &
                               width_in_pixels,  & 
@@ -128,6 +142,7 @@ contains
 
       call sketch.path( contour_path.num,    &
                         verts_sim,           &
+                        path_directive,      &
                         width_in_pixels,     &
                         .true.,   &
                         line_color,          &
