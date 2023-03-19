@@ -119,6 +119,7 @@ contains
     logical <io> :: jumped
     integer <in> :: ei0, ej0
 
+    integer :: vi0, vj0
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
@@ -129,9 +130,11 @@ contains
       u = edge.u_cross_coord(ei0,ej0)
       v = vert.pos_v(ej0)
       call ut__assert( u /= NAN, "__MODFUNC__: Invalid cross coord." )
-      call register( path, u, v )
-      if ( ej0 == edge.u_nv ) then
-        path.head = contour_path__element_t( 'u', 'on', ei0, ej0,  &
+      call register( path, u, v )  !       __ new head      
+      if ( ej0 == edge.u_nv ) then !      /
+        vi0 = ei0                  ! - - p * * - m - -
+        vj0 = ej0                  !     .     * .
+        path.head = contour_path__element_t( 'u', 'on', vi0, vj0,  &
                                             PATH_WESTWARD )
       else
         path.head = contour_path__element_t( 'u', 'in', ei0, ej0,  &
@@ -151,6 +154,8 @@ contains
     integer <in> :: ei0, ej0
 
     real :: u, v
+    integer :: vi0, vj0
+
     if ( jumped ) return  ! you have already jumped for this cell.
 
 !debugp "I am jump_to_u_edge_mp_if_possible", ei0, ej0
@@ -160,8 +165,10 @@ contains
       u = edge.u_cross_coord(ei0,ej0)
       v = vert.pos_v(ej0)
       call register( path, u, v )
-      if ( ej0 == 1 ) then
-        path.head = contour_path__element_t( 'u', 'in', ei0, ej0,  &
+      if ( ej0 == 1 ) then !         *       .  __ new head.
+        vi0 = ei0 + 1      !           *     . /
+        vj0 = ej0          !     - - m - * * p - - 
+        path.head = contour_path__element_t( 'u', 'in', vi0, vj0,  &
                                             PATH_EASTWARD )
       else
         path.head = contour_path__element_t( 'u', 'in', ei0, ej0,  &
@@ -180,6 +187,7 @@ contains
     logical <io> :: jumped
     integer <in> :: ei0, ej0
 
+    integer :: vi0, vj0
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
@@ -188,9 +196,12 @@ contains
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
       call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
-      call register( path, u, v )
-      if ( ei0 == 1 ) then
-        path.head = contour_path__element_t( 'v', 'on', ei0, ej0,  &
+      call register( path, u, v ) !              .     * .
+                                  !              m - * - p - 
+      if ( ei0 == 1 ) then        !              . *     .
+        vi0 = ei0                 !              *       .
+        vj0 = ej0                 ! new head --> p - - - p - 
+        path.head = contour_path__element_t( 'v', 'on', vi0, vj0,  &
                                             PATH_SOUTHWARD )
       else
         path.head = contour_path__element_t( 'v', 'in', ei0, ej0,  &
@@ -208,6 +219,7 @@ contains
     logical <io> :: jumped
     integer <in> :: ei0, ej0
 
+    integer :: vi0, vj0
     real :: u, v
     if ( jumped ) return  ! you have already jumped for this cell.
 
@@ -219,9 +231,12 @@ contains
       v = edge.v_cross_coord(ei0,ej0)
       call ut__assert( v /= NAN, "__MODFUNC__: Invalid cross coord." )
 !debugp "I am jump_to_v_edge_mp_if_possible. registering..."   
-      call register( path, u, v )
-      if ( ei0 == edge.v_nu ) then
-        path.head = contour_path__element_t( 'v', 'on', ei0, ej0,  &
+      call register( path, u, v )  !       .       .
+                                   !       p - - - p <== new head
+      if ( ei0 == edge.v_nu ) then !       .       * 
+        vi0 = ei0                  !       .     * .
+        vj0 = ej0 + 1              !       p - * - m
+        path.head = contour_path__element_t( 'v', 'on', vi0, vj0,  &
                                             PATH_NORTHWARD )
       else
         path.head = contour_path__element_t( 'v', 'in', ei0, ej0,  &
