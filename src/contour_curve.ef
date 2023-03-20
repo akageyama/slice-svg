@@ -27,9 +27,9 @@ module contour_curve_m
              |       |       |       |       |   
 
       Mathematically, every contour line is closed unless it touches 
-      on the boundary of the simulatin box (u=umin/umax or v=vmin/vmax).
+      on the border of the simulatin box (u=umin/umax or v=vmin/vmax).
 
-      We set a virtual contour line along the boundary if the boudary grid
+      We set a virtual contour line along the border if the boudary grid
       vertices satisfy the condition 
           vert_val >= level  (denoted by "p" in the figure),
       see the upper right figure. 
@@ -44,7 +44,7 @@ module contour_curve_m
       boundaries) is any u_edge with its quarter value "PM" (plus-in-left
       and minus-in-right of the edge).
 
-      Cares should be taken for contour lines with virual (on-boundary)
+      Cares should be taken for contour lines with virual (on-border)
       contours. 
 
            ei     ei+1    *      
@@ -240,9 +240,9 @@ contains
   end subroutine jump_to_v_edge_mp_if_possible 
 
 
-  subroutine go_along_boundary_on_v_edge_northward( path,   &
-                                                    vert,   &
-                                                    edge )
+  subroutine go_along_border_on_v_edge_northward( path,   &
+                                                  vert,   &
+                                                  edge )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
@@ -326,12 +326,12 @@ contains
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
 
-  end subroutine go_along_boundary_on_v_edge_northward
+  end subroutine go_along_border_on_v_edge_northward
 
 
-  subroutine go_along_boundary_on_v_edge_southward( path,  &
-                                                vert,  &
-                                                edge )
+  subroutine go_along_border_on_v_edge_southward( path,  &
+                                                  vert,  &
+                                                  edge )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
@@ -384,12 +384,12 @@ contains
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
 
-  end subroutine go_along_boundary_on_v_edge_southward
+  end subroutine go_along_border_on_v_edge_southward
 
 
-  subroutine go_along_boundary_on_u_edge_westward( path,  &
-                                                   vert,  &
-                                                   edge )
+  subroutine go_along_border_on_u_edge_westward( path,  &
+                                                 vert,  &
+                                                 edge )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
@@ -479,12 +479,12 @@ contains
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
 
-  end subroutine go_along_boundary_on_u_edge_westward
+  end subroutine go_along_border_on_u_edge_westward
 
 
-  subroutine go_along_boundary_on_u_edge_eastward( path,  &
-                                                   vert,  &
-                                                   edge )
+  subroutine go_along_border_on_u_edge_eastward( path,  &
+                                                 vert,  &
+                                                 edge )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
@@ -526,10 +526,10 @@ contains
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
 
-  end subroutine go_along_boundary_on_u_edge_eastward
+  end subroutine go_along_border_on_u_edge_eastward
 
 
-  subroutine go_along_boundary( path, vert, edge )
+  subroutine go_along_border( path, vert, edge )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
@@ -539,17 +539,17 @@ contains
 
     select case (path.head.direct)
       case (PATH_NORTHWARD)
-        call go_along_boundary_on_v_edge_northward( path, vert, edge )
+        call go_along_border_on_v_edge_northward( path, vert, edge )
       case (PATH_SOUTHWARD)
-        call go_along_boundary_on_v_edge_southward( path, vert, edge )
+        call go_along_border_on_v_edge_southward( path, vert, edge )
       case (PATH_WESTWARD)
-        call go_along_boundary_on_u_edge_westward( path, vert, edge )
+        call go_along_border_on_u_edge_westward( path, vert, edge )
       case (PATH_EASTWARD)
-        call go_along_boundary_on_u_edge_eastward( path, vert, edge )
+        call go_along_border_on_u_edge_eastward( path, vert, edge )
       case default
         call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
-  end subroutine go_along_boundary
+  end subroutine go_along_border
 
 
   subroutine jump_to_other_edge( path,  &
@@ -811,9 +811,9 @@ contains
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
-    !----------------!
-    ! South boundary !
-    !----------------!
+    !--------------!
+    ! South border !
+    !--------------!
     ej = 1
     do ei = 1, mesh_edge.u_nu
       quarter = mesh_edge.u_quarter(ei,ej)
@@ -860,7 +860,7 @@ contains
                      |       |   *   |       |
                      |       |  *    |       |   ej=1
                   ***p*******p** - - m - - - m - (bottom
-                                 \                boundary)
+                                 \                border)
                                    start edge
 
             [case PP]
@@ -926,9 +926,9 @@ contains
       end if
     end do
 
-    !---------------!
-    ! East boundary !
-    !---------------!
+    !-------------!
+    ! East border !
+    !-------------!
     !!>  
       [case MP]         
                .         *     
@@ -1013,9 +1013,9 @@ contains
       end if
     end do  
 
-    !----------------!
-    ! North boundary !
-    !----------------!
+    !--------------!
+    ! North border !
+    !--------------!
     ej = mesh_edge.u_nv
     do ei = mesh_edge.u_nu, 1, -1 ! No strong reason to cound down here.
       quarter = mesh_edge.u_quarter(ei,ej)
@@ -1079,9 +1079,9 @@ contains
     end do
 
 
-    !---------------!
-    ! West boundary !
-    !---------------!
+    !-------------!
+    ! West border !
+    !-------------!
     ei = 1
     do ej = mesh_edge.v_nv, 1, -1
       quarter = mesh_edge.v_quarter(ei,ej)
@@ -1244,7 +1244,7 @@ contains
     do
       select case (path.head.lane)
         case ('on')
-          call go_along_boundary( path, vert, edge )
+          call go_along_border( path, vert, edge )
         case ('in')
           call jump_to_other_edge( path, vert, edge )
         case default

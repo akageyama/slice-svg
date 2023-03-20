@@ -77,7 +77,7 @@ module slice_mesh_m
              m - - m  |  0
              m - - p  |  1
              p - - m  |  2
-             p - - p  |  3 (Special quarter for boundary edges)
+             p - - p  |  3 (Special quarter for border edges)
       !!<
     real, dimension(:,:), allocatable :: u_cross_coord
     real, dimension(:,:), allocatable :: v_cross_coord
