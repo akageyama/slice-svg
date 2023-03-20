@@ -1,5 +1,6 @@
 module svglib_m
   use color_m
+  use ut_m
   use const_base_m
   use fileut_m
   implicit none
@@ -620,20 +621,19 @@ contains
   end subroutine svglib__polygon
 
 
-  subroutine svglib__path( this, nverts,    &
+  subroutine svglib__path( this,            &
+                           nverts,          &
+                           path_directive,  &
                            verts_x,         &
                            verts_y,         &
-                           path_directive,  &
-                           path_close,      &
                            line_width,      &
                            line_color,      &
                            fill_color )
     class(svglib_t) <io> :: this
     integer <in> :: nverts
+    char(len=1), dimension(nverts) <in> :: path_directive 
     real, dimension(nverts) <in> :: verts_x
     real, dimension(nverts) <in> :: verts_y 
-    char(len=1), dimension(nverts) <in> :: path_directive 
-    logical <in> :: path_close
     real <in> :: line_width
     char(len=*) <optin> :: line_color
     char(len=*) <optin> :: fill_color
@@ -643,6 +643,7 @@ contains
     char(len=SVGLIB__BSL) :: str_coords
     char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
     char(len=SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=1) :: directive
 
     str(1) = '<path' 
     str(2) = svglib__text_line( 'stroke-width=', line_width )
@@ -665,19 +666,24 @@ contains
     
     call write_out( this, trim(adjustl(str_all)) )
       call indent_push( this )
-        n = 1
-        str_coords = svglib__text_line( verts_x(n), verts_y(n) )
-        call write_out( this, str_coords )
         do n = 1, nverts
-          if ( path_directive(n) /= ' ' ) then
-            call write_out( this, path_directive(n) )
-          end if
-          str_coords = svglib__text_line( verts_x(n), verts_y(n) )
-          call write_out( this, str_coords )
+          directive = path_directive(n)
+          select case (directive)
+            case ('M','L') ! M(move) to , L(line) to.
+              call write_out( this, directive )
+              str_coords = svglib__text_line( verts_x(n), verts_y(n) )
+              call write_out( this, str_coords )
+            case (' ')  ! You can omit directive after 1st 'L'.
+              ! Omit the directive letter
+              str_coords = svglib__text_line( verts_x(n), verts_y(n) )
+              call write_out( this, str_coords )
+            case ('Z')  ! Close path
+              call write_out( this, directive )
+              ! No need to write coords
+            case default
+              call ut__fatal( "__MODULE__(__LINE__): case error." )
+          end select
         end do
-        if ( path_close ) then
-          call write_out( this, 'Z' )
-        end if
       call indent_pop( this )
     call write_out( this, QUOTE // '/>' )
 

@@ -29,7 +29,7 @@ objlist := $(addsuffix .o, $(filebase)) # => example.o
 
 
 FC = gfortran
-FFLAGS :=
+FFLAGS := 
 # FFLAGS += -fopenmp
 # FFLAGS += -fcheck=all
 # FFLAGS += -Wall
@@ -57,7 +57,7 @@ endif
 ifeq ($(this_host),mac)  # Mac
         EFPP = ../bin/efpp.py
         FC = gfortran
-        FFLAGS = 
+        FFLAGS = -O -Wuninitialized -ffpe-trap=invalid,zero,overflow -fbacktrace 
 endif
 ifeq ($(this_host),ofp)  # Oakforest PACS
         EFPP = ../bin/efpp.py

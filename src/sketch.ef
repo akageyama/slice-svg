@@ -458,18 +458,17 @@ contains
 
 
 
-  subroutine sketch__path( this, nverts,    &
-                           verts_sim,       &
+  subroutine sketch__path( this,            &
+                           nverts,          &
                            path_directive,  &
+                           verts_sim,       &
                            width_in_pixels, &
-                           path_close,      &
                            line_color,      &
                            fill_color )
     class(sketch_t) <io> :: this
     integer <in> :: nverts
     type(sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
     char(len=1), dimension(nverts) <in> :: path_directive
-    logical <in> :: path_close
     real <optin> :: width_in_pixels
     type(color_t) <optin> :: line_color
     type(color_t) <optin> :: fill_color
@@ -498,19 +497,17 @@ contains
 
     if ( present(line_color) ) then
       call this.svglib.path( nverts,                       &
+                             path_directive,               &
                              verts_screen_x,               &
                              verts_screen_y,               &
-                             path_directive,               &
-                             path_close,                   &
                              width_in_pixels,              &
                              line_color=line_color_code,   &
                              fill_color=fill_color_code )
     else
       call this.svglib.path( nverts,                       &
+                             path_directive,               &
                              verts_screen_x,               &
                              verts_screen_y,               &
-                             path_directive,               &
-                             path_close,                   &
                              width_in_pixels,              &
                              fill_color=fill_color_code )
     end if

@@ -60,22 +60,23 @@ contains
     real <optin> :: width_in_pixels
     type(color_t) <optin> :: line_color
     type(color_t) <optin> :: fill_color
-    
+
+    integer :: nu, nv
     type(contour_path_t), save :: contour_path
     logical :: just_once = .true.
     char(len=10) :: status
-
-    type path_data_for_svg_t
-      integer :: num_verts
-      type(sketch__sim_pos_t), dimension(nu*nv) :: verts_sim
-
-    contains
-      initialize => path_data_for_svg__initialize
-    end path_data_for_svg_t
+    type(sketch__sim_pos_t), dimension(:), allocatable, save :: verts_sim
+    char(len=1), dimension(:), allocatable, save :: path_directive
+    char(len=1) :: directive
+    integer :: i, counter
+    real :: u_sim, v_sim, dummy
 
     ==<just_once>==
-      call contour_path.initialize( this.mesh_vert.nu,  &
-                                    this.mesh_vert.nv )
+      nu = this.mesh_vert.nu
+      nv = this.mesh_vert.nv
+      call contour_path.initialize( nu, nv )
+      allocate(verts_sim(nu*nv))
+      allocate(path_directive(nu*nv))
     ==</just_once>==
 
     call this.mesh_edge.set_quarter( this.mesh_vert,  &
@@ -86,16 +87,35 @@ contains
     call contour_path.set_start_edge( this.mesh_vert,  &
                                       this.mesh_edge,  &
                                       status )
-    do while ( status == 'have found' )
 
+    counter = 0
+    do while ( status == 'have found' )
       !!  Tring to find the 1st contour for this level.
       call contour_path.trace_and_erase( this.mesh_vert,  &
                                          this.mesh_edge )
-      call iDraw_contour( this.mesh_vert.nu,    &
-                          this.mesh_vert.nv,    &
-                          width_in_pixels,      &
-                          line_color,           &
-                          fill_color )
+      call  ut__assert( contour_path.num >= 2,  &
+                        "__MODULE__(__LINE__): Path too short." )
+        
+      do i = 1, contour_path.num
+        counter += 1
+        if ( i == 1 ) then
+          directive = 'M' ! Move to 
+        else if ( i == 2 ) then
+          directive = 'L' ! Line to
+        else
+          directive = ' ' ! Line to (You can ommit directive after 1st 'L'.)
+        end if
+        path_directive(counter) = directive 
+        u_sim = contour_path.list_u(i)
+        v_sim = contour_path.list_v(i)
+        verts_sim(counter) = sketch__sim_pos_t(u_sim,v_sim)
+      end do
+
+      ! To close the path
+      counter += 1
+      path_directive(counter) = 'Z' ! Close the sub-path.
+      dummy = 0.0  ! any number
+      verts_sim(counter) = sketch__sim_pos_t( dummy, dummy )
 
       !!  Generally, more contours exist for this level.
       call contour_path.reset
@@ -104,50 +124,14 @@ contains
                                         status )
     end do
 
-  contains
-
-    subroutine iSet_vertex_list_for_svg
-      integer, save :: counter
-      counter = 0
-
-    end subroutine iSet_vertex_list_for_svg
-
-    subroutine iDraw_contour( nu,               &
-                              nv,               &
-                              width_in_pixels,  & 
-                              line_color,       &
-                              fill_color )
-      integer <in> :: nu, nv
-      real <optin> :: width_in_pixels
-      type(color_t) <optin> :: line_color
-      type(color_t) <optin> :: fill_color
-
-      integer :: i, li, lj
-      real :: u_sim, v_sim
-      type(sketch__sim_pos_t), dimension(nu*nv) :: verts_sim
-
-      do i = 1, contour_path.num
-        u_sim = contour_path.list_u(i)
-        v_sim = contour_path.list_v(i)
-        verts_sim(i) = sketch__sim_pos_t(u_sim,v_sim)
-      end do
-
-      !!> Polygon version (original)
-      call sketch.polygon( contour_path.num,    &
-                           verts_sim,           &
-                           width_in_pixels,     &
-                           line_color,          &
-                           fill_color )
-      !!<
-
-      call sketch.path( contour_path.num,    &
-                        verts_sim,           &
+    if ( counter > 1 ) then
+      call sketch.path( counter,             &
                         path_directive,      &
+                        verts_sim,           &
                         width_in_pixels,     &
-                        .true.,   &
                         line_color,          &
-                        fill_color )
-    end subroutine iDraw_contour
+                        fill_color )      
+    end if
 
   end subroutine slice__scalar_vis_contour
 
