@@ -26,6 +26,47 @@ module contour_curve_m
            - m - - - m - - - m - - - m - - - m -  
              |       |       |       |       |   
 
+     The border is usually rectangular.
+
+          +=======+=======+=======+=======+=======+
+          |       .       .       .       .       |
+          |       .       .       .       .       |
+          + - - - + - - - + - - - + - - - + - - - +
+          |       .       .       .       .       |
+          |       .       .       .       .       |
+          + - - - + - - - + - - - + - - - + - - - +
+          |       .       .       .       .       |
+          |       .       .       .       .       |
+          + - - - + - - - + - - - + - - - + - - - +
+          |       .       .       .       .       |
+          |       .       .       .       .       |
+          + - - - + - - - + - - - + - - - + - - - +
+          |       .       .       .       .       |
+          |       .       .       .       .       |
+          +=======+=======+=======+=======+=======+
+
+
+     This library also accepts general border shape such as follows.
+     The letter 'W' stands for the turning direction when you go
+     along the border in the anti-crlockwise.
+
+            . . .   . . . S=======+=======+=======W
+          .       .       |       .       .       |     
+          .       .       |       .       .       |     
+            . . . S=======W . . . + . . . E=======N
+          .       |       .       .       |       .     
+          .       |       .       .       |       .     
+          S=======W . . . + . . . + . . . N=======W
+          |       .       .       .       .       |     
+          |       .       .       .       .       |     
+          E=======S . . . + . . . + . . . + . . . +
+          .       |       .       .       .       |     
+          .       |       .       .       .       |     
+            . . . E=======S . . . E=======+=======N
+          .       .       |       |       .       .     
+          .       .       |       |       .       .     
+            . . .   . . . E=======N . . .   . . .  
+
       Mathematically, every contour line is closed unless it touches 
       on the border of the simulatin box (u=umin/umax or v=vmin/vmax).
 

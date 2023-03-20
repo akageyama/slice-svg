@@ -40,6 +40,14 @@ module slice_mesh_m
     procedure :: finalize => slice_mesh__vert_finalize
   end type slice_mesh__vert_t  
 
+  type, public :: slice_mesh__border_edge_t
+    integer :: num
+    char(len=1), dimension(:), allocatable :: which_edge ! 'u' or 'v'
+    char(len=1), dimension(:), allocatable :: turn ! F(orward)/N(orth)/W/S/E
+  contains
+    procedure :: initialize => slice_mesh__border_edge_initialize
+  end type slice_mesh__border_edge_t
+
   type, public :: slice_mesh__edge_t
     !!>                            
                                  edge_v                                    
@@ -91,6 +99,15 @@ module slice_mesh_m
 
 
 contains
+
+
+  subroutine slice_mesh__border_edge_initialize( this,   &
+                                                 edge_u_nu, edge_u_nv,  &
+                                                 edge_v_nu, edge_v_nv,  &
+                                                 border
+                                                 )
+
+  end subroutine slice_mesh__border_edge_initialize
 
 
   function linear_interpol( x1, x2, diff1, diff2 ) result( xi )
