@@ -1,0 +1,1263 @@
+module contour_curve_m
+  use ut_m
+  use const_base_m
+  use slice_mesh_m
+  implicit none
+  private
+
+  !!> 
+     To draw contour paths for a given level.
+             |       |       |       |       |    
+           - m - - - m - - - m - - - m - - - m - 
+             |       |       *       |       |   
+             |       |    *  |  *    |       |         
+           - m - - - m *-- - p - - * m - - - m -  
+             |      *|       |       *       |   
+             |    *  |       |       |*      |   
+           - m -*- - p - - - p - - - p * - - m -  
+             |   *   |       |       | *     |   
+             |    *  |       |       | *     |   
+           - m - - * p - - - p - - - p * - - m -  
+             |     * |       |       |*      |   
+             |     * |       |       *       |   
+           - m - - * m - - - P - - * M - - - m -  
+             |      *|       |  *    |       |   
+             |       * * * * *       |       |   
+           - m - - - m - - - m - - - m - - - m -  
+             |       |       |       |       |   
+
+      Mathematically, every contour line is closed unless it touches 
+      on the boundary of the simulatin box (u=umin/umax or v=vmin/vmax).
+
+      We set a virtual contour line along the boundary if the boudary grid
+      vertices satisfy the condition 
+          vert_val >= level  (denoted by "p" in the figure),
+      see the upper right figure. 
+
+      Since all contour lines are thus always closed, we first find an
+      edge (starting edge) for each contour and draw the contour with
+      keeping grid vertices with 
+          vert_val >= level
+      always in its left-hand side of the path.
+      
+      Starting edge of a trully closed contour (without touching the
+      boundaries) is any u_edge with its quarter value "PM" (plus-in-left
+      and minus-in-right of the edge).
+
+      Cares should be taken for contour lines with virual (on-boundary)
+      contours. 
+
+           ei     ei+1    *      
+           |       |    *       
+       - - p - - - p -*-       
+           |       |*         
+           |      *|         
+           |    *  |        
+    ej - - p==*====m - -   
+           | *  \  |              
+           |*   PM |             
+           *      \
+                   \
+                 start edge   
+  !!< 
+
+  integer <const> :: PATH_NORTHWARD = 0    !       0        0 (NORTH)
+  integer <const> :: PATH_WESTWARD  = 1    !       |        1 (WEST)
+  integer <const> :: PATH_SOUTHWARD = 2    !  1 -- + -- 3   2 (SOUTH)
+  integer <const> :: PATH_EASTWARD  = 3    !       |        3 (EAST)
+                                           !       2
+
+  type, public :: contour_curve__element_t
+    char(len=1) :: which_edge ! 'u' or 'v'
+    char(len=2) :: lane ! 'in' (bulk) or 'on' (border)
+    integer :: i, j  ! edge id (for in-lane), or 
+                     ! vertex id (for on-lane).
+    integer :: direct
+  end type contour_curve__element_t
+
+  type, public :: contour_curve_t
+    integer :: vert_nu, vert_nv
+    integer :: num ! total number of vertex points of the path
+    type(contour_curve__element_t) :: start
+    type(contour_curve__element_t) :: head
+    real, dimension(:), allocatable :: list_u, list_v
+  contains
+    procedure :: initialize => contour_curve__initialize
+    procedure :: reset => contour_curve__reset
+    procedure :: trace_and_erase  &
+                       => contour_curve__trace_and_erase
+    procedure :: set_start_edge &
+                       => contour_curve__set_start_edge
+    procedure :: is_closed => contour_curve__is_closed
+  end type contour_curve_t
+
+
+contains
+
+
+  subroutine register( contour_curve, u, v )
+    type(contour_curve_t) <io> :: contour_curve
+    real <in> :: u, v
+
+    integer :: n
+
+    n = contour_curve.num + 1
+    call ut__assert( n <= size(contour_curve.list_u,dim=1),  &
+                    '__MODULE__(__LINE__): Increase array size of path_vert.' )
+
+    contour_curve.list_u(n) = u
+    contour_curve.list_v(n) = v
+    contour_curve.num = n
+  end subroutine register
+
+
+  subroutine jump_to_u_edge_pm_if_possible( path, vert, edge, jumped,  &
+                                            ei0, ej0 )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+    logical <io> :: jumped
+    integer <in> :: ei0, ej0
+
+    integer :: vi0, vj0
+    real :: u, v
+    if ( jumped ) return  ! you have already jumped for this cell.
+
+    if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_PM ) then
+      jumped = .true.
+      u = edge.u_cross_coord(ei0,ej0)
+      v = vert.pos_v(ej0)
+      call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+      call register( path, u, v )  !       __ new head      
+      if ( ej0 == edge.u_nv ) then !      /
+        vi0 = ei0                  ! - - p * * - m - -
+        vj0 = ej0                  !     .     * .
+        path.head = contour_curve__element_t( 'u', 'on', vi0, vj0,  &
+                                              PATH_WESTWARD )
+      else
+        path.head = contour_curve__element_t( 'u', 'in', ei0, ej0,  &
+                                              PATH_NORTHWARD )
+      end if   
+      call edge.erase( 'u', ei0, ej0 ) 
+    end if
+  end subroutine jump_to_u_edge_pm_if_possible
+
+
+  subroutine jump_to_u_edge_mp_if_possible( path, vert, edge, jumped,  &
+                                            ei0, ej0 )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+    logical <io> :: jumped
+    integer <in> :: ei0, ej0
+
+    real :: u, v
+    integer :: vi0, vj0
+
+    if ( jumped ) return  ! you have already jumped for this cell.
+
+    if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
+      jumped = .true.
+      u = edge.u_cross_coord(ei0,ej0)
+      v = vert.pos_v(ej0)
+      call register( path, u, v )
+      if ( ej0 == 1 ) then !         *       .  __ new head.
+        vi0 = ei0 + 1      !           *     . /
+        vj0 = ej0          !     - - m - * * p - - 
+        path.head = contour_curve__element_t( 'u', 'on', vi0, vj0,  &
+                                              PATH_EASTWARD )
+      else
+        path.head = contour_curve__element_t( 'u', 'in', ei0, ej0,  &
+                                              PATH_SOUTHWARD )
+      end if    
+      call edge.erase( 'u', ei0, ej0 ) 
+    end if
+  end subroutine jump_to_u_edge_mp_if_possible  
+
+
+  subroutine jump_to_v_edge_pm_if_possible( path, vert, edge, jumped,  &
+                                            ei0, ej0 )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+    logical <io> :: jumped
+    integer <in> :: ei0, ej0
+
+    integer :: vi0, vj0
+    real :: u, v
+    if ( jumped ) return  ! you have already jumped for this cell.
+
+    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_PM ) then
+      jumped = .true.
+      u = vert.pos_u(ei0)
+      v = edge.v_cross_coord(ei0,ej0)
+      call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+      call register( path, u, v ) !              .     * .
+                                  !              m - * - p - 
+      if ( ei0 == 1 ) then        !              . *     .
+        vi0 = ei0                 !              *       .
+        vj0 = ej0                 ! new head --> p - - - p - 
+        path.head = contour_curve__element_t( 'v', 'on', vi0, vj0,  &
+                                              PATH_SOUTHWARD )
+      else
+        path.head = contour_curve__element_t( 'v', 'in', ei0, ej0,  &
+                                              PATH_WESTWARD )
+      end if
+      call edge.erase( 'v', ei0, ej0 ) 
+    end if
+  end subroutine jump_to_v_edge_pm_if_possible   
+
+
+  subroutine jump_to_v_edge_mp_if_possible( path, vert, edge, jumped, ei0, ej0 )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+    logical <io> :: jumped
+    integer <in> :: ei0, ej0
+
+    integer :: vi0, vj0
+    real :: u, v
+    if ( jumped ) return  ! you have already jumped for this cell.
+
+    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
+      jumped = .true.
+      u = vert.pos_u(ei0)
+      v = edge.v_cross_coord(ei0,ej0)
+      call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+      call register( path, u, v )  !       .       .
+                                   !       p - - - p <== new head
+      if ( ei0 == edge.v_nu ) then !       .       * 
+        vi0 = ei0                  !       .     * .
+        vj0 = ej0 + 1              !       p - * - m
+        path.head = contour_curve__element_t( 'v', 'on', vi0, vj0,  &
+                                              PATH_NORTHWARD )
+      else
+        path.head = contour_curve__element_t( 'v', 'in', ei0, ej0,  &
+                                              PATH_EASTWARD )
+      end if
+      call edge.erase( 'v', ei0, ej0 ) 
+    end if
+  end subroutine jump_to_v_edge_mp_if_possible 
+
+
+  subroutine go_along_boundary_on_v_edge_northward( path,   &
+                                                    vert,   &
+                                                    edge )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+
+    real :: u, v       ! coordinates of path tip that is to be registered.
+    integer :: vi, vj  ! vertex indeces i and j
+    logical :: jumped
+
+    call ut__assert( path.head.lane == 'on',  &
+                     "__MODULE__(__LINE__): The path should be on border." )
+
+    call ut__assert( path.head.direct == PATH_NORTHWARD,  &
+                     "__MODULE__(__LINE__): The path is supposed to go north." )
+
+    vi = path.head.i
+    vj = path.head.j
+    select case ( edge.v_quarter(vi,vj) )
+      case (SLICE_MESH__EDGE_PP) 
+        !!>
+              .       |            
+            - + - - - p            
+              .       .\__ Will register this vertex             
+              .       .         in the present step.
+              .       .            
+            - + - - - p <== current head of vertex-type (vi,vj)
+              .       * \__ Already egistered this vertex           
+              .       *                 in the last step.
+              .       * <== You have come along this edge.
+        !!<
+        jumped = .true.
+        u = vert.pos_u(vi)
+        v = vert.pos_v(vj+1)
+        call register( path, u, v )
+        call edge.erase( 'v', vi, vj )
+        if ( vj+1 == vert.nv ) then ! you have reached the north-east corner.
+          !!>
+                        __ you will go this way.
+                       /    
+                - + - <=**p <== new head of vertex-type (vi,vj+1)
+                  .       *
+                  .       *
+                  .       *
+                - + - - - p
+                  .       *
+                                          
+          !!<
+          path.head = contour_curve__element_t( 'u', 'on', vi, vj+1, PATH_WESTWARD )
+        else
+          !!>
+                   .       * <== you will continue going this way.
+                   .       *
+                 - + - - - p <= new head of vertex type (vi,vj+1)
+                   .       *
+                   .       *
+                   .       *
+                 - + - - - p
+                   .       *
+                   .       *
+          !!<
+          path.head = contour_curve__element_t( 'v', 'on', vi, vj+1, PATH_NORTHWARD )
+        end if
+      case (SLICE_MESH__EDGE_PM )
+        !!>
+                   .       |
+                 - + - - - m
+                   .       .
+                   .       * <== new head of edge-type (vi,vj)
+                   .       *
+                 - + - - - p
+                   .       *
+                   .       *
+        !!<
+        jumped = .true.
+        u = vert.pos_u(vi)
+        v = edge.v_cross_coord(vi,vj)
+        call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+        call register( path, u, v )
+        call edge.erase( 'v', vi, vj )
+        path.head = contour_curve__element_t( 'v', 'in', vi, vj, PATH_WESTWARD )
+      case default
+        call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
+    end select
+
+  end subroutine go_along_boundary_on_v_edge_northward
+
+
+  subroutine go_along_boundary_on_v_edge_southward( path,  &
+                                                vert,  &
+                                                edge )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+
+    real :: u, v       ! coordinates of path tip that is to be registered.
+    integer :: vi, vj  ! vertex indeces i and j
+    logical :: jumped
+
+    call ut__assert( path.head.lane == 'on',  &
+                     "__MODULE__(__LINE__): The path should be on border." )
+
+    call ut__assert( path.head.direct == PATH_SOUTHWARD,  &
+                     "__MODULE__(__LINE__): The path is supposed to go north." )
+
+    vi = path.head.i
+    vj = path.head.j
+
+    select case ( edge.v_quarter(vi,vj-1) )
+      case (SLICE_MESH__EDGE_PP) 
+        jumped = .true.
+        u = vert.pos_u(vi)
+        v = vert.pos_v(vj-1)
+        call register( path, u, v )
+        call edge.erase( 'v', vi, vj-1 )
+        if ( vj-1 == 1 ) then ! you have reached the south-west corner.
+          path.head = contour_curve__element_t( 'u', 'on', vi,    1, PATH_EASTWARD )
+        else
+          path.head = contour_curve__element_t( 'v', 'on', vi, vj-1, PATH_SOUTHWARD )
+        end if
+      case (SLICE_MESH__EDGE_MP )
+        !!>
+                   *       |
+                   *       |
+                   p - - - + -
+                   *       .
+                   *       .
+                   .       .
+                   m - - - + -
+                   |       .
+                   |       .
+        !!<
+        jumped = .true.
+        u = vert.pos_u(vi)
+        v = edge.v_cross_coord(vi,vj-1)
+        call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+        call register( path, u, v )
+        call edge.erase( 'v', vi, vj-1 )
+        path.head = contour_curve__element_t( 'v', 'in', vi, vj-1, PATH_EASTWARD )
+      case default
+        call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
+    end select
+
+  end subroutine go_along_boundary_on_v_edge_southward
+
+
+  subroutine go_along_boundary_on_u_edge_westward( path,  &
+                                                   vert,  &
+                                                   edge )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+
+    real :: u, v       ! coordinates of path tip that is to be registered.
+    integer :: vi, vj  ! vertex indeces i and j
+
+    logical :: jumped
+
+    call ut__assert( path.head.lane == 'on',  &
+                     "__MODULE__(__LINE__): The path should be on border." )
+
+    call ut__assert( path.head.direct == PATH_WESTWARD,  &
+                     "__MODULE__(__LINE__): The path is supposed to go west." )
+
+    vi = path.head.i
+    vj = path.head.j
+
+    select case ( edge.u_quarter(vi-1,vj) )
+      case (SLICE_MESH__EDGE_PP) 
+        !!>
+                        __ You will go this way.
+                       /
+                      /      You have come along this edge.
+                     /       /        
+            - - p - - - p * * *             
+                .\      .\
+                . \     . \__ Current head of vertex-type (vi,vj)
+                .  \    .
+                + - - - +
+                .    \  . 
+                .     New head of vertex-type
+        !!<
+        jumped = .true.
+        u = vert.pos_u(vi-1)
+        v = vert.pos_v(vj)
+        call register( path, u, v )
+        call edge.erase( 'u', vi-1, vj )
+        if ( vi-1 == 1 ) then ! you have reached the north-west corner.
+          !!>                
+                              __ new head of vertex-type (vi-1,vj)
+                             / 
+                            p * * * p * * 
+            you will        *       .
+             go this way => *       .
+                            .       .
+                            + - - - + - -
+                            .       .
+          !!<
+          path.head = contour_curve__element_t( 'v', 'on', 1, vj, PATH_SOUTHWARD )
+        else
+          !!>
+                         __ new head of vertex type (vi-1,vj)
+                        /
+                       /  ___ you will continue going this way.
+                      /  /
+                     /  /      
+                  - p * * * p * * You came along this border.
+                    .       .     
+                    .       .     
+                    .       .     
+                  - + - - - + - - 
+                    .       .     
+          !!<
+          path.head = contour_curve__element_t( 'u', 'on', vi-1, vj, PATH_WESTWARD )
+        end if
+      case (SLICE_MESH__EDGE_MP )
+        !!>
+                           __ new head of edge type (vi-1,vj)
+                          /
+                         /      
+                  - m - * * p * * You came along this border.
+                    .  *    .     
+                    . *<== You will go this way.
+                    .       .     
+                  - + - - - + - - 
+                    .       .     
+        !!<
+        jumped = .true.
+        u = edge.u_cross_coord(vi-1,vj)
+        v = vert.pos_v(vj)
+        call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+        call register( path, u, v )
+        call edge.erase( 'u', vi-1, vj )
+        path.head = contour_curve__element_t( 'u', 'in', vi-1, vj, PATH_SOUTHWARD )
+      case default
+        call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
+    end select
+
+  end subroutine go_along_boundary_on_u_edge_westward
+
+
+  subroutine go_along_boundary_on_u_edge_eastward( path,  &
+                                                   vert,  &
+                                                   edge )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+
+    real :: u, v       ! coordinates of path tip that is to be registered.
+    integer :: vi, vj  ! vertex indeces i and j
+
+    logical :: jumped
+
+    call ut__assert( path.head.lane == 'on',  &
+                     "__MODULE__(__LINE__): The path should be on border." )
+
+    call ut__assert( path.head.direct == PATH_EASTWARD,  &
+                     "__MODULE__(__LINE__): The path is supposed to go north." )
+
+    vi = path.head.i
+    vj = path.head.j
+    select case ( edge.u_quarter(vi,vj) )
+      case (SLICE_MESH__EDGE_PP) 
+        jumped = .true.
+        u = vert.pos_u(vi+1)
+        v = vert.pos_v(vj)
+        call register( path, u, v )
+        call edge.erase( 'u', vi, vj )
+        if ( vi+1 == vert.nu ) then ! you have reached the south-east corner.
+          path.head = contour_curve__element_t( 'v', 'on', vi+1, vj, PATH_NORTHWARD )
+        else
+          path.head = contour_curve__element_t( 'u', 'on', vi+1, vj, PATH_EASTWARD )
+        end if
+      case (SLICE_MESH__EDGE_PM )
+        jumped = .true.
+        u = edge.u_cross_coord(vi,vj)
+        v = vert.pos_v(vj)
+        call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+        call register( path, u, v )
+        call edge.erase( 'u', vi, vj )
+        path.head = contour_curve__element_t( 'u', 'in', vi, vj, PATH_NORTHWARD )
+      case default
+        call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
+    end select
+
+  end subroutine go_along_boundary_on_u_edge_eastward
+
+
+  subroutine go_along_boundary( path, vert, edge )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+
+    call ut__assert( path.head.lane == 'on',  &
+                     "__MODULE__(__LINE__): The path should be on border." )
+
+    select case (path.head.direct)
+      case (PATH_NORTHWARD)
+        call go_along_boundary_on_v_edge_northward( path, vert, edge )
+      case (PATH_SOUTHWARD)
+        call go_along_boundary_on_v_edge_southward( path, vert, edge )
+      case (PATH_WESTWARD)
+        call go_along_boundary_on_u_edge_westward( path, vert, edge )
+      case (PATH_EASTWARD)
+        call go_along_boundary_on_u_edge_eastward( path, vert, edge )
+      case default
+        call ut__fatal( "__MODULE__(__LINE__): case error." )
+    end select
+  end subroutine go_along_boundary
+
+
+  subroutine jump_to_other_edge( path,  &
+                                 vert,  &
+                                 edge )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+
+    integer :: ei, ej
+    logical :: jumped
+
+    call ut__assert( path.head.lane == 'in',  &
+                     "__MODULE__(__LINE__): The path should be in the region." )
+
+    jumped = .false.  ! Default.
+
+    ei = path.head.i
+    ej = path.head.j
+
+    select case (path.head.direct)
+      !!>
+                        edge.u(i,j+1)
+                            .
+                   vertex   .     vertex
+                   (i,j+1)  .     (i+1,j+1)
+                       \    .    /
+                        + - - - +
+                        |       |
+          edge.v(i,j) --|       |-- edge.v(i+1,j)
+                        |       |
+                        + - - - +
+                       /    .    \
+                   vertex   .   vertex
+                    (i,j)   .   (i+1,j)
+                            .
+                        edge.u(i,j)
+      !!<
+      case (PATH_NORTHWARD)
+        call ut__assert( path.head.which_edge == 'u',  &
+                         "__MODULE__(__LINE__): Must be edge-u here." )
+        call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
+                                            jumped, ei+1, ej )
+                         !!>
+                              p - - p
+                              |    *|To
+                              |   * |
+                              p -*- m
+                                From 
+                         !!<
+        call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej+1 )
+                         !!>
+                                To
+                              p -*- m
+                              |  *  |
+                              |  *  |
+                              p -*- m
+                                From 
+                         !!<
+        call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej )
+                         !!>
+                              m - - m
+                            To*     |
+                              | *   |
+                              p - * m
+                                From 
+                         !!<
+      case (PATH_WESTWARD)
+        call ut__assert( path.head.which_edge == 'v',  &
+                         "__MODULE__(__LINE__): Must be edge-v here." )
+        call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei-1, ej+1 )
+                         !!>
+                                To
+                              p -*- m
+                              |   * |
+                              |    *|From
+                              p - - p
+                         !!<
+        call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei-1, ej )
+                         !!>
+                              m - - m
+                              |     |
+                            To|* * *|From
+                              p - - p
+                         !!<
+        call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
+                                            jumped, ei-1, ej )
+                         !!>
+                              m - - m
+                              |    *|
+                              |   * |From
+                              m -*- p
+                                To
+                         !!<
+      case (PATH_SOUTHWARD)
+        call ut__assert( path.head.which_edge == 'u',  &
+                         "__MODULE__(__LINE__): Must be edge-u here." )
+        call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej-1 )
+                         !!>
+                                From
+                              m -*- p
+                              | *   |
+                           To |*    |
+                              p - - p
+                         !!<
+        call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej-1 )
+                         !!>
+                                From
+                              m -*- p
+                              |  *  |
+                              |  *  |
+                              m -*- p
+                                 To
+                         !!<
+        call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
+                                            jumped, ei+1, ej-1 )
+                         !!>
+                                From
+                              m -*- p
+                              |   * |
+                              |    *|To
+                              m - - m
+                         !!<
+      case (PATH_EASTWARD)
+        call ut__assert( path.head.which_edge == 'v',  &
+                         "__MODULE__(__LINE__): Must be edge-v here." )
+        call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej )
+                         !!>
+                              p - - p
+                         From *     |
+                              |*    |
+                              m * - p
+                                To
+                         !!<
+        call jump_to_v_edge_mp_if_possible ( path, vert, edge,  &
+                                            jumped, ei+1, ej )
+                         !!>
+                              p - - p
+                         From * * * * To
+                              |     |
+                              m - - m
+                         !!<
+        call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
+                                            jumped, ei, ej+1 )
+                         !!>
+                                To
+                              p * - m
+                              |*    |
+                         From *     |
+                              m - - m
+                         !!<
+      case default
+        call ut__fatal( '__MODULE__(__LINE__): case error.' )
+    end select
+
+    call ut__assert( jumped,  &
+                     "__MODULE__(__LINE__): Failed to find next path." )
+  end subroutine jump_to_other_edge
+
+
+  function contour_curve__is_closed( this ) result(ans)
+    class(contour_curve_t) <in> :: this
+    logical :: ans
+
+    logical :: con1, con2, con3
+
+    con1 = ( this.head.which_edge == this.start.which_edge )
+    con2 = ( this.head.i == this.start.i )
+    con3 = ( this.head.j == this.start.j )
+    ans = ( con1 .and. con2 .and. con3 )
+  end function contour_curve__is_closed  
+
+
+  subroutine contour_curve__reset( this )
+    class(contour_curve_t) <io> :: this
+    this.num = 0
+    this.list_u(:) = 0.0
+    this.list_v(:) = 0.0
+  end subroutine contour_curve__reset
+
+
+  subroutine contour_curve__initialize( this, vert_nu, vert_nv )
+    class(contour_curve_t) <out> :: this
+    integer <in> :: vert_nu, vert_nv
+
+    integer :: max_path_element_num
+
+    max_path_element_num = vert_nu * vert_nv
+
+    allocate(this.list_u(max_path_element_num))
+    allocate(this.list_v(max_path_element_num))
+
+    this.vert_nu = vert_nu
+    this.vert_nv = vert_nv
+    call contour_curve__reset( this )
+  end subroutine contour_curve__initialize
+
+
+  subroutine find_start_edge_on_boundaries( path,         &
+                                            mesh_vert,    &
+                                            mesh_edge,    &
+                                            status )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: mesh_vert
+    type(slice_mesh__edge_t) <io> :: mesh_edge
+    char(len=10) <io> :: status ! 'no contour' or 'have found'
+    integer :: quarter
+    integer :: vi, vj
+
+    ! To shorten.
+    integer <const> :: MM = SLICE_MESH__EDGE_MM
+    integer <const> :: PP = SLICE_MESH__EDGE_PP
+    integer <const> :: MP = SLICE_MESH__EDGE_MP
+    integer <const> :: PM = SLICE_MESH__EDGE_PM
+
+    !!>
+             |       |       |    _ Contour line     | 
+           - m - - - m - - - m   /    at "level" - - m
+             |       |       * */                    |
+             |       |    *  |   *   |       |       |      
+           - m - - - m -*- - p - - * m - - - m - - - m   ej=3
+             |       *       |       *       |       |
+             |     * |       |       | *     |       |
+           - m - -*- p - - - p - - - p - * - m - - - m   ej=2
+             |    *  |       |       |    *  |       |
+             |    *  |       |       |    *  |       |
+           - m - - * p * * * p * * * p * * - m - - - m   ej=1
+                 \
+                  \__ Will find this edge_u
+
+
+        We will search for the start edge in this order,
+           1. South border
+           2. East border
+           3. North border
+           4. West border
+
+                       <---
+                   +----------+
+                   |  North   |    
+               |  W|          |E   ^
+               |  e|          |a   |
+               v  s|          |s   |
+                  t|  South   |t    
+                   +----------+
+                       ---> 
+    !!<    
+
+    integer :: ei, ej ! edge_i & edge_j
+    real :: u1, u2, v1, v2
+
+    call ut__assert( path.num == 0,  &
+                    '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
+
+    !----------------!
+    ! South boundary !
+    !----------------!
+    ej = 1
+    do ei = 1, mesh_edge.u_nu
+      quarter = mesh_edge.u_quarter(ei,ej)
+      if ( quarter == MP  .or.  &
+           quarter == PM  .or.  &
+           quarter == PP ) then
+        status = 'have found'
+        !!>           
+            [case MP] (This is the most plausible case.)
+
+                        |*      |     
+                    - - m * - - p - - 
+                        |  *    |     
+                        |   *   |     
+                        |    *  |     
+                    ====m==== * p * *   ej=1 (bottom)
+                             /   \
+                  1st register    \
+                                   2nd register
+            [case PM]
+
+
+               ei=1 (left border)
+                | *
+                |*
+                *       |     
+                p - - - p -   
+                *       *     
+                *      *|     
+                *     * |     
+                p=== * =m===  ej=1 (bottom)
+                 \    \
+                  \    2nd register
+                   1st register     
+
+                     Incidentally, there will be no chance
+                     to find the following start edge unless
+                     we survey the south edge from the
+                     right (i=u_nu) to the left (i=1).
+
+                     |       |      *|       |
+                 - - p - - - p - - * m - - - m - -
+                     |       |    *  |       |
+                     |       |   *   |       |
+                     |       |  *    |       |   ej=1
+                  ***p*******p** - - m - - - m - (bottom
+                                 \                boundary)
+                                   start edge
+
+            [case PP]
+
+               ei=1 (left border)
+                | *
+                |*      |       |             
+                *       |       |             
+                p - - - p - - - p -           
+                *       |       |             
+                *       |       |             
+                *       |       |             
+                p * * * p * * * p * * ej=1 (bottom)   
+                 \       \
+                  \       2nd register
+                   1st register     
+        !!<
+
+        select case (quarter)
+          case (MP)
+            u1 = mesh_edge.u_cross_coord(ei,ej)
+            u2 = mesh_vert.pos_u(ei+1)
+            call ut__assert( u1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+          case (PM)
+            u1 = mesh_vert.pos_u(ei)
+            u2 = mesh_edge.u_cross_coord(ei,ej)
+            call ut__assert( u2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+          case (PP)
+            u1 = mesh_vert.pos_u(ei)
+            u2 = mesh_vert.pos_u(ei+1)
+          case default
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
+
+        v1 = mesh_vert.pos_v(ej)
+        call register( path, u1, v1 )
+        call register( path, u2, v1 )
+
+        ! Add path head.
+        select case (quarter)
+          case (PM)
+            ! You will laeave the south border and go north.
+              vi = ei
+              vj = ej
+            path.head = contour_curve__element_t( 'u', 'in', vi, vj, PATH_NORTHWARD )
+          case (MP,PP)
+            if ( ei < mesh_edge.u_nu ) then
+              ! You will go along the south bourder.
+              vi = ei + 1
+              vj = ej
+              path.head = contour_curve__element_t( 'u', 'on', vi, vj, PATH_EASTWARD )
+            else 
+              ! you are on the south-east corner. Go toward north along the east border.
+              vi = ei + 1
+              vj = ej
+              path.head = contour_curve__element_t( 'v', 'on', vi, vj, PATH_NORTHWARD )
+            end if
+          case default
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
+        path.start = path.head
+        return
+      end if
+    end do
+
+    !---------------!
+    ! East boundary !
+    !---------------!
+    !!>  
+      [case MP]         
+               .         *     
+             - p - - - - p <-- 2nd register
+               .         *
+               .         * <-- 1st register
+               .        *|     
+               .       * |     
+               .      *  |     
+           * * p - - * - m
+               .     *   |
+                 
+      [case PM]         
+               .         |
+             . p . . .*. m 
+               .       * |     
+               .        *|     
+               .         *  <== 2nd register   
+               .         *
+             . p . . . . p  <== 1st register
+               .         *
+      
+      [case PP]         
+               .         *            
+             - p - - - - p  <== 2nd register          
+               .         *             
+               .         *             
+               .         *             
+             - p - - - - p  <== 1st register
+               .         *
+    !!<
+    ei = mesh_edge.v_nu
+    do ej = 1, mesh_edge.v_nv
+      quarter = mesh_edge.v_quarter(ei,ej)
+      if ( quarter == PM  .or.  &
+           quarter == MP  .or.  &
+           quarter == PP ) then
+        status = 'have found'
+
+        select case (quarter)
+          case (PM)
+            v1 = mesh_vert.pos_u(ej)
+            v2 = mesh_edge.v_cross_coord(ei,ej)
+            call ut__assert( v2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+          case (MP)
+            v1 = mesh_edge.v_cross_coord(ei,ej)
+            v2 = mesh_vert.pos_v(ej+1)
+            call ut__assert( v1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+          case (PP)
+            v1 = mesh_vert.pos_v(ej)
+            v2 = mesh_vert.pos_v(ej+1)
+          case default
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
+
+        u1 = mesh_vert.pos_u(ei)
+        call register( path, u1, v1 )
+        call register( path, u1, v2 )
+
+        ! Add path head.
+        select case (quarter)
+          case (PM)
+            vi = ei
+            vj = ej
+            path.head = contour_curve__element_t( 'v', 'in', vi, vj, PATH_WESTWARD )
+          case (MP,PP)
+            if ( ej < mesh_edge.v_nv ) then
+              vi = ei
+              vj = ej + 1
+              path.head = contour_curve__element_t( 'v', 'on', vi, vj, PATH_NORTHWARD )
+            else 
+              ! you are on the north-east corner. turn west.
+              vi = ei - 1
+              vj = ej + 1
+              path.head = contour_curve__element_t( 'u', 'on', vi, vj, PATH_WESTWARD )
+            end if
+          case default
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
+        path.start = path.head
+        return
+      end if
+    end do  
+
+    !----------------!
+    ! North boundary !
+    !----------------!
+    ej = mesh_edge.u_nv
+    do ei = mesh_edge.u_nu, 1, -1 ! No strong reason to cound down here.
+      quarter = mesh_edge.u_quarter(ei,ej)
+      if ( quarter == PM  .or.  &
+           quarter == MP  .or.  &
+           quarter == PP ) then
+        status = 'have found'
+
+        select case (quarter)
+          case (PM)
+            !   2nd register     1st register
+            !             \     /
+            !          * * p * * - - m - -
+            u1 = mesh_edge.u_cross_coord(ei,ej)
+            u2 = mesh_vert.pos_u(ei)
+            call ut__assert( u1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+          case (MP)
+            !       2nd register       1st register
+            !                 \       /
+            !          - - m - * * * p * *
+            u1 = mesh_vert.pos_u(ei+1)
+            u2 = mesh_edge.u_cross_coord(ei,ej)
+            call ut__assert( u2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+          case (PP)
+            !   2nd register           1st register
+            !             \           /
+            !          * * p * * * * p * *
+            u1 = mesh_vert.pos_u(ei+1)
+            u2 = mesh_vert.pos_u(ei)
+          case default
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
+
+        v1 = mesh_vert.pos_v(ej)
+        call register( path, u1, v1 )
+        call register( path, u2, v1 )
+
+        ! Add path head.
+        select case (quarter)
+          case (MP)
+            vi = ei
+            vj = ej
+            path.head = contour_curve__element_t( 'u', 'in', vi, vj, PATH_SOUTHWARD )
+          case (PM,PP)
+            if ( ei > 1 ) then
+              vi = ei - 1
+              vj = ej
+              path.head = contour_curve__element_t( 'u', 'on', vi, vj, PATH_WESTWARD )
+            else 
+              ! you are on the north-west corner. turn south.
+              vi = 1
+              vj = ej - 1
+              path.head = contour_curve__element_t( 'v', 'on', vi, vj, PATH_SOUTHWARD )
+            end if
+          case default
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
+        path.start = path.head
+        return
+      end if
+    end do
+
+
+    !---------------!
+    ! West boundary !
+    !---------------!
+    ei = 1
+    do ej = mesh_edge.v_nv, 1, -1
+      quarter = mesh_edge.v_quarter(ei,ej)
+      if ( quarter == PM  .or.  &
+           quarter == MP  .or.  &
+           quarter == PP ) then
+        status = 'have found'
+        select case (quarter)
+          case (MP)
+            v1 = mesh_vert.pos_u(ej+1)
+            v2 = mesh_edge.v_cross_coord(ei,ej)
+            call ut__assert( v2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+          case (PM)
+            v1 = mesh_edge.v_cross_coord(ei,ej)
+            v2 = mesh_vert.pos_v(ej)
+            call ut__assert( v1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+          case (PP)
+            v1 = mesh_vert.pos_v(ej+1)
+            v2 = mesh_vert.pos_v(ej)
+          case default
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
+
+        u1 = mesh_vert.pos_u(ei)
+        call register( path, u1, v1 )
+        call register( path, u1, v2 )
+
+        ! Add path head.
+        select case (quarter)
+          case (MP)
+            vi = ei
+            vj = ej
+            path.head = contour_curve__element_t( 'v', 'in', vi, vj, PATH_EASTWARD )
+          case (PM,PP)
+            if ( ej > 1 ) then
+              vi = ei
+              vj = ej
+              ! ?? path.head = contour_curve__element_t( 'v', 'on', ei, ej-1, PATH_SOUTHWARD )
+              path.head = contour_curve__element_t( 'v', 'on', vi, vj, PATH_SOUTHWARD )
+            else 
+              ! you are on the south-west corner. turn east.
+              path.head = contour_curve__element_t( 'u', 'on', 1, 1, PATH_EASTWARD )
+            end if
+          case default
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
+        path.start = path.head
+        return
+      end if
+    end do  
+
+  end subroutine find_start_edge_on_boundaries
+
+
+  subroutine set_start_edge_in_bulk( path,         &
+                                     mesh_vert,    &
+                                     mesh_edge,    &
+                                     status )  
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: mesh_vert
+    type(slice_mesh__edge_t) <io> :: mesh_edge
+    char(len=10) <io> :: status ! 'no contour' or 'have found'
+
+    ! To shorten.
+    integer <const> :: MM = SLICE_MESH__EDGE_MM
+    integer <const> :: PP = SLICE_MESH__EDGE_PP
+    integer <const> :: MP = SLICE_MESH__EDGE_MP
+    integer <const> :: PM = SLICE_MESH__EDGE_PM
+
+    !!>
+             |       |       |       |       |    
+           - m - - - m - - - m - - - m - - - m - 
+             |       |       *       |       |   
+             |       |    *  |  *    |       |         
+           - m - - - m -*- - p - - * m - - - m -  
+             |       *       |       *       |   
+             |     * |       |       |*      |   
+           - m - -*- p - - - p - - - p * - - m -  
+             |    *  |       |       | *     |   
+             |    *  |       |       | *     |   
+           - m - - * p - - - p - - - p * - - m -  
+             |      *|       |       |*      |   
+             |       *       |       *       |   
+           - m - - - m * - - P=====*=M - - - m -  
+             |       |    *  |  * \  |       |   
+             |       |       *     \ |       |   
+           - m - - - m - - - m - - -\m - - - m -  
+             |       |       |       \       |   
+                                      \
+                                       \___ Try to find this edge of "PM".
+                 
+    !!< 
+    integer :: ei, ej
+    integer :: quarter
+    real :: u, v
+
+    call ut__assert( path.num == 0,  &
+                    '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
+
+    do ej = 2, mesh_edge.u_nv-1
+      do ei = 2, mesh_edge.u_nu-1
+        quarter = mesh_edge.u_quarter(ei,ej)
+        if ( quarter == PM ) then
+          !!> 
+              path tip you
+              have just found.  *
+                        |    \ *      |
+                      --p=====*-------m--
+                        |    *        |
+             contour ---|-->*         |
+                        |  *          |
+                        | *           |
+          !!<
+          status = 'have found'
+          u = mesh_edge.u_cross_coord(ei,ej)
+          v = mesh_vert.pos_v(ej)
+          call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+          call register( path, u, v )
+          path.head = contour_curve__element_t( 'u', 'in', ei, ej, PATH_NORTHWARD )
+          path.start = path.head
+          return
+        end if
+      end do
+    end do
+
+  end subroutine set_start_edge_in_bulk
+
+
+  subroutine contour_curve__set_start_edge( this,         &
+                                           mesh_vert,    &
+                                           mesh_edge,    &
+                                           status )
+    class(contour_curve_t) <io> :: this
+    type(slice_mesh__vert_t) <in> :: mesh_vert
+    type(slice_mesh__edge_t) <io> :: mesh_edge
+    char(len=10) <out> :: status ! 'no contour' or 'have found'
+
+    status = 'no contour'  ! default 
+    call find_start_edge_on_boundaries( this,         &
+                                        mesh_vert,    &
+                                        mesh_edge,    &
+                                        status )
+    if ( status == 'have found' ) return
+
+    call set_start_edge_in_bulk( this,         &
+                                 mesh_vert,    &
+                                 mesh_edge,    &
+                                 status )
+
+  end subroutine contour_curve__set_start_edge
+
+
+  subroutine contour_curve__trace_and_erase( path,  &
+                                             vert,  &
+                                             edge )
+    class(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+
+    do
+      select case (path.head.lane)
+        case ('on')
+          call go_along_boundary( path, vert, edge )
+        case ('in')
+          call jump_to_other_edge( path, vert, edge )
+        case default
+          call ut__fatal( "__MODULE__(__LINE__): case error." )
+      end select
+      if ( path.is_closed() ) then
+        call edge.erase( path.start.which_edge,  &
+                         path.start.i,           &
+                         path.start.j )
+        return
+      end if
+    end do
+
+  end subroutine contour_curve__trace_and_erase
+
+end module contour_curve_m
