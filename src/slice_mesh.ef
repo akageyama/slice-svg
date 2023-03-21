@@ -273,7 +273,6 @@ contains
                         "Check num error." )
       end if
 
-
       if ( head_vi == vert.border_list_vi(1) .and.  &
            head_vj == vert.border_list_vj(1) ) then
         ! returned to the starter u-edge.
