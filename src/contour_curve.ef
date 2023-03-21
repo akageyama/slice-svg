@@ -543,6 +543,7 @@ contains
 
     vi = path.head.i
     vj = path.head.j
+
     select case ( edge.u_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
@@ -804,14 +805,7 @@ contains
     type(slice_mesh__vert_t) <in> :: mesh_vert
     type(slice_mesh__edge_t) <io> :: mesh_edge
     char(len=10) <io> :: status ! 'no contour' or 'have found'
-    integer :: quarter
-    integer :: vi, vj
 
-    ! To shorten.
-    integer <const> :: MM = SLICE_MESH__EDGE_MM
-    integer <const> :: PP = SLICE_MESH__EDGE_PP
-    integer <const> :: MP = SLICE_MESH__EDGE_MP
-    integer <const> :: PM = SLICE_MESH__EDGE_PM
 
     !!>
              |       |       |    _ Contour line     | 
@@ -846,132 +840,120 @@ contains
                        ---> 
     !!<    
 
-    integer :: ei, ej ! edge_i & edge_j
-    real :: u1, u2, v1, v2
+    integer :: quarter
+    integer :: b, i, j
+    char(len=1) :: direct
+
+    ! To shorten.
+    integer <const> :: MM = SLICE_MESH__EDGE_MM
+    integer <const> :: PP = SLICE_MESH__EDGE_PP
+    integer <const> :: MP = SLICE_MESH__EDGE_MP
+    integer <const> :: PM = SLICE_MESH__EDGE_PM
 
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
-
-    !--------------!
-    ! South border !
-    !--------------!
-    ej = 1
-    do ei = 1, mesh_edge.u_nu
-      quarter = mesh_edge.u_quarter(ei,ej)
-      if ( quarter == MP  .or.  &
-           quarter == PM  .or.  &
+    do b = 1, mesh_vert.border_list_num
+      i = mesh_vert.border_list_vi(b)
+      j = mesh_vert.border_list_vj(b)
+      direct = mesh_vert.border_list_dir(b)
+      call ut__assert( direct == 'N' .or.          &
+                       direct == 'S' .or.          &
+                       direct == 'E' .or.          &
+                       direct == 'W' ,             &
+                       "__MODULE__(__LINE__): " // &
+                       "direct error." )
+      select case (direct)
+        case ('N')        
+          quarter = mesh_edge.v_quarter(i,j)
+        case ('S')        
+          quarter = mesh_edge.v_quarter(i,j-1)
+        case ('E') 
+          quarter = mesh_edge.u_quarter(i,j)
+        case ('W') 
+          quarter = mesh_edge.u_quarter(i-1,j)
+      end select
+      if ( quarter == PM  .or.  &
+           quarter == MP  .or.  &
            quarter == PP ) then
         status = 'have found'
-        call iSouth_border( quarter )
+        select case (direct)
+          case ('N')
+            call iRegister_northward_edge( i, j, quarter )
+          case ('S')
+            call iRegister_southward_edge( i, j, quarter )
+          case ('E')
+            call iRegister_eastward_edge ( i, j, quarter )
+          case ('W')
+            call iRegister_westward_edge ( i, j, quarter )
+        end select
         return
       end if
     end do
-
-    !-------------!
-    ! East border !
-    !-------------!
-
-    ei = mesh_edge.v_nu
-    do ej = 1, mesh_edge.v_nv
-      quarter = mesh_edge.v_quarter(ei,ej)
-      if ( quarter == PM  .or.  &
-           quarter == MP  .or.  &
-           quarter == PP ) then
-        status = 'have found'
-        call iEast_border( quarter )
-        return
-      end if
-    end do  
-
-    !--------------!
-    ! North border !
-    !--------------!
-    ej = mesh_edge.u_nv
-    do ei = mesh_edge.u_nu, 1, -1 ! No strong reason to cound down here.
-      quarter = mesh_edge.u_quarter(ei,ej)
-      if ( quarter == PM  .or.  &
-           quarter == MP  .or.  &
-           quarter == PP ) then
-        status = 'have found'
-        call iNorth_border( quarter )
-        return
-      end if
-    end do
-
-    !-------------!
-    ! West border !
-    !-------------!
-    ei = 1
-    do ej = mesh_edge.v_nv, 1, -1
-      quarter = mesh_edge.v_quarter(ei,ej)
-      if ( quarter == PM  .or.  &
-           quarter == MP  .or.  &
-           quarter == PP ) then
-        status = 'have found'
-        call iWest_border( quarter )
-        return
-      end if
-    end do  
 
   contains
 
-    subroutine iNorth_border( quarter )
+    subroutine iRegister_westward_edge( i, j, quarter )
+      integer <in> :: i, j 
       integer <in> :: quarter  
+
+      real :: u1, u2, v1
+      integer :: ei, ej, vi, vj
 
         select case (quarter)
           case (PM)
             !   2nd register     1st register
             !             \     /
             !          * * p * * - - m - -
-            u1 = mesh_edge.u_cross_coord(ei,ej)
-            u2 = mesh_vert.pos_u(ei)
+            u1 = mesh_edge.u_cross_coord(i-1,j)
+            u2 = mesh_vert.pos_u(i-1)
             call ut__assert( u1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           case (MP)
             !       2nd register       1st register
             !                 \       /
             !          - - m - * * * p * *
-            u1 = mesh_vert.pos_u(ei+1)
-            u2 = mesh_edge.u_cross_coord(ei,ej)
+            u1 = mesh_vert.pos_u(i)
+            u2 = mesh_edge.u_cross_coord(i-1,j)
             call ut__assert( u2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           case (PP)
             !   2nd register           1st register
             !             \           /
             !          * * p * * * * p * *
-            u1 = mesh_vert.pos_u(ei+1)
-            u2 = mesh_vert.pos_u(ei)
+            u1 = mesh_vert.pos_u(i)
+            u2 = mesh_vert.pos_u(i-1)
           case default
             call ut__fatal( "__MODULE__(__LINE__): case error." )
         end select
 
-        v1 = mesh_vert.pos_v(ej)
+        v1 = mesh_vert.pos_v(j)
         call register( path, u1, v1 )
         call register( path, u2, v1 )
 
         ! Add path head.
         select case (quarter)
           case (MP)
-            vi = ei
-            vj = ej
-            path.head = contour_curve__element_t( 'u', 'in', vi, vj, PATH_SOUTHWARD )
+            ei = i-1
+            ej = j
+            path.head = contour_curve__element_t( 'u', 'in', ei, ej, PATH_SOUTHWARD )
           case (PM,PP)
-            if ( ei > 1 ) then
-              vi = ei - 1
-              vj = ej
+            if ( i > 2 ) then
+              vi = i - 1
+              vj = j
               path.head = contour_curve__element_t( 'u', 'on', vi, vj, PATH_WESTWARD )
             else 
               ! you are on the north-west corner. turn south.
               vi = 1
-              vj = ej - 1
+              vj = j - 1
               path.head = contour_curve__element_t( 'v', 'on', vi, vj, PATH_SOUTHWARD )
             end if
           case default
             call ut__fatal( "__MODULE__(__LINE__): case error." )
         end select
         path.start = path.head
-    end subroutine iNorth_border
+    end subroutine iRegister_westward_edge
 
-    subroutine iSouth_border( quarter )
+    subroutine iRegister_eastward_edge( i, j, quarter )
+      integer <in> :: i, j 
       integer <in> :: quarter
       
       !!>           
@@ -1032,23 +1014,26 @@ contains
                   1st register     
       !!<
 
+      real :: u1, u2, v1
+      integer :: ei, ej, vi, vj
+
       select case (quarter)
         case (MP)
-          u1 = mesh_edge.u_cross_coord(ei,ej)
-          u2 = mesh_vert.pos_u(ei+1)
+          u1 = mesh_edge.u_cross_coord(i,j)
+          u2 = mesh_vert.pos_u(i+1)
           call ut__assert( u1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PM)
-          u1 = mesh_vert.pos_u(ei)
-          u2 = mesh_edge.u_cross_coord(ei,ej)
+          u1 = mesh_vert.pos_u(i)
+          u2 = mesh_edge.u_cross_coord(i,j)
           call ut__assert( u2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PP)
-          u1 = mesh_vert.pos_u(ei)
-          u2 = mesh_vert.pos_u(ei+1)
+          u1 = mesh_vert.pos_u(i)
+          u2 = mesh_vert.pos_u(i+1)
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
 
-      v1 = mesh_vert.pos_v(ej)
+      v1 = mesh_vert.pos_v(j)
       call register( path, u1, v1 )
       call register( path, u2, v1 )
 
@@ -1056,29 +1041,30 @@ contains
       select case (quarter)
         case (PM)
           ! You will laeave the south border and go north.
-            vi = ei
-            vj = ej
-          path.head = contour_curve__element_t( 'u', 'in', vi, vj, PATH_NORTHWARD )
+            ei = i
+            ej = j
+          path.head = contour_curve__element_t( 'u', 'in', ei, ej, PATH_NORTHWARD )
         case (MP,PP)
-          if ( ei < mesh_edge.u_nu ) then
+          if ( i < mesh_vert.nu - 1 ) then
             ! You will go along the south bourder.
-            vi = ei + 1
-            vj = ej
+            vi = i + 1
+            vj = j
             path.head = contour_curve__element_t( 'u', 'on', vi, vj, PATH_EASTWARD )
           else 
             ! you are on the south-east corner. Go toward north along the east border.
-            vi = ei + 1
-            vj = ej
+            vi = i + 1
+            vj = j
             path.head = contour_curve__element_t( 'v', 'on', vi, vj, PATH_NORTHWARD )
           end if
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
       path.start = path.head
-    end subroutine iSouth_border
+    end subroutine iRegister_eastward_edge
 
-    subroutine iEast_border( quarter )
-      integer <in> :: quarter  
+    subroutine iRegister_northward_edge( i, j, quarter )
+      integer <in> :: i, j 
+      integer <in> :: quarter 
       !!>  
         [case MP]         
                  .         *     
@@ -1110,82 +1096,89 @@ contains
                - p - - - - p  <== 1st register
                  .         *
       !!<
+      real :: u1, v1, v2
+      integer :: ei, ej, vi, vj
+
       select case (quarter)
         case (PM)
-          v1 = mesh_vert.pos_u(ej)
-          v2 = mesh_edge.v_cross_coord(ei,ej)
+          v1 = mesh_vert.pos_u(j)
+          v2 = mesh_edge.v_cross_coord(i,j)
           call ut__assert( v2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (MP)
-          v1 = mesh_edge.v_cross_coord(ei,ej)
-          v2 = mesh_vert.pos_v(ej+1)
+          v1 = mesh_edge.v_cross_coord(i,j)
+          v2 = mesh_vert.pos_v(j+1)
           call ut__assert( v1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PP)
-          v1 = mesh_vert.pos_v(ej)
-          v2 = mesh_vert.pos_v(ej+1)
+          v1 = mesh_vert.pos_v(j)
+          v2 = mesh_vert.pos_v(j+1)
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
 
-      u1 = mesh_vert.pos_u(ei)
+      u1 = mesh_vert.pos_u(i)
       call register( path, u1, v1 )
       call register( path, u1, v2 )
 
       ! Add path head.
       select case (quarter)
         case (PM)
-          vi = ei
-          vj = ej
-          path.head = contour_curve__element_t( 'v', 'in', vi, vj, PATH_WESTWARD )
+          ei = i
+          ej = j
+          path.head = contour_curve__element_t( 'v', 'in', ei, ej, PATH_WESTWARD )
         case (MP,PP)
-          if ( ej < mesh_edge.v_nv ) then
-            vi = ei
-            vj = ej + 1
+          if ( j < mesh_vert.nv-1 ) then
+            vi = i
+            vj = j + 1
             path.head = contour_curve__element_t( 'v', 'on', vi, vj, PATH_NORTHWARD )
           else 
             ! you are on the north-east corner. turn west.
-            vi = ei - 1
-            vj = ej + 1
+            vi = i - 1
+            vj = j + 1
             path.head = contour_curve__element_t( 'u', 'on', vi, vj, PATH_WESTWARD )
           end if
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
       path.start = path.head
-    end subroutine iEast_border
+    end subroutine iRegister_northward_edge
 
-    subroutine iWest_border( quarter )
+    subroutine iRegister_southward_edge( i, j, quarter )
+      integer <in> :: i, j 
       integer <in> :: quarter  
+
+      real :: u1, v1, v2
+      integer :: ei, ej, vi, vj
 
       select case (quarter)
         case (MP)
-          v1 = mesh_vert.pos_u(ej+1)
-          v2 = mesh_edge.v_cross_coord(ei,ej)
+          v1 = mesh_vert.pos_u(j)
+          v2 = mesh_edge.v_cross_coord(i,j-1)
           call ut__assert( v2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PM)
-          v1 = mesh_edge.v_cross_coord(ei,ej)
-          v2 = mesh_vert.pos_v(ej)
+          v1 = mesh_edge.v_cross_coord(i,j-1)
+          v2 = mesh_vert.pos_v(j-1)
           call ut__assert( v1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PP)
-          v1 = mesh_vert.pos_v(ej+1)
-          v2 = mesh_vert.pos_v(ej)
+          v1 = mesh_vert.pos_v(j)
+          v2 = mesh_vert.pos_v(j-1)
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
 
-      u1 = mesh_vert.pos_u(ei)
+      u1 = mesh_vert.pos_u(i)
       call register( path, u1, v1 )
       call register( path, u1, v2 )
 
       ! Add path head.
       select case (quarter)
         case (MP)
-          vi = ei
-          vj = ej
-          path.head = contour_curve__element_t( 'v', 'in', vi, vj, PATH_EASTWARD )
+          ei = i
+          ej = j-1
+          path.head = contour_curve__element_t( 'v', 'in', ei, ej, PATH_EASTWARD )
         case (PM,PP)
-          if ( ej > 1 ) then
-            vi = ei
-            vj = ej
+          if ( j > 2 ) then
+            vi = i
+            vj = j-1
             path.head = contour_curve__element_t( 'v', 'on', vi, vj, PATH_SOUTHWARD )
           else 
             ! you are on the south-west corner. turn east.
@@ -1195,7 +1188,7 @@ contains
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
       path.start = path.head
-    end subroutine iWest_border
+    end subroutine iRegister_southward_edge
 
   end subroutine find_start_edge_on_boundaries
 
