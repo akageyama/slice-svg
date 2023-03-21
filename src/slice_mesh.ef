@@ -35,18 +35,11 @@ module slice_mesh_m
     real, dimension(:), allocatable :: pos_v
     real :: u_min, u_max
     real :: v_min, v_max
+    char(len=1), dimension(:,:), allocatable :: border_turn
   contains
     procedure :: initialize => slice_mesh__vert_initialize
     procedure :: finalize => slice_mesh__vert_finalize
   end type slice_mesh__vert_t  
-
-  type, public :: slice_mesh__border_edge_t
-    integer :: num
-    char(len=1), dimension(:), allocatable :: which_edge ! 'u' or 'v'
-    char(len=1), dimension(:), allocatable :: turn ! F(orward)/N(orth)/W/S/E
-  contains
-    procedure :: initialize => slice_mesh__border_edge_initialize
-  end type slice_mesh__border_edge_t
 
   type, public :: slice_mesh__edge_t
     !!>                            
@@ -69,8 +62,10 @@ module slice_mesh_m
     !!< 
     integer :: u_nu, u_nv
     integer :: v_nu, v_nv
-    integer, dimension(:,:), allocatable :: u_quarter ! {0,1,2,3}
-    integer, dimension(:,:), allocatable :: v_quarter ! {0,1,2,3}
+    integer, dimension(:,:), allocatable :: u_quarter   ! {0,1,2,3}
+    integer, dimension(:,:), allocatable :: v_quarter   ! {0,1,2,3}
+    logical, dimension(:,:), allocatable :: is_border_u ! T for border edges
+    logical, dimension(:,:), allocatable :: is_border_v ! T for border edges
       !!>
           Take an edge V1-V2. 
                     V1--edge--V2  
@@ -99,15 +94,6 @@ module slice_mesh_m
 
 
 contains
-
-
-  subroutine slice_mesh__border_edge_initialize( this,   &
-                                                 edge_u_nu, edge_u_nv,  &
-                                                 edge_v_nu, edge_v_nv,  &
-                                                 border
-                                                 )
-
-  end subroutine slice_mesh__border_edge_initialize
 
 
   function linear_interpol( x1, x2, diff1, diff2 ) result( xi )
@@ -195,6 +181,8 @@ contains
 
     allocate(this.pos_u(nu))
     allocate(this.pos_v(nv))
+    allocate(this.border_turn(nu,nv))
+    this.border_turn(:,:) = ' ' ! default.
 
     du = ( u_max - u_min ) / (nu-1)
     dv = ( v_max - v_min ) / (nv-1)
@@ -209,6 +197,161 @@ contains
   end subroutine slice_mesh__vert_initialize
 
 
+  subroutine set_turn_direct_on_vert_on_border_turn( vert,  &
+                                                     edge )
+    type(slice_mesh__vert_t) <io> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+
+    integer :: vi, vj  ! v stands for vertex
+    integer :: vi_start, vj_start 
+    char(len=1) :: current_dir
+    integer :: safety_counter
+    integer, dimension(4) :: check
+
+    ! already set. ! vert.border_turn(:,:) = ' ' ! default 
+
+    call iFind_a_border_u_edge( vi, vj )
+
+    !          edge_u(i,j)
+    !         /
+    !    o - - - o
+    !     \       \
+    !      v(i,j)  v(i+1,j)
+
+    current_dir = 'E'
+    vi_start = vi
+    vj_start = vj
+    vi += 1  ! go eastward
+
+    safety_counter = 0
+    do while (vi /= vi_start .or. vj /= vj_start)  
+      safety_counter += 1  
+      check(1) = iCheck_north( current_dir, vi, vj )
+      check(2) = iCheck_south( current_dir, vi, vj )
+      check(3) = iCheck_east( current_dir, vi, vj )
+      check(4) = iCheck_west( current_dir, vi, vj )
+
+      select case (sum(check(1:4)))
+        case (2:3)
+          call ut__fatal( "__MODULE__(__LINE__): " //  &
+                          "Three- or four-way intersection." )
+        case (0)
+          call ut__fatal( "__MODULE__(__LINE__): " //  &
+                          "Deadend." )
+        case (1)
+          call iGo_one_step_set_border_turn( current_dir, vi, vj, check )
+        case default
+          call ut__fatal( "__MODULE__(__LINE__): " //  &
+                          "Strange checksum." )
+      end select
+
+      if ( safety_counter > ( edge.u_nu*edge.u_nv  &
+                            + edge.v_nu*edge.v_nv ) ) then
+        call ut__fatal( "__MODULE__(__LINE__): " //  &
+                        "Failed to close the border." )
+      end if
+    end do
+
+  contains
+    
+    subroutine iFind_a_border_u_edge( vi, vj )
+      integer <out> :: vi, vj
+
+      integer :: i, j
+      do j = 1, edge.u_nv
+        do i = 1, edge.u_nu
+          if ( edge.is_border_u(i,j) ) then
+            ! Have found a border u-edge.
+            vi = i
+            vj = j
+            return
+          end if
+        end do
+      end do
+      call ut__fatal( "__MODULE__(__LINE__): " // &
+                      "Failed to find a border_u edge." )
+    end subroutine iFind_a_border_u_edge
+
+    function iCheck_north( current_dir, vi, vj ) result(ans)
+      char(len=1) <in> :: current_dir
+      integer <in> :: vi, vj
+      integer :: ans
+
+      ans = 0 ! default
+      if ( current_dir == 'S' ) return ! You came from there.
+      if ( vj == vert.nv ) return ! there is no north v-edge
+      if ( edge.is_border_v(vi,vj) ) ans = 1
+    end function iCheck_north
+
+    function iCheck_south( current_dir, vi, vj ) result(ans)
+      char(len=1) <in> :: current_dir
+      integer <in> :: vi, vj
+      integer :: ans
+
+      ans = 0 ! default
+      if ( current_dir == 'N' ) return ! You came from there.
+      if ( vj == 1 ) return ! there is no south v-edge
+      if ( edge.is_border_v(vi,vj-1) ) ans = 1
+    end function iCheck_south
+
+    function iCheck_east( current_dir, vi, vj ) result(ans)
+      char(len=1) <in> :: current_dir
+      integer <in> :: vi, vj
+      integer :: ans
+
+      ans = 0 ! default
+      if ( current_dir == 'W' ) return ! You came from there.
+      if ( vi == vert.nu ) return ! there is no east v-edge
+      if ( edge.is_border_u(vi,vj) ) ans = 1
+    end function iCheck_east    
+
+    function iCheck_west( current_dir, vi, vj ) result(ans)
+      char(len=1) <in> :: current_dir
+      integer <in> :: vi, vj
+      integer :: ans
+
+      ans = 0 ! default
+      if ( current_dir == 'E' ) return ! You came from there.
+      if ( vi == 1 ) return ! there is no west v-edge
+      if ( edge.is_border_u(vi-1,vj) ) ans = 1
+    end function iCheck_west      
+
+    subroutine iGo_one_step_set_border_turn( current_dir, vi, vj, check )
+      char(len=1) <io> :: current_dir
+      integer <io> :: vi, vj
+      integer, dimension(4) <in> :: check
+
+      if ( check(1) == 1 ) then
+        if ( current_dir /= 'N' ) vert.border_turn(vi,vj) = 'N'
+          !!>
+                                    ^ Will go northward
+                                    |
+             current_dir='E' ====> 'N' - - -
+                 (Came eastward)    |
+          !!<
+        current_dir = 'N'
+        vj += 1
+      else if ( check(2) == 1 ) then
+        if ( current_dir /= 'S' ) vert.border_turn(vi,vj) = 'S'
+        current_dir = 'S'
+        vj -= 1
+      else if ( check(3) == 1 ) then
+        if ( current_dir /= 'E' ) vert.border_turn(vi,vj) = 'E'
+        current_dir = 'E'
+        vi += 1
+      else if ( check(4) == 1 ) then
+        if ( current_dir /= 'W' ) vert.border_turn(vi,vj) = 'W'
+        current_dir = 'W'
+        vi -= 1
+      else 
+        call ut__fatal( "__MODULE__(__LINE__): "  // &
+                        "Strange value of check(:)." )
+      end if
+    end subroutine iGo_one_step_set_border_turn
+    
+  end subroutine set_turn_direct_on_vert_on_border_turn
+
+
   subroutine slice_mesh__vert_finalize( this )
     class(slice_mesh__vert_t) <io> :: this
 
@@ -217,9 +360,14 @@ contains
   end subroutine slice_mesh__vert_finalize
 
 
-  subroutine slice_mesh__edge_initialize( this, mesh_vert )
+  subroutine slice_mesh__edge_initialize( this,         &
+                                          mesh_vert,    &
+                                          is_border_u,  &
+                                          is_border_v )
     class(slice_mesh__edge_t) <out> :: this
-    class(slice_mesh__vert_t) <in> :: mesh_vert
+    class(slice_mesh__vert_t) <io> :: mesh_vert
+    logical, dimension(:,:) <optin> :: is_border_u
+    logical, dimension(:,:) <optin> :: is_border_v
     !!>
                             edgev                                    
                               |
@@ -242,18 +390,67 @@ contains
              v       v       v       v       v
              + edgeu + edgeu + edgeu + edgeu +
     !!<
-      this.u_nu = mesh_vert.nu - 1
-      this.u_nv = mesh_vert.nv
-      this.v_nu = mesh_vert.nu
-      this.v_nv = mesh_vert.nv - 1
-      allocate(this.u_cross_coord(this.u_nu,  &
-                                  this.u_nv))
-      allocate(this.v_cross_coord(this.v_nu,  &
-                                  this.v_nv))
-      allocate(this.u_quarter(this.u_nu,  &
-                              this.u_nv))
-      allocate(this.v_quarter(this.v_nu,  &
+    this.u_nu = mesh_vert.nu - 1
+    this.u_nv = mesh_vert.nv
+    this.v_nu = mesh_vert.nu
+    this.v_nv = mesh_vert.nv - 1
+    allocate(this.u_cross_coord(this.u_nu,  &
+                                this.u_nv))
+    allocate(this.v_cross_coord(this.v_nu,  &
+                                this.v_nv))
+    allocate(this.u_quarter(this.u_nu,  &
+                            this.u_nv))
+    allocate(this.v_quarter(this.v_nu,  &
+                            this.v_nv))
+    allocate(this.is_border_u(this.v_nu,  &
                               this.v_nv))
+    allocate(this.is_border_v(this.v_nu,  &
+                              this.v_nv))
+
+    call iBorder_set
+
+    call set_turn_direct_on_vert_on_border_turn( mesh_vert, &
+                                                 this )
+  
+  contains
+
+    subroutine iBorder_set
+      integer :: u_nu_, u_nv_, v_nu_, v_nv_
+
+      this.is_border_u(:,:) = .false.  ! default bulk edges
+      this.is_border_v(:,:) = .false.
+
+      if ( present(is_border_v) ) then
+        call ut__assert( present(is_border_u),              &
+                         "__MODULE__(__LINE__): "           &
+                         // "Needs both border_u and _v." )
+        u_nu_ = size(is_border_u,dim=1)
+        u_nv_ = size(is_border_u,dim=2)
+        v_nu_ = size(is_border_v,dim=1)
+        v_nv_ = size(is_border_v,dim=2)
+        call ut__assert( u_nu_ == this.u_nu,                    &
+                         "__MODULE__(__LINE__): "               &
+                         // "Inconsistent nu of border_u and mesh_edge." )
+        call ut__assert( u_nv_ == this.u_nv,                    &
+                         "__MODULE__(__LINE__): "               &
+                         // "Inconsistent nv of border_u and mesh_edge." )
+        call ut__assert( v_nu_ == this.v_nu,                    &
+                         "__MODULE__(__LINE__): "               &
+                         // "Inconsistent nu of border_u and mesh_edge." )
+        call ut__assert( v_nv_ == this.v_nv,                    &
+                         "__MODULE__(__LINE__): "               &
+                         // "Inconsistent nv of border_v and mesh_edge." )
+        this.is_border_u(:,:) = is_border_u(:,:)
+        this.is_border_v(:,:) = is_border_v(:,:)
+      else 
+        ! the case of usual (rectangular) border
+        this.is_border_u(:,        1) = .true. ! south bourder
+        this.is_border_u(:,this.u_nv) = .true. ! north bourder
+        this.is_border_v(        1,:) = .true. ! west bourder
+        this.is_border_v(this.v_nu,:) = .true. ! east bourder
+      end if
+    end subroutine iBorder_set
+
   end subroutine slice_mesh__edge_initialize
 
 
