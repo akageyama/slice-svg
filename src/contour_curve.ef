@@ -425,6 +425,7 @@ contains
     integer :: vi, vj  ! vertex indeces i and j
 
     logical :: jumped
+    char(len=1) :: dir
 
     call ut__assert( path.head.lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
@@ -435,6 +436,8 @@ contains
     vi = path.head.i
     vj = path.head.j
 
+!debugp ">>", vi, vj
+!debugp ">>", edge.u_quarter(vi-1,vj)
     select case ( edge.u_quarter(vi-1,vj) )
       case (SLICE_MESH__EDGE_PP) 
         !!>
@@ -451,11 +454,28 @@ contains
                 .     New head of vertex-type
         !!<
         jumped = .true.
-        u = vert.pos_u(vi-1)
+        vi -= 1
+        u = vert.pos_u(vi)
         v = vert.pos_v(vj)
         call register( path, u, v )
-        call edge.erase( 'u', vi-1, vj )
-        if ( vi-1 == 1 ) then ! you have reached the north-west corner.
+        call edge.erase( 'u', vi, vj )
+
+        dir = vert.border_list_dir(vi,vj)
+        select case (dir)
+          case ('W')
+            ! Continue going westward.
+            path.head = contour_curve__element_t( 'u', 'on', vi, vj, dir )
+          case ('N')
+            ! Turn right or north. Here here
+            path.head = contour_curve__element_t( 'v', 'on', vi, vj, dir )
+          case ('S')
+            ! Turn right or left, north or south.
+            path.head = contour_curve__element_t( 'v', 'on', vi, vj, dir )
+          case default
+            call ut__fatal( "__MODULE__(__LINE__): case error." )          
+        end select
+
+        if ( vi == 1 ) then ! you have reached the north-west corner.
           !!>                
                               __ new head of vertex-type (vi-1,vj)
                              / 
@@ -520,6 +540,7 @@ contains
     integer :: vi, vj  ! vertex indeces i and j
 
     logical :: jumped
+    char(len=1) :: dir
 
     call ut__assert( path.head.lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
@@ -537,11 +558,16 @@ contains
         v = vert.pos_v(vj)
         call register( path, u, v )
         call edge.erase( 'u', vi, vj )
-        if ( vi+1 == vert.nu ) then ! you have reached the south-east corner.
-          path.head = contour_curve__element_t( 'v', 'on', vi+1, vj, 'N' )
-        else
-          path.head = contour_curve__element_t( 'u', 'on', vi+1, vj, 'E' )
-        end if
+        vi += 1
+        dir = vert.border_list_dir(vi,vj)
+        select case ( dir )
+          case ('E')
+            path.head = contour_curve__element_t( 'u', 'on', vi, vj, dir )
+          case ('N','S')
+            path.head = contour_curve__element_t( 'v', 'on', vi, vj, dir )
+          case default  
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
       case (SLICE_MESH__EDGE_PM )
         jumped = .true.
         u = edge.u_cross_coord(vi,vj)
@@ -565,6 +591,9 @@ contains
     call ut__assert( path.head.lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
 
+!debugp "I am in go_along_border"
+!debugp path.head.direct
+!debugp path.head.i, path.head.j
     select case (path.head.direct)
       case ('N')
         call go_along_border_on_v_edge_northward( path, vert, edge )

@@ -146,18 +146,47 @@ contains
     real <in> :: v_min, v_max
     real, dimension(nu,nv) <optin> :: val
 
+    logical, dimension(nu-1,nv  ) :: is_border_edge_u
+    logical, dimension(nu,  nv-1) :: is_border_edge_v
+
     allocate(this.val_vert(nu,nv))
 
     call this.mesh_vert.initialize( nu, nv,        &
                                     u_min, u_max,  &
                                     v_min, v_max )
+!!>
     call this.mesh_edge.initialize( this.mesh_vert )
+!!<
+    call iSet_test_border
+    call this.mesh_edge.initialize( this.mesh_vert,   &
+                                    is_border_edge_u, &
+                                    is_border_edge_v )
 
     if ( present(val) ) then
       this.val_vert(:,:) = val(:,:)
     else
       this.val_vert(:,:) = 0.0
     end if
+
+    call iSet_test_border
+  
+  contains
+
+    subroutine iSet_test_border
+
+      integer :: i, j
+      is_border_edge_u(:,:) = .false.
+      is_border_edge_v(:,:) = .false.
+
+!      j = 1
+      do i = 1, nu/2-1
+        is_border_edge_u(i, 1) = .true.
+        is_border_edge_u(i,nv) = .true.
+      end do
+
+      is_border_edge_v(   1,:) = .true.
+      is_border_edge_v(nu/2,:) = .true.
+    end subroutine iSet_test_border
 
   end subroutine slice__scalar_initialize
 
