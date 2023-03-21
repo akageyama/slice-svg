@@ -277,6 +277,7 @@ contains
     real :: u, v       ! coordinates of path tip that is to be registered.
     integer :: vi, vj  ! vertex indeces i and j
     logical :: jumped
+    char(len=1) :: dir
 
     call ut__assert( path.head.lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
@@ -286,7 +287,9 @@ contains
 
     vi = path.head.i
     vj = path.head.j
-    select case ( edge.v_quarter(vi,vj) )
+    vj += 1
+
+    select case ( edge.v_quarter(vi,vj-1) )
       case (SLICE_MESH__EDGE_PP) 
         !!>
               .       |            
@@ -301,36 +304,40 @@ contains
         !!<
         jumped = .true.
         u = vert.pos_u(vi)
-        v = vert.pos_v(vj+1)
+        v = vert.pos_v(vj)
         call register( path, u, v )
-        call edge.erase( 'v', vi, vj )
-        if ( vj+1 == vert.nv ) then ! you have reached the north-east corner.
-          !!>
-                        __ you will go this way.
-                       /    
-                - + - <=**p <== new head of vertex-type (vi,vj+1)
-                  .       *
-                  .       *
-                  .       *
-                - + - - - p
-                  .       *
-                                          
-          !!<
-          path.head = contour_curve__element_t( 'u', 'on', vi, vj+1, 'W' )
-        else
-          !!>
-                   .       * <== you will continue going this way.
-                   .       *
-                 - + - - - p <= new head of vertex type (vi,vj+1)
-                   .       *
-                   .       *
-                   .       *
-                 - + - - - p
-                   .       *
-                   .       *
-          !!<
-          path.head = contour_curve__element_t( 'v', 'on', vi, vj+1, 'N' )
-        end if
+        call edge.erase( 'v', vi, vj-1 )
+        dir = vert.border_list_dir(vi,vj)
+        select case (dir)
+          case ('N')
+            !!>
+                     .       * <== you will continue going this way.
+                     .       *
+                   - + - - - p <= new head of vertex type (vi,vj+1)
+                     .       *
+                     .       *
+                     .       *
+                   - + - - - p
+                     .       *
+                     .       *
+            !!<
+            path.head = contour_curve__element_t( 'v', 'on', vi, vj, dir )
+          case ('W','E')
+            !!>
+                          __ you will go this way.
+                         /    
+                  - + - <=**p <== new head 
+                    .       *
+                    .       *
+                    .       *
+                  - + - - - p
+                    .       *
+
+            !!<
+            path.head = contour_curve__element_t( 'u', 'on', vi, vj, dir )
+          case default 
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
       case (SLICE_MESH__EDGE_PM )
         !!>
                    .       |
@@ -344,11 +351,11 @@ contains
         !!<
         jumped = .true.
         u = vert.pos_u(vi)
-        v = edge.v_cross_coord(vi,vj)
+        v = edge.v_cross_coord(vi,vj-1)
         call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
-        call edge.erase( 'v', vi, vj )
-        path.head = contour_curve__element_t( 'v', 'in', vi, vj, 'W' )
+        call edge.erase( 'v', vi, vj-1 )
+        path.head = contour_curve__element_t( 'v', 'in', vi, vj-1, 'W' )
       case default
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
@@ -366,6 +373,7 @@ contains
     real :: u, v       ! coordinates of path tip that is to be registered.
     integer :: vi, vj  ! vertex indeces i and j
     logical :: jumped
+    char(len=1) :: dir
 
     call ut__assert( path.head.lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
@@ -375,19 +383,24 @@ contains
 
     vi = path.head.i
     vj = path.head.j
+    vj -= 1
 
-    select case ( edge.v_quarter(vi,vj-1) )
+    select case ( edge.v_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
         u = vert.pos_u(vi)
-        v = vert.pos_v(vj-1)
+        v = vert.pos_v(vj)
         call register( path, u, v )
-        call edge.erase( 'v', vi, vj-1 )
-        if ( vj-1 == 1 ) then ! you have reached the south-west corner.
-          path.head = contour_curve__element_t( 'u', 'on', vi,    1, 'E' )
-        else
-          path.head = contour_curve__element_t( 'v', 'on', vi, vj-1, 'S' )
-        end if
+        call edge.erase( 'v', vi, vj )
+        dir = vert.border_list_dir(vi,vj)
+        select case (dir)
+          case ('S')
+            path.head = contour_curve__element_t( 'v', 'on', vi, vj, dir )
+          case ('E','W')
+            path.head = contour_curve__element_t( 'u', 'on', vi, vj, dir )
+          case default 
+            call ut__fatal( "__MODULE__(__LINE__): case error." )
+        end select
       case (SLICE_MESH__EDGE_MP )
         !!>
                    *       |
@@ -402,11 +415,11 @@ contains
         !!<
         jumped = .true.
         u = vert.pos_u(vi)
-        v = edge.v_cross_coord(vi,vj-1)
+        v = edge.v_cross_coord(vi,vj)
         call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
-        call edge.erase( 'v', vi, vj-1 )
-        path.head = contour_curve__element_t( 'v', 'in', vi, vj-1, 'E' )
+        call edge.erase( 'v', vi, vj )
+        path.head = contour_curve__element_t( 'v', 'in', vi, vj, 'E' )
       case default
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
@@ -435,10 +448,10 @@ contains
 
     vi = path.head.i
     vj = path.head.j
+    vi -= 1
 
-!debugp ">>", vi, vj
-!debugp ">>", edge.u_quarter(vi-1,vj)
-    select case ( edge.u_quarter(vi-1,vj) )
+!debugp vi, vj
+    select case ( edge.u_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         !!>
                         __ You will go this way.
@@ -454,55 +467,47 @@ contains
                 .     New head of vertex-type
         !!<
         jumped = .true.
-        vi -= 1
         u = vert.pos_u(vi)
         v = vert.pos_v(vj)
         call register( path, u, v )
         call edge.erase( 'u', vi, vj )
 
         dir = vert.border_list_dir(vi,vj)
+!debugp dir
+!debugp vi, vj        
         select case (dir)
           case ('W')
-            ! Continue going westward.
+            !!>
+                Continue going westward.
+                           __ new head 
+                          /
+                         /  ___ you will continue going this way.
+                        /  /
+                       /  /      
+                    - p * * * p * * You came along this border.
+                      .       .     
+                      .       .     
+                      .       .     
+                    - + - - - + - - 
+                      .       .     
+            !!<            
             path.head = contour_curve__element_t( 'u', 'on', vi, vj, dir )
-          case ('N')
-            ! Turn right or north. Here here
-            path.head = contour_curve__element_t( 'v', 'on', vi, vj, dir )
-          case ('S')
-            ! Turn right or left, north or south.
+          case ('N','S')
+            !!>                
+                Turn left (right) to south (north).
+                                __ new head 
+                               / 
+                              p * * * p * * 
+              you will        *       .
+               go this way => *       .
+                              .       .
+                              + - - - + - -
+                              .       .
+            !!<            
             path.head = contour_curve__element_t( 'v', 'on', vi, vj, dir )
           case default
             call ut__fatal( "__MODULE__(__LINE__): case error." )          
         end select
-
-        if ( vi == 1 ) then ! you have reached the north-west corner.
-          !!>                
-                              __ new head of vertex-type (vi-1,vj)
-                             / 
-                            p * * * p * * 
-            you will        *       .
-             go this way => *       .
-                            .       .
-                            + - - - + - -
-                            .       .
-          !!<
-          path.head = contour_curve__element_t( 'v', 'on', 1, vj, 'S' )
-        else
-          !!>
-                         __ new head of vertex type (vi-1,vj)
-                        /
-                       /  ___ you will continue going this way.
-                      /  /
-                     /  /      
-                  - p * * * p * * You came along this border.
-                    .       .     
-                    .       .     
-                    .       .     
-                  - + - - - + - - 
-                    .       .     
-          !!<
-          path.head = contour_curve__element_t( 'u', 'on', vi-1, vj, 'W' )
-        end if
       case (SLICE_MESH__EDGE_MP )
         !!>
                            __ new head of edge type (vi-1,vj)
@@ -516,12 +521,12 @@ contains
                     .       .     
         !!<
         jumped = .true.
-        u = edge.u_cross_coord(vi-1,vj)
+        u = edge.u_cross_coord(vi,vj)
         v = vert.pos_v(vj)
         call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
-        call edge.erase( 'u', vi-1, vj )
-        path.head = contour_curve__element_t( 'u', 'in', vi-1, vj, 'S' )
+        call edge.erase( 'u', vi, vj )
+        path.head = contour_curve__element_t( 'u', 'in', vi, vj, 'S' )
       case default
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
@@ -538,9 +543,8 @@ contains
 
     real :: u, v       ! coordinates of path tip that is to be registered.
     integer :: vi, vj  ! vertex indeces i and j
-
-    logical :: jumped
     char(len=1) :: dir
+    logical :: jumped
 
     call ut__assert( path.head.lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
@@ -550,15 +554,15 @@ contains
 
     vi = path.head.i
     vj = path.head.j
+    vi += 1
 
-    select case ( edge.u_quarter(vi,vj) )
+    select case ( edge.u_quarter(vi-1,vj) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
-        u = vert.pos_u(vi+1)
+        u = vert.pos_u(vi)
         v = vert.pos_v(vj)
         call register( path, u, v )
-        call edge.erase( 'u', vi, vj )
-        vi += 1
+        call edge.erase( 'u', vi-1, vj )
         dir = vert.border_list_dir(vi,vj)
         select case ( dir )
           case ('E')
@@ -570,11 +574,11 @@ contains
         end select
       case (SLICE_MESH__EDGE_PM )
         jumped = .true.
-        u = edge.u_cross_coord(vi,vj)
+        u = edge.u_cross_coord(vi-1,vj)
         v = vert.pos_v(vj)
         call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
-        call edge.erase( 'u', vi, vj )
+        call edge.erase( 'u', vi-1, vj )
         path.head = contour_curve__element_t( 'u', 'in', vi, vj, 'N' )
       case default
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
@@ -591,9 +595,8 @@ contains
     call ut__assert( path.head.lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
 
-!debugp "I am in go_along_border"
-!debugp path.head.direct
-!debugp path.head.i, path.head.j
+!debugp path.head.i
+!debugp path.head.j
     select case (path.head.direct)
       case ('N')
         call go_along_border_on_v_edge_northward( path, vert, edge )
@@ -872,6 +875,7 @@ contains
       i = mesh_vert.border_list_vi(b)
       j = mesh_vert.border_list_vj(b)
       direct = mesh_vert.border_list_dir(i,j)
+!debugp i, j, direct      
       call ut__assert( direct == 'N' .or.          &
                        direct == 'S' .or.          &
                        direct == 'E' .or.          &
