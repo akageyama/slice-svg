@@ -37,10 +37,14 @@ module slice_mesh_m
     real :: v_min, v_max
     integer :: border_list_num
     char(len=1), dimension(:,:), allocatable :: border_list_dir
+    char(len=1), dimension(:,:), allocatable :: grid_type
     integer, dimension(:), allocatable :: border_list_vi
     integer, dimension(:), allocatable :: border_list_vj
   contains
-    procedure :: initialize => slice_mesh__vert_initialize
+    procedure, private :: slcie_mesh__vert_initialize_with_grids
+    procedure, private :: slice_mesh__vert_initialize_with_uvmaxmin
+    generic :: initialize => slcie_mesh__vert_initialize_with_grids,  &
+                             slice_mesh__vert_initialize_with_uvmaxmin
     procedure :: finalize => slice_mesh__vert_finalize
   end type slice_mesh__vert_t  
 
@@ -158,9 +162,106 @@ contains
   end subroutine slice_mesh_edge__erase  
 
 
-  subroutine slice_mesh__vert_initialize( this, nu, nv,  &
-                                          u_min, u_max,  &
-                                          v_min, v_max )
+ subroutine slcie_mesh__vert_initialize_with_grids( this, nu, nv,  &
+                                                    grid_pos_u,    &
+                                                    grid_pos_v,    &
+                                                    grid_type )
+    class(slice_mesh__vert_t) <out> :: this
+    integer <in> :: nu, nv
+    real, dimension(nu) <in> :: grid_pos_u
+    real, dimension(nv) <in> :: grid_pos_v
+    char(len=1), dimension(nu,nv) <optin> :: grid_type ! 'i'(nside of border)
+                                                       ! 'b'(border itself)
+                                                       ! 'o'(utside of border)
+
+    real :: u_min, u_max
+    real :: v_min, v_max
+    integer :: max_num_border_verts
+
+    u_min = grid_pos_u(1)
+    u_max = grid_pos_u(nu)
+    v_min = grid_pos_v(1)
+    v_max = grid_pos_v(nv)
+
+    call ut__assert( u_max > u_min,       &
+                    '__MODULE__(__LINE__): Invalid coords u.' )
+    call ut__assert( v_max > v_min,       &
+                    '__MODULE__(__LINE__): Invalid coords v.' )
+
+    this.nu = nu
+    this.nv = nv
+    this.u_min = u_min
+    this.u_max = u_max
+    this.v_min = v_min
+    this.v_max = v_max
+
+    allocate(this.pos_u(nu))
+    allocate(this.pos_v(nv))
+    allocate(this.grid_type(nu,nv))
+    allocate(this.border_list_dir(nu,nv))
+
+    max_num_border_verts = nu*nv
+       ! An overestimate.
+    allocate(this.border_list_vi(max_num_border_verts))
+    allocate(this.border_list_vj(max_num_border_verts))
+
+    this.pos_u(:) = grid_pos_u(:)
+    this.pos_v(:) = grid_pos_v(:)
+
+    if ( present(grid_type) ) then
+      call iCopy_grid_type
+    else
+      call iSet_default_grid_type
+    end if
+
+  contains
+
+    subroutine iCopy_grid_type
+      char(len=1) :: t
+      integer :: i, j, count_border_type
+
+      count_border_type = 0
+
+      do j = 1, nv
+        do i = 1, nu
+          t = grid_type(i,j)
+          call ut__assert( t == 'i' .or.                &
+                           t == 'b' .or.                &
+                           t == 'o',                    &
+                           "__MODULE__(__LINE__): " //  &
+                           "Invalid grid type." )
+          if ( t == 'b' ) count_border_type += 1
+        end do
+      end do
+
+      call ut__assert( count_border_type >= (2*nu+2*(nv-1)),  &
+                       "__MODULE__(__LINE__): " //            &
+                       "Border type grid is too few." )
+
+      this.grid_type(:,:) = grid_type(:,:)
+    end subroutine iCopy_grid_type
+
+    subroutine iSet_default_grid_type
+      integer :: i, j
+
+      do j = 1, nv
+        do i = 1, nu
+          if ( i==1 .or. i==nu .or.  &
+               j==1 .or. j==nv ) then
+            this.grid_type(i,j) = 'b'
+          else
+            this.grid_type(i,j) = 'i'
+          end if
+        end do
+      end do
+    end subroutine iSet_default_grid_type
+
+  end subroutine slcie_mesh__vert_initialize_with_grids
+
+
+  subroutine slice_mesh__vert_initialize_with_uvmaxmin( this, nu, nv,  &
+                                                        u_min, u_max,  &
+                                                        v_min, v_max )
     class(slice_mesh__vert_t) <out> :: this
     integer <in> :: nu, nv
     real <in> :: u_min, u_max
@@ -185,7 +286,7 @@ contains
 
     allocate(this.pos_u(nu))
     allocate(this.pos_v(nv))
-
+    allocate(this.grid_type(nu,nv))
     allocate(this.border_list_dir(nu,nv))
 
     max_num_border_verts = nu*nv
@@ -203,9 +304,8 @@ contains
     do j = 1, nv
       this.pos_v(j) = v_min + dv*(j-1)
     end do
-
   
-  end subroutine slice_mesh__vert_initialize
+  end subroutine slice_mesh__vert_initialize_with_uvmaxmin
 
 
   subroutine make_border_list( vert, edge )

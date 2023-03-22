@@ -26,7 +26,10 @@ module slice_m
     real, dimension(:,:), allocatable :: val_vert
     real :: val_vert_max, val_vert_min
   contains
-    procedure :: initialize => slice__scalar_initialize
+    procedure, private :: slice__scalar_initialize_with_uvmax
+    procedure, private :: slice__scalar_initialize_with_grids
+    generic :: initialize => slice__scalar_initialize_with_uvmax,  &
+                             slice__scalar_initialize_with_grids
     procedure :: finalize => slice__scalar_finalize
     procedure :: set_val => slice__scalar_set_val
     procedure :: vis_contour => slice__scalar_vis_contour
@@ -136,10 +139,10 @@ contains
   end subroutine slice__scalar_vis_contour
 
 
-  subroutine slice__scalar_initialize( this, nu, nv,  &
-                                       u_min, u_max,  &
-                                       v_min, v_max,  &
-                                       val )
+  subroutine slice__scalar_initialize_with_uvmax( this, nu, nv,  &
+                                                  u_min, u_max,  &
+                                                  v_min, v_max,  &
+                                                  val )
     class(slice__scalar_t) <out> :: this
     integer <in> :: nu, nv
     real <in> :: u_min, u_max
@@ -154,13 +157,14 @@ contains
     call this.mesh_vert.initialize( nu, nv,        &
                                     u_min, u_max,  &
                                     v_min, v_max )
-!!>
     call this.mesh_edge.initialize( this.mesh_vert )
-!!<
+
+!!>
     call iSet_test_border
     call this.mesh_edge.initialize( this.mesh_vert,   &
                                     is_border_edge_u, &
                                     is_border_edge_v )
+!!<
 
     if ( present(val) ) then
       this.val_vert(:,:) = val(:,:)
@@ -188,7 +192,69 @@ contains
       is_border_edge_v(nu/2,:) = .true.
     end subroutine iSet_test_border
 
-  end subroutine slice__scalar_initialize
+  end subroutine slice__scalar_initialize_with_uvmax
+
+
+  subroutine slice__scalar_initialize_with_grids( this,       &
+                                                  nu, nv,     &
+                                                  grid_pos_u, &
+                                                  grid_pos_v, &
+                                                  val )
+    class(slice__scalar_t) <out> :: this
+    integer <in> :: nu, nv
+    real, dimension(nu) <in> :: grid_pos_u
+    real, dimension(nv) <in> :: grid_pos_v
+    real, dimension(nu,nv) <optin> :: val
+
+    logical, dimension(nu-1,nv  ) :: is_border_edge_u
+    logical, dimension(nu,  nv-1) :: is_border_edge_v
+
+    allocate(this.val_vert(nu,nv))
+
+    call ut__assert( size(grid_pos_u,dim=1) == nu .and. &
+                     size(grid_pos_v,dim=1) == nv,      &
+                     "__MODULE__(__LINE__): " //        &
+                     "grid size inconsistent." )
+
+    call this.mesh_vert.initialize( nu, nv,     &
+                                    grid_pos_u, &
+                                    grid_pos_v )
+    call this.mesh_edge.initialize( this.mesh_vert )
+
+!!>
+    call iSet_test_border
+    call this.mesh_edge.initialize( this.mesh_vert,   &
+                                    is_border_edge_u, &
+                                    is_border_edge_v )
+!!<
+
+    if ( present(val) ) then
+      this.val_vert(:,:) = val(:,:)
+    else
+      this.val_vert(:,:) = 0.0
+    end if
+
+    call iSet_test_border
+  
+  contains
+
+    subroutine iSet_test_border
+
+      integer :: i, j
+      is_border_edge_u(:,:) = .false.
+      is_border_edge_v(:,:) = .false.
+
+      do i = 1, nu/2-1
+        is_border_edge_u(i, 1) = .true.
+        is_border_edge_u(i,nv) = .true.
+      end do
+
+      is_border_edge_v(   1,:) = .true.
+      is_border_edge_v(nu/2,:) = .true.
+    end subroutine iSet_test_border
+
+  end subroutine slice__scalar_initialize_with_grids
+
 
 
   subroutine slice__scalar_set_val( this, nu, nv, val )
