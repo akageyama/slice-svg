@@ -556,6 +556,8 @@ contains
     vj = path.head.j
     vi += 1
 
+!debugp "I am go_along_border_on_u_edge_eastward."
+!debugp ">:", edge.u_quarter(vi-1,vj)
     select case ( edge.u_quarter(vi-1,vj) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
@@ -564,6 +566,7 @@ contains
         call register( path, u, v )
         call edge.erase( 'u', vi-1, vj )
         dir = vert.border_list_dir(vi,vj)
+!debugp ">:", dir
         select case ( dir )
           case ('E')
             path.head = contour_curve__element_t( 'u', 'on', vi, vj, dir )
@@ -576,10 +579,11 @@ contains
         jumped = .true.
         u = edge.u_cross_coord(vi-1,vj)
         v = vert.pos_v(vj)
+!debugp ">:", vi-1, vj
         call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
         call edge.erase( 'u', vi-1, vj )
-        path.head = contour_curve__element_t( 'u', 'in', vi, vj, 'N' )
+        path.head = contour_curve__element_t( 'u', 'in', vi-1, vj, 'N' )
       case default
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
@@ -1323,6 +1327,7 @@ contains
 !debugp "I am contour_curve__trace_and_erase."   
 !debugp "    ", path.head.lane
 !debugp "    ", path.head.i, path.head.j
+!debugp "    ", path.head.which_edge
       select case (path.head.lane)
         case ('on')
 !debugp "      Im calling go_along_border."
