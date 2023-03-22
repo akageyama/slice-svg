@@ -450,7 +450,6 @@ contains
     vj = path.head.j
     vi -= 1
 
-!debugp vi, vj
     select case ( edge.u_quarter(vi,vj) )
       case (SLICE_MESH__EDGE_PP) 
         !!>
@@ -473,8 +472,6 @@ contains
         call edge.erase( 'u', vi, vj )
 
         dir = vert.border_list_dir(vi,vj)
-!debugp dir
-!debugp vi, vj        
         select case (dir)
           case ('W')
             !!>
@@ -556,8 +553,6 @@ contains
     vj = path.head.j
     vi += 1
 
-!debugp "I am go_along_border_on_u_edge_eastward."
-!debugp ">:", edge.u_quarter(vi-1,vj)
     select case ( edge.u_quarter(vi-1,vj) )
       case (SLICE_MESH__EDGE_PP) 
         jumped = .true.
@@ -566,7 +561,6 @@ contains
         call register( path, u, v )
         call edge.erase( 'u', vi-1, vj )
         dir = vert.border_list_dir(vi,vj)
-!debugp ">:", dir
         select case ( dir )
           case ('E')
             path.head = contour_curve__element_t( 'u', 'on', vi, vj, dir )
@@ -579,7 +573,6 @@ contains
         jumped = .true.
         u = edge.u_cross_coord(vi-1,vj)
         v = vert.pos_v(vj)
-!debugp ">:", vi-1, vj
         call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
         call edge.erase( 'u', vi-1, vj )
@@ -599,8 +592,6 @@ contains
     call ut__assert( path.head.lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
 
-!debugp path.head.i
-!debugp path.head.j
     select case (path.head.direct)
       case ('N')
         call go_along_border_on_v_edge_northward( path, vert, edge )
@@ -631,13 +622,9 @@ contains
 
     jumped = .false.  ! Default.
 
-!debugp "I am in jump_to_other_edge."
     ei = path.head.i
     ej = path.head.j
 
-!debugp "    ", ei, ej
-!debugp "    ", path.head.direct
-!debugp "    ", path.head.which_edge
     select case (path.head.direct)
       !!>
                         edge.u(i,j+1)
@@ -657,7 +644,6 @@ contains
                         edge.u(i,j)
       !!<
       case ('N')
-!debugp "            case N"
         call ut__assert( path.head.which_edge == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
         call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
@@ -669,7 +655,6 @@ contains
                               p -*- m
                                 From 
                          !!<
-!debugp " called jump_to_v_edge_mp_if_possible.", jumped
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej+1 )
                          !!>
@@ -680,7 +665,6 @@ contains
                               p -*- m
                                 From 
                          !!<
-!debugp " called jump_to_u_edge_pm_if_possible.", jumped
         call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej )
                          !!>
@@ -690,9 +674,7 @@ contains
                               p - * m
                                 From 
                          !!<
-!debugp " called jump_to_v_edge_pm_if_possible.", jumped
       case ('W')
-!debugp "            case W"
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
@@ -722,8 +704,6 @@ contains
                                 To
                          !!<
       case ('S')
-!debugp "            case S"
-
         call ut__assert( path.head.which_edge == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
         call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
@@ -755,7 +735,6 @@ contains
                               m - - m
                          !!<
       case ('E')
-!debugp "            case E"
 
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
@@ -892,7 +871,6 @@ contains
       i = mesh_vert.border_list_vi(b)
       j = mesh_vert.border_list_vj(b)
       direct = mesh_vert.border_list_dir(i,j)
-!debugp "I am find_start_edge_on_boundaries", i, j, direct      
       call ut__assert( direct == 'N' .or.          &
                        direct == 'S' .or.          &
                        direct == 'E' .or.          &
@@ -923,7 +901,6 @@ contains
           case ('W')
             call iRegister_western_border_edge ( i, j, quarter )
         end select
-!debugp "I am find_start_edge_on_boundaries", status         
         return
       end if
     end do
@@ -1257,12 +1234,9 @@ contains
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
-!debugp "I am set_start_edge_in_bulk."
     do ej = 2, mesh_edge.u_nv-1
       do ei = 2, mesh_edge.u_nu-1
         quarter = mesh_edge.u_quarter(ei,ej)
-!debugp "     set_start_edge_in_bulk:", ei, ej
-!debugp "     set_start_edge_in_bulk:", quarter
         if ( quarter == PM ) then
           !!> 
               path tip you
@@ -1299,15 +1273,12 @@ contains
     char(len=10) <out> :: status ! 'no contour' or 'have found'
 
     status = 'no contour'  ! default 
-!debugp "I am  contour_curve__set_start_edge."
-!debugp "     calling find_start_edge_on_boundaries." 
     call find_start_edge_on_boundaries( this,         &
                                         mesh_vert,    &
                                         mesh_edge,    &
                                         status )
     if ( status == 'have found' ) return
 
-!debugp "     calling set_start_edge_in_bulk." 
     call set_start_edge_in_bulk( this,         &
                                  mesh_vert,    &
                                  mesh_edge,    &
@@ -1324,16 +1295,10 @@ contains
     type(slice_mesh__edge_t) <io> :: edge
 
     do
-!debugp "I am contour_curve__trace_and_erase."   
-!debugp "    ", path.head.lane
-!debugp "    ", path.head.i, path.head.j
-!debugp "    ", path.head.which_edge
       select case (path.head.lane)
         case ('on')
-!debugp "      Im calling go_along_border."
           call go_along_border( path, vert, edge )
         case ('in')
-!debugp "      Im calling jump_to_other_edge."
           call jump_to_other_edge( path, vert, edge )
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )

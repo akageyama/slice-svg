@@ -348,11 +348,6 @@ contains
       check(3) = iShould_go_eastward ( dir, head_vi, head_vj )
       check(4) = iShould_go_westward ( dir, head_vi, head_vj )
 
-!debugp b, head_vi, head_vj
-!debugp check(1)
-!debugp check(2)
-!debugp check(3)
-!debugp check(4)
       call ut__assert( sum(check(1:4)) == 1,        &
                        "__MODULE__(__LINE__): " //  &
                        "Should be just one border for next." )
