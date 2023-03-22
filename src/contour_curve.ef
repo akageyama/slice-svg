@@ -665,6 +665,7 @@ contains
                               p -*- m
                                 From 
                          !!<
+!debugp " called jump_to_v_edge_mp_if_possible.", jumped
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej+1 )
                          !!>
@@ -675,6 +676,7 @@ contains
                               p -*- m
                                 From 
                          !!<
+!debugp " called jump_to_u_edge_pm_if_possible.", jumped
         call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej )
                          !!>
@@ -684,6 +686,7 @@ contains
                               p - * m
                                 From 
                          !!<
+!debugp " called jump_to_v_edge_pm_if_possible.", jumped
       case ('W')
 !debugp "            case W"
         call ut__assert( path.head.which_edge == 'v',  &
