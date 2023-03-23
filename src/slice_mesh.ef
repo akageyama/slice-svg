@@ -40,6 +40,11 @@ module slice_mesh_m
     char(len=1), dimension(:,:), allocatable :: grid_type
     integer, dimension(:), allocatable :: border_list_vi
     integer, dimension(:), allocatable :: border_list_vj
+    integer :: diagonal_border_num
+    char(len=2), dimension(:,:), allocatable :: diagonal_border_list_dir
+    integer, dimension(:), allocatable :: diagonal_border_list_vi
+    integer, dimension(:), allocatable :: diagonal_border_list_vj
+
   contains
     procedure, private :: slcie_mesh__vert_initialize_with_grids
     procedure, private :: slice_mesh__vert_initialize_with_uvmaxmin
@@ -50,29 +55,56 @@ module slice_mesh_m
 
   type, public :: slice_mesh__edge_t
     !!>                            
-                                 edge_v                                    
-                                    |
-        v: vertex                   |
-        e: edge_u or edge_v         +---- edge_u
+        + vertex    edge_v                                    
+        u edge_u    |
+        v edge_v    |
+                    +---- edge_u
                                     
-            e       e       e       e       e
-            e       e       e       e       e    
-            e       e       e       e       e
-      e e e v e e e v e e e v e e e v e e e v e e e
-            e       e       e       e       e
-            e       e       e       e       e    
-            e       e       e       e       e
-      e e e v e e e v e e e v e e e v e e e v e e e
-            e       e       e       e       e
-            e       e       e       e       e    
-            e       e       e       e       e
+            v       v       v       v       v
+            v       v       v       v       v
+            v       v       v       v       v
+      u u u + u u u + u u u v u u u + u u u + u u u
+            v       v       v       v       v
+            v       v       v       v       v
+            v       v       v       v       v
+      u u u + u u u + u u u v u u u + u u u + u u u
+            v       v       v       v       v
+            v       v       v       v       v
+            v       v       v       v       v
+
+
+                    v
+                    .       
+                    .     a <== edge_a (ascend)
+                    .   a
+                    . a
+                    + . . . . . . u
+                      d
+                        d
+                          d <== edge_d  (descend)
+
+        d     v                 v     a
+           d  v                 v  a
+        u  u  +  u  u  u  u  u  +  u  u
+              v  d           a  v
+              v     d     a     v
+              v       ad        v
+              v     a     d     v
+              v  a           d  v
+        u  u  +  u  u  u  u  u  +  u  u
+           a  v                 v  d
+        a     v                 v     d
     !!< 
     integer :: u_nu, u_nv
     integer :: v_nu, v_nv
+    integer :: a_nu, a_nv
+    integer :: d_nu, d_nv
     integer, dimension(:,:), allocatable :: u_quarter   ! {0,1,2,3}
     integer, dimension(:,:), allocatable :: v_quarter   ! {0,1,2,3}
-    logical, dimension(:,:), allocatable :: is_border_u ! T for border edges
-    logical, dimension(:,:), allocatable :: is_border_v ! T for border edges
+    integer, dimension(:,:), allocatable :: a_quarter   ! {0,1,2,3}
+    integer, dimension(:,:), allocatable :: d_quarter   ! {0,1,2,3}
+    logical, dimension(:,:), allocatable :: is_border_u ! True for border edges
+    logical, dimension(:,:), allocatable :: is_border_v ! True for border edges
       !!>
           Take an edge V1-V2. 
                     V1--edge--V2  
@@ -91,6 +123,8 @@ module slice_mesh_m
       !!<
     real, dimension(:,:), allocatable :: u_cross_coord
     real, dimension(:,:), allocatable :: v_cross_coord
+    real, dimension(:,:), allocatable :: a_cross_coord
+    real, dimension(:,:), allocatable :: d_cross_coord
                                             
   contains
     procedure :: initialize => slice_mesh__edge_initialize
@@ -156,6 +190,10 @@ contains
       this.u_quarter(ei,ej) = SLICE_MESH__EDGE_MM
     else if ( which_edge == 'v' ) then
       this.v_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+    else if ( which_edge == 'a' ) then
+      this.a_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+    else if ( which_edge == 'd' ) then
+      this.d_quarter(ei,ej) = SLICE_MESH__EDGE_MM
     else 
       call ut__fatal( '__MODULE__(__LINE__): argument error.' )
     end if
@@ -498,6 +536,11 @@ contains
     this.u_nv = mesh_vert.nv
     this.v_nu = mesh_vert.nu
     this.v_nv = mesh_vert.nv - 1
+    this.a_nu = mesh_vert.nu - 1
+    this.a_nv = mesh_vert.nv - 1
+    this.d_nu = mesh_vert.nu - 1
+    this.d_nv = mesh_vert.nv - 1
+
     allocate(this.u_cross_coord(this.u_nu,  &
                                 this.u_nv))
     allocate(this.v_cross_coord(this.v_nu,  &
@@ -506,6 +549,10 @@ contains
                             this.u_nv))
     allocate(this.v_quarter(this.v_nu,  &
                             this.v_nv))
+    allocate(this.a_quarter(this.a_nu,  &
+                            this.a_nv))
+    allocate(this.d_quarter(this.d_nu,  &
+                            this.d_nv))
     allocate(this.is_border_u(this.v_nu,  &
                               this.v_nv))
     allocate(this.is_border_v(this.v_nu,  &
@@ -562,6 +609,8 @@ contains
 
     deallocate(this.u_quarter)
     deallocate(this.v_quarter)
+    deallocate(this.a_quarter)
+    deallocate(this.d_quarter)
   end subroutine slice_mesh__edge_finalize  
 
 
@@ -766,6 +815,84 @@ contains
   end function edge_level_check_set_v_quarter  
 
 
+  function edge_level_check_set_a_quarter( ei, ej,     &
+                                           edge_a_nu,  &
+                                           edge_a_nv,  &
+                                           vert_nu,    &
+                                           vert_nv,    &
+                                           val_vert,   &
+                                           level )     &
+                                    result(a_quarter)
+
+    integer <in> :: ei, ej
+    integer <in> :: edge_a_nu, edge_a_nv
+    integer <in> :: vert_nu, vert_nv
+    real, dimension(vert_nu,vert_nv) <in> :: val_vert
+    real <in> :: level
+    integer, dimension(edge_a_nu,edge_a_nv) :: a_quarter
+
+    !!>
+        See comments in "edge_level_check_set_u_quarter".
+    !!<
+
+    if ( val_vert(ei,  ej  ) < level .and. &
+         val_vert(ei+1,ej+1) < level ) then
+      a_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+    else if ( val_vert(ei,  ej  ) > level .and. &
+              val_vert(ei+1,ej+1) > level ) then
+      a_quarter(ei,ej) = SLICE_MESH__EDGE_PP
+    else if ( val_vert(ei,  ej  ) >= level .and. &
+              val_vert(ei+1,ej+1) <  level ) then          
+      a_quarter(ei,ej) = SLICE_MESH__EDGE_PM
+    else if ( val_vert(ei,  ej  ) <  level .and. &
+              val_vert(ei+1,ej+1) >= level ) then
+      a_quarter(ei,ej) = SLICE_MESH__EDGE_MP
+    else
+      call ut__fatal( "__MODULE__(__LINE__): case error." )
+    end if
+
+  end function edge_level_check_set_a_quarter    
+
+
+  function edge_level_check_set_d_quarter( ei, ej,     &
+                                           edge_d_nu,  &
+                                           edge_d_nv,  &
+                                           vert_nu,    &
+                                           vert_nv,    &
+                                           val_vert,   &
+                                           level )     &
+                                    result(d_quarter)
+
+    integer <in> :: ei, ej
+    integer <in> :: edge_d_nu, edge_d_nv
+    integer <in> :: vert_nu, vert_nv
+    real, dimension(vert_nu,vert_nv) <in> :: val_vert
+    real <in> :: level
+    integer, dimension(edge_d_nu,edge_d_nv) :: d_quarter
+
+    !!>
+        See comments in "edge_level_check_set_u_quarter".
+    !!<
+
+    if ( val_vert(ei,  ej  ) < level .and. &
+         val_vert(ei+1,ej-1) < level ) then
+      d_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+    else if ( val_vert(ei,  ej  ) > level .and. &
+              val_vert(ei+1,ej-1) > level ) then
+      d_quarter(ei,ej) = SLICE_MESH__EDGE_PP
+    else if ( val_vert(ei,  ej  ) >= level .and. &
+              val_vert(ei+1,ej-1) <  level ) then          
+      d_quarter(ei,ej) = SLICE_MESH__EDGE_PM
+    else if ( val_vert(ei,  ej  ) <  level .and. &
+              val_vert(ei+1,ej-1) >= level ) then
+      d_quarter(ei,ej) = SLICE_MESH__EDGE_MP
+    else
+      call ut__fatal( "__MODULE__(__LINE__): case error." )
+    end if
+
+  end function edge_level_check_set_d_quarter   
+
+
   subroutine slice_mesh__edge_set_quarter( this,       &
                                            mesh_vert,  &
                                            val_vert,   &
@@ -780,6 +907,8 @@ contains
     this.v_quarter(:,:) = -999  ! check if all edges are set,
                                 ! using ...QUATER_MM, MP, PM, 
                                 ! PP are all non-negative.
+    this.a_quarter(:,:) = -999
+    this.d_quarter(:,:) = -999
 
     this.u_cross_coord(:,:) = NAN ! Reset
     this.v_cross_coord(:,:) = NAN
@@ -800,6 +929,7 @@ contains
                                          val_vert,        &
                                          level )
 
+
     call iInterpol_cross_point_edge_u
     call iInterpol_cross_point_edge_v
 
@@ -809,6 +939,46 @@ contains
                      "__MODULE__(__LINE__): You missed some edge_v." )
 
   contains
+
+    subroutine iSet_diagonal_border
+      integer :: b, vi, vj, ei, ej
+      char(len=2) :: dir
+      do b = 1, mesh_vert.diagonal_border_num
+        vi = mesh_vert.diagonal_border_list_vi(b)
+        vj = mesh_vert.diagonal_border_list_vj(b)
+        ei = mesh_vert.diagonal_border_list_ei(b)
+        ej = mesh_vert.diagonal_border_list_ej(b)
+        dir = mesh_vert.diagonal_border_list_dir(b)
+  
+        select case (dir)
+          case ('NE','SW')
+            this.a_cross_coord(ei,ej) = NAN
+            this.a_quarter(ei,ej) =  &
+                    edge_level_check_set_a_quarter(         &
+                                           ei, ej,          &
+                                           this.v_nu,       &
+                                           this.v_nv,       &
+                                           mesh_vert.nu,    &
+                                           mesh_vert.nv,    &
+                                           val_vert,        &
+                                           level )
+          case ('NW','SE')
+            this.d_cross_coord(ei,ej) = NAN
+            this.d_quarter(ei,ej) =  &
+                    edge_level_check_set_d_quarter(         &
+                                           ei, ej,          &
+                                           this.v_nu,       &
+                                           this.v_nv,       &
+                                           mesh_vert.nu,    &
+                                           mesh_vert.nv,    &
+                                           val_vert,        &
+                                           level )
+          case default
+            call ut__fatal( "__MODULE__(__LINE__)): " //  &
+                            "case error." )
+        end select
+      end do    
+    end subroutine iSet_diagonal_border
 
     subroutine iInterpol_cross_point_edge_u
       real :: u1, u2, diff1, diff2
