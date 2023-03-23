@@ -202,15 +202,16 @@ contains
     type(slice_mesh__vert_t) <in> :: vert
     integer <in> :: nth
 
-    call ut__assert( nth >= 1 .and.                    &
-                     nth <= vert.diagonal_border_num,  &
-                     "__MODULE__(__LINE__): " //       &
+    call ut__assert( nth >= 1 .and.                     &
+                     nth <= vert.diag_border_list.num,  &
+                     "__MODULE__(__LINE__): " //        &
                      "over the range." )
     this.d_quarter(nth) = SLICE_MESH__EDGE_MM
   end subroutine slice_mesh_edge__erase_d_edge
 
 
-  subroutine slcie_mesh__vert_initialize_with_grids( this, nu, nv,  &
+  subroutine slice_mesh__vert_initialize_with_grids( this,          &
+                                                     nu, nv,        &
                                                      grid_pos_u,    &
                                                      grid_pos_v,    &
                                                      grid_type )
@@ -221,7 +222,6 @@ contains
     char(len=1), dimension(nu,nv) <optin> :: grid_type ! 'i'(nside of border)
                                                        ! 'b'(border itself)
                                                        ! 'o'(utside of border)
-
     real :: u_min, u_max
     real :: v_min, v_max
     integer :: max_num_border_verts
@@ -304,7 +304,7 @@ contains
       end do
     end subroutine iSet_default_grid_type
 
-  end subroutine slcie_mesh__vert_initialize_with_grids
+  end subroutine slice_mesh__vert_initialize_with_grids
 
 
   subroutine slice_mesh__vert_initialize_with_uvmaxmin( this, nu, nv,  &
