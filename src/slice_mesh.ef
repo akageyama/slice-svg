@@ -17,6 +17,20 @@ module slice_mesh_m
         note that their positiveness is assumed in some checks.
     !!<
 
+  type, public :: slice_mesh__vert_border_list_t
+    integer :: num ! number of border vertex
+    char(len=1), dimension(:,:), allocatable :: dir  ! N/S/W/E
+    integer, dimension(:), allocatable :: vi
+    integer, dimension(:), allocatable :: vj
+  end type slice_mesh__vert_border_list_t
+
+  type, public :: slice_mesh__vert_diag_border_list_t
+    integer :: num ! number of diagnoal border vertex
+    char(len=2), dimension(:), allocatable :: dir  ! NE/NW/SW/SE
+    integer, dimension(:), allocatable :: vi
+    integer, dimension(:), allocatable :: vj
+  end type slice_mesh__vert_diag_border_list_t  
+
   type, public :: slice_mesh__vert_t
     !!>  
         v: vertex
@@ -35,16 +49,10 @@ module slice_mesh_m
     real, dimension(:), allocatable :: pos_v
     real :: u_min, u_max
     real :: v_min, v_max
-    integer :: border_list_num
-    char(len=1), dimension(:,:), allocatable :: border_list_dir
-    char(len=1), dimension(:,:), allocatable :: grid_type
-    integer, dimension(:), allocatable :: border_list_vi
-    integer, dimension(:), allocatable :: border_list_vj
-    integer :: diagonal_border_num
-    char(len=2), dimension(:,:), allocatable :: diagonal_border_list_dir
-    integer, dimension(:), allocatable :: diagonal_border_list_vi
-    integer, dimension(:), allocatable :: diagonal_border_list_vj
-
+    char(len=1), dimension(:,:), allocatable :: grid_type ! 'i' / 'b' / 'o'
+                                                          !  in / border / out
+    type(slice_mesh__vert_border_list_t) :: border_list
+    type(slice_mesh__vert_diag_border_list_t) :: diag_border_list
   contains
     procedure, private :: slcie_mesh__vert_initialize_with_grids
     procedure, private :: slice_mesh__vert_initialize_with_uvmaxmin
@@ -55,56 +63,29 @@ module slice_mesh_m
 
   type, public :: slice_mesh__edge_t
     !!>                            
-        + vertex    edge_v                                    
-        u edge_u    |
-        v edge_v    |
-                    +---- edge_u
+        + vertex            v     d                                 
+        u edge_u            |   /
+        v edge_v            | /
+        d edge_d            +---- u
                                     
-            v       v       v       v       v
-            v       v       v       v       v
-            v       v       v       v       v
-      u u u + u u u + u u u v u u u + u u u + u u u
-            v       v       v       v       v
-            v       v       v       v       v
-            v       v       v       v       v
-      u u u + u u u + u u u v u u u + u u u + u u u
-            v       v       v       v       v
-            v       v       v       v       v
-            v       v       v       v       v
-
-
-                    v
-                    .       
-                    .     a <== edge_a (ascend)
-                    .   a
-                    . a
-                    + . . . . . . u
-                      d
-                        d
-                          d <== edge_d  (descend)
-
-        d     v                 v     a
-           d  v                 v  a
-        u  u  +  u  u  u  u  u  +  u  u
-              v  d           a  v
-              v     d     a     v
-              v       ad        v
-              v     a     d     v
-              v  a           d  v
-        u  u  +  u  u  u  u  u  +  u  u
-           a  v                 v  d
-        a     v                 v     d
+            | \   / | \   / | \   / | \   / | 
+            v   d   v   d   v   d   v   d   v
+            | /   \ | /   \ | /   \ | /   \ |
+           -+---u---+---u---+---u---+---u---+-
+            | \   / | \   / | \   / | \   / |
+            v   d   v   d   v   d   v   d   v
+            | /   \ | /   \ | /   \ | /   \ |
+           -+---u---+---u---+---u---+---u---+-
+            | \   / | \   / | \   / | \   / |
+            v   d   v   d   v   d   v   d   v
+            | /   \ | /   \ | /   \ | /   \ |
     !!< 
     integer :: u_nu, u_nv
     integer :: v_nu, v_nv
-    integer :: a_nu, a_nv
-    integer :: d_nu, d_nv
     integer, dimension(:,:), allocatable :: u_quarter   ! {0,1,2,3}
     integer, dimension(:,:), allocatable :: v_quarter   ! {0,1,2,3}
-    integer, dimension(:,:), allocatable :: a_quarter   ! {0,1,2,3}
-    integer, dimension(:,:), allocatable :: d_quarter   ! {0,1,2,3}
-    logical, dimension(:,:), allocatable :: is_border_u ! True for border edges
-    logical, dimension(:,:), allocatable :: is_border_v ! True for border edges
+
+    integer, dimension(:), allocatable :: d_quarter   ! {0,1,2,3}
       !!>
           Take an edge V1-V2. 
                     V1--edge--V2  
@@ -123,14 +104,17 @@ module slice_mesh_m
       !!<
     real, dimension(:,:), allocatable :: u_cross_coord
     real, dimension(:,:), allocatable :: v_cross_coord
-    real, dimension(:,:), allocatable :: a_cross_coord
-    real, dimension(:,:), allocatable :: d_cross_coord
+    real, dimension(:), allocatable :: u_cross_coord_on_diag_edge
+    real, dimension(:), allocatable :: v_cross_coord_on_diag_edge
                                             
   contains
     procedure :: initialize => slice_mesh__edge_initialize
     procedure :: finalize => slice_mesh__edge_finalize
     procedure :: set_quarter => slice_mesh__edge_set_quarter
-    procedure :: erase => slice_mesh_edge__erase
+    procedure, private :: slice_mesh_edge__erase_uv_edge
+    procedure, private :: slice_mesh_edge__erase_d_edge
+    general :: erase => slice_mesh_edge__erase_uv_edge,  &
+                        slice_mesh_edge__erase_d_edge
   end type slice_mesh__edge_t    
 
 
@@ -181,7 +165,24 @@ contains
   end function linear_interpol
 
 
-  subroutine slice_mesh_edge__erase( this, which_edge, ei, ej )
+
+  function quarter_of_edge_ends( v1, v2, val ) result(ans)
+    if ( v1 < level .and. v2 < level ) then
+      ans = SLICE_MESH__EDGE_MM
+    else if ( v1 > level .and. v2 > level ) then
+      ans = SLICE_MESH__EDGE_PP
+    else if ( v1 >= level .and. v2 < level ) then          
+      ans = SLICE_MESH__EDGE_PM
+    else if ( v1 < level .and. v2 >= level ) then
+      ans = SLICE_MESH__EDGE_MP  
+    else
+      call ut__fatal( "__MODULE__(__LINE__): " //  &
+                      "case error." )
+    end if
+  end function quarter_of_edge_ends
+
+
+  subroutine slice_mesh_edge__erase_uv_edge( this, which_edge, ei, ej )
     class(slice_mesh__edge_t) <io> :: this
     char(len=1) <in> :: which_edge
     integer <in> :: ei, ej
@@ -190,20 +191,29 @@ contains
       this.u_quarter(ei,ej) = SLICE_MESH__EDGE_MM
     else if ( which_edge == 'v' ) then
       this.v_quarter(ei,ej) = SLICE_MESH__EDGE_MM
-    else if ( which_edge == 'a' ) then
-      this.a_quarter(ei,ej) = SLICE_MESH__EDGE_MM
-    else if ( which_edge == 'd' ) then
-      this.d_quarter(ei,ej) = SLICE_MESH__EDGE_MM
     else 
       call ut__fatal( '__MODULE__(__LINE__): argument error.' )
     end if
-  end subroutine slice_mesh_edge__erase  
+  end subroutine slice_mesh_edge__erase_uv_edge
 
 
- subroutine slcie_mesh__vert_initialize_with_grids( this, nu, nv,  &
-                                                    grid_pos_u,    &
-                                                    grid_pos_v,    &
-                                                    grid_type )
+  subroutine slice_mesh_edge__erase_d_edge( this, vert, nth )
+    class(slice_mesh__edge_t) <io> :: this
+    type(slice_mesh__vert_t) <in> :: vert
+    integer <in> :: nth
+
+    call ut__assert( nth >= 1 .and.                    &
+                     nth <= vert.diagonal_border_num,  &
+                     "__MODULE__(__LINE__): " //       &
+                     "over the range." )
+    this.d_quarter(nth) = SLICE_MESH__EDGE_MM
+  end subroutine slice_mesh_edge__erase_d_edge
+
+
+  subroutine slcie_mesh__vert_initialize_with_grids( this, nu, nv,  &
+                                                     grid_pos_u,    &
+                                                     grid_pos_v,    &
+                                                     grid_type )
     class(slice_mesh__vert_t) <out> :: this
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
@@ -700,18 +710,10 @@ contains
                 p--------m
                     PM
 
-    !!<
+        =====
+              Case MM
 
-    integer :: ei, ej  ! edge indexes. They 
-                       ! are simply converted
-                       ! to  vertex indexes
-    ! edge_u
-    do ej = 1, edge_u_nv  
-      do ei = 1, edge_u_nu
-        if ( val_vert(ei,  ej) < level .and. &
-             val_vert(ei+1,ej) < level ) then
-          !!>
-               The path does not cross this edge.
+                The path does not cross this edge.
                          ei   ei+1
                           |    |      .      
                       ----M====M---.---- level
@@ -719,25 +721,20 @@ contains
                           |  . |
                           .----|-------- val_vert(ei,ej)
                        .  |    |
-          !!<
-          u_quarter(ei,ej) = SLICE_MESH__EDGE_MM
-        else if ( val_vert(ei,  ej) > level .and. &
-                  val_vert(ei+1,ej) > level ) then
-          !!>
-               The path does not cross this edge.
 
-               But special care would be taken when
-               this edge is on the border (ej=1 or u_nv).
+              Case PP
+
+                The path does not cross this edge.
+                But special care would be taken when
+                this edge is on the border (ej=1 or u_nv).
                           .
                           |    . 
                       ----P====P----.------ level
                          ei   ei+1       .
-          !!<
-          u_quarter(ei,ej) = SLICE_MESH__EDGE_PP
-        else if ( val_vert(ei,  ej) >= level .and. &
-                  val_vert(ei+1,ej) <  level ) then          
-          !!> 
-              The path goes through the edge.
+
+              Case PM
+
+                The path goes through the edge.
                      .
                        .       u2
                        | .     |
@@ -746,12 +743,10 @@ contains
                       u1   |   .
                            |     .
                           u=ui
-          !!<
-          u_quarter(ei,ej) = SLICE_MESH__EDGE_PM
-        else if ( val_vert(ei,  ej) <  level .and. &
-                  val_vert(ei+1,ej) >= level ) then
-          !!> 
-              The path goes through the edge, too.
+
+              Case MP
+
+                The path goes through the edge, too.
                                  .
                        u1      . 
                        |     . |
@@ -760,14 +755,22 @@ contains
                        .   |   u2
                      .     |     
                           u=ui
-          !!<
-          u_quarter(ei,ej) = SLICE_MESH__EDGE_MP
-        else
-          call ut__fatal( "__MODULE__(__LINE__): case error." )
-        end if
+        =====
+    !!<
+
+    integer :: ei, ej  ! edge indexes. They 
+                       ! are simply converted
+                       ! to vertex indexes
+    real :: val1, val2
+
+    ! edge_u
+    do ej = 1, edge_u_nv  
+      do ei = 1, edge_u_nu
+        val1 = val_vert(ei,  ej)
+        val2 = val_vert(ei+1,ej)
+        u_quarter(ei,ej) = quarter_of_edge_ends( val1, val2, level )
       end do
     end do
-
   end function edge_level_check_set_u_quarter
 
 
@@ -790,25 +793,13 @@ contains
     !!<
 
     integer :: ei, ej  ! edge indexes
+    real :: val1, val2
 
-    ! edge_v
     do ej = 1, edge_v_nv  
       do ei = 1, edge_v_nu
-        if ( val_vert(ei,ej  ) < level .and. &
-             val_vert(ei,ej+1) < level ) then
-          v_quarter(ei,ej) = SLICE_MESH__EDGE_MM
-        else if ( val_vert(ei,ej  ) > level .and. &
-                  val_vert(ei,ej+1) > level ) then
-          v_quarter(ei,ej) = SLICE_MESH__EDGE_PP
-        else if ( val_vert(ei,ej  ) >= level .and. &
-                  val_vert(ei,ej+1) <  level ) then          
-          v_quarter(ei,ej) = SLICE_MESH__EDGE_PM
-        else if ( val_vert(ei,ej  ) <  level .and. &
-                  val_vert(ei,ej+1) >= level ) then
-          v_quarter(ei,ej) = SLICE_MESH__EDGE_MP
-        else
-          call ut__fatal( "__MODULE__(__LINE__): case error." )
-        end if
+        val1 = val_vert(ei,ej  )
+        val2 = val_vert(ei,ej+1)
+        u_quarter(ei,ej) = quarter_of_edge_ends( val1, val2, level )
       end do
     end do
 
@@ -907,9 +898,6 @@ contains
     this.v_quarter(:,:) = -999  ! check if all edges are set,
                                 ! using ...QUATER_MM, MP, PM, 
                                 ! PP are all non-negative.
-    this.a_quarter(:,:) = -999
-    this.d_quarter(:,:) = -999
-
     this.u_cross_coord(:,:) = NAN ! Reset
     this.v_cross_coord(:,:) = NAN
 
@@ -938,45 +926,115 @@ contains
     call ut__assert( minval(this.v_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_v." )
 
+    call iSet_diagonal_border
+
   contains
 
-    subroutine iSet_diagonal_border
-      integer :: b, vi, vj, ei, ej
+    subroutine iSet_diagonal_border( level )
+      real <in> :: level
+
+      !!>
+          注意。このdiagnonal edgeにおける4値（quarter）の定義は
+          u_edge/v_edge と異なる。 u_edgeの場合は
+              val(vi,vj) - level > 0 .and. val(vi+1,vj) - level < 0
+          の場合に
+              quarter(ei,ej) = PM
+          としていた。vi=ei, vj=ej の場合、つまり現在注目している頂点 {i,j} が
+          このu_edgeの左端である場合は特に問題ない。自分が M で右隣がPである。
+
+            自分 {i,j}    {i+1,j}
+               \         /
+                P - - - M
+          
+          だが、vi=ei+1, vj=ej つまりこのu_edgeの右端に注目している
+          頂点 {i,j} がある場合は、おなじ
+              quarter(ei,ej) = PM
+          の値は、自分 {i,j} が P で左隣の頂点が M である。
+
+            {i-1,j}     自分 {i,j}
+               \         /
+                P - - - M
+          つまりこの場合は PM を右から左に読む必要がある。
+
+          一方、d_edgeの場合は、自分から右斜め上方向に行く次のような
+          d_edgeの場合も、
+
+                    + - - - - M
+                    |       d |
+                    |    d    |
+                    | d       |
+                    P - - - - +
+                     \
+                   自分 {i,j}
+
+          左斜め上に行く次のような場合も、
+
+                    M - - - - M
+                    | d       |
+                    |    d    |
+                    |       d |
+                    + - - - - P
+                               \
+                                自分 {i,j}
+          どちらも d_edge = PM とする。つまり常に左から右に読む。
+          
+      !!<
+      integer :: b, vi, vj
       char(len=2) :: dir
+      real :: val1, u1, v1
+      real :: val2, u2, v2
+      integer :: quarter
+
       do b = 1, mesh_vert.diagonal_border_num
+!debugp "__FUNC__", b
         vi = mesh_vert.diagonal_border_list_vi(b)
         vj = mesh_vert.diagonal_border_list_vj(b)
-        ei = mesh_vert.diagonal_border_list_ei(b)
-        ej = mesh_vert.diagonal_border_list_ej(b)
         dir = mesh_vert.diagonal_border_list_dir(b)
+!debugp "__FUNC__", vi, vj
+!debugp "__FUNC__", dir
   
+        this.u_cross_coord_on_diagonal_edge(b) = NAN  ! reset
+        this.v_cross_coord_on_diagonal_edge(b) = NAN
+
+        val1 = val_vert(vi,vj)
+        u1 = mesh_vert.pos_u(vi)
+        v1 = mesh_vert.pos_v(vj)
+
         select case (dir)
-          case ('NE','SW')
-            this.a_cross_coord(ei,ej) = NAN
-            this.a_quarter(ei,ej) =  &
-                    edge_level_check_set_a_quarter(         &
-                                           ei, ej,          &
-                                           this.v_nu,       &
-                                           this.v_nv,       &
-                                           mesh_vert.nu,    &
-                                           mesh_vert.nv,    &
-                                           val_vert,        &
-                                           level )
-          case ('NW','SE')
-            this.d_cross_coord(ei,ej) = NAN
-            this.d_quarter(ei,ej) =  &
-                    edge_level_check_set_d_quarter(         &
-                                           ei, ej,          &
-                                           this.v_nu,       &
-                                           this.v_nv,       &
-                                           mesh_vert.nu,    &
-                                           mesh_vert.nv,    &
-                                           val_vert,        &
-                                           level )
+          case ('NE')
+            val2 = val_vert(vi+1,vj+1)
+            u2 = mesh_vert.pos_u(vi+1)
+            v2 = mesh_vert.pos_v(vj+1)
+          case ('NW')
+            val2 = val_vert(vi-1,vj+1)
+            u2 = mesh_vert.pos_u(vi-1)
+            v2 = mesh_vert.pos_v(vj+1)
+          case ('SE')
+            val2 = val_vert(vi+1,vj-1)
+            u2 = mesh_vert.pos_u(vi+1)
+            v2 = mesh_vert.pos_v(vj-1)
+          case ('SW')
+            val2 = val_vert(vi-1,vj-1)
+            u2 = mesh_vert.pos_u(vi-1)
+            v2 = mesh_vert.pos_v(vj-1)
           case default
-            call ut__fatal( "__MODULE__(__LINE__)): " //  &
+            call ut__fatal( "__MODULE__(__LINE__): " //  &
                             "case error." )
         end select
+
+        quarter = quarter_of_edge_ends( val1, val2, level )
+        this.d_quarter(b) = quarter
+!debugp "__FUNC__", quarter
+
+        if ( quarter == SLICE_MESH__EDGE_MP  .or.                                   &
+             quarter == SLICE_MESH__EDGE_PM ) then
+          diff1 = val1 - level
+          diff2 = level - val2
+          this.u_cross_coord_on_diagonal_edge(b) = linear_interpol( u1, u2, diff1, diff2 )
+          this.v_cross_coord_on_diagonal_edge(b) = linear_interpol( v1, v2, diff1, diff2 )
+!debugp this.u_cross_coord_on_diagonal_edge(b)
+!debugp this.v_cross_coord_on_diagonal_edge(b)
+        end if
       end do    
     end subroutine iSet_diagonal_border
 
