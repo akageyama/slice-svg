@@ -248,10 +248,10 @@ contains
     allocate(this.grid_type(nu,nv))
     allocate(this.border_list_dir(nu,nv))
 
-    max_num_border_verts = nu*nv
-       ! An overestimate.
-    allocate(this.border_list_vi(max_num_border_verts))
-    allocate(this.border_list_vj(max_num_border_verts))
+    max_num_border_verts = 20*(nu+nv)
+       ! A rough (over) estimate. Increase it, if necessary.
+    allocate(this.border_list.vi(max_num_border_verts))
+    allocate(this.border_list.vj(max_num_border_verts))
 
     this.pos_u(:) = grid_pos_u(:)
     this.pos_v(:) = grid_pos_v(:)
@@ -268,6 +268,28 @@ contains
       char(len=1) :: t
       integer :: i, j, count_border_type
 
+      !!>
+          Default case
+
+             b b b b b b b b b 
+             b i i i i i i i b
+             b i i i i i i i b
+             b i i i i i i i b
+             b b b b b b b b b 
+          
+             o o o b b b b b o
+             b b b b i i i b o
+             b i i i i i i b o
+             b b b b i i i b o
+             o o o b b b b b o
+          
+             o o o o b o o o o
+             o o o b i b o o o
+             o o b i i i b o o
+             o b i i i i i b o
+             o b b b b b b b o
+      !!<
+
       count_border_type = 0
 
       do j = 1, nv
@@ -277,15 +299,20 @@ contains
                            t == 'b' .or.                &
                            t == 'o',                    &
                            "__MODULE__(__LINE__): " //  &
-                           "Invalid grid type." )
-          if ( t == 'b' ) count_border_type += 1
+                           "Invalid grid_type." )
+          this.grid_type(i,j) = t
+          if ( t == 'b' ) then
+            count_border_type += 1
+            this.border_list.vi = i
+            this.border_list.vj = j
+          end if
         end do
       end do
 
-      call ut__assert( count_border_type >= (2*nu+2*(nv-1)),  &
-                       "__MODULE__(__LINE__): " //            &
-                       "Border type grid is too few." )
-
+      call ut__assert( count_border_type <= max_num_border_verts,  &
+                       "__MODULE__(__LINE__): " //                 &
+                       "Border type grid is too many." )
+      this.border_list.num = count_border_type
       this.grid_type(:,:) = grid_type(:,:)
     end subroutine iCopy_grid_type
 
