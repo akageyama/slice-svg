@@ -27,6 +27,8 @@ module slice_mesh_m
   end type slice_mesh__vert_border_list_t
 
   !!>
+
+
        in
        out
        border:
@@ -212,10 +214,17 @@ contains
 
     integer :: head_i, head_j, head_i_start, head_j_start
     char(len=1) :: t
-    integer, dimension(4) :: counts  ! counts(1) 'b'
-                                     ! counts(2) 'd'
-                                     ! counts(3) 'o'
-                                     ! counts(4) 'i'    
+    integer, dimension(4) :: counts  ! counts(1) 'i'
+                                     ! counts(2) 'o'
+                                     ! counts(3) 'N'
+                                     ! counts(4) 'S'    
+                                     ! counts(5) 'W'    
+                                     ! counts(6) 'E'    
+                                     ! counts(7) 'f'    
+                                     ! counts(8) 'r'    
+                                     ! counts(9) 'R'    
+                                     ! counts(10) 'l'    
+                                     ! counts(11) 'L'    
 
     call iCount_grid_type( nu, nv, grid_type, counts )
     call iFind_a_point_in_border_for_start( nu, nv,    &
