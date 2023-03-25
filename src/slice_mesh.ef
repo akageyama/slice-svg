@@ -22,14 +22,18 @@ module slice_mesh_m
     char(len=1), dimension(:,:), allocatable :: dir  ! N/S/W/E
     integer, dimension(:), allocatable :: vi
     integer, dimension(:), allocatable :: vj
+  contains
+    procedure : initialize => slice_mesh__vert_border_list_init
   end type slice_mesh__vert_border_list_t
 
-  type, public :: slice_mesh__vert_diag_border_list_t
+  type, public :: slice_mesh__vert_dborder_list_t
     integer :: num ! number of diagnoal border vertex
     char(len=2), dimension(:), allocatable :: dir  ! NE/NW/SW/SE
     integer, dimension(:), allocatable :: vi
     integer, dimension(:), allocatable :: vj
-  end type slice_mesh__vert_diag_border_list_t  
+  contains
+    procedure : initialize => slice_mesh__vert_dborder_list_init
+  end type slice_mesh__vert_dborder_list_t  
 
   type, public :: slice_mesh__vert_t
     !!>  
@@ -52,13 +56,12 @@ module slice_mesh_m
     char(len=1), dimension(:,:), allocatable :: grid_type ! 'i' / 'b' / 'o'
                                                           !  in / border / out
     type(slice_mesh__vert_border_list_t) :: border_list
-    type(slice_mesh__vert_diag_border_list_t) :: diag_border_list
+    type(slice_mesh__vert_dborder_list_t) :: dborder_list
   contains
-    procedure, private :: slcie_mesh__vert_initialize_with_grids
+    procedure, private :: slice_mesh__vert_initialize_with_grids
     procedure, private :: slice_mesh__vert_initialize_with_uvmaxmin
-    generic :: initialize => slcie_mesh__vert_initialize_with_grids,  &
+    generic :: initialize => slice_mesh__vert_initialize_with_grids,  &
                              slice_mesh__vert_initialize_with_uvmaxmin
-    procedure :: finalize => slice_mesh__vert_finalize
   end type slice_mesh__vert_t  
 
   type, public :: slice_mesh__edge_t
@@ -121,6 +124,149 @@ module slice_mesh_m
 contains
 
 
+  subroutine slice_mesh__vert_dborder_list_init( this, nu, nv )
+    class(slice_mesh__vert_dborder_list_t) <out> :: this
+    integer <in> :: nu, nv
+
+    integer :: max_num_overestimate 
+
+    max_num_overestimate = 20*(nu+nv)
+       ! A rough (over) estimate. Increase it, if necessary.
+
+    this.num = 0
+    allocate(this.dborder_list_dir(nu,nv))
+    allocate(this.dborder_list.vi(max_num_overestimate))
+    allocate(this.dborder_list.vj(max_num_overestimate))
+  end subroutine slice_mesh__vert_dborder_list_init
+
+
+  subroutine slice_mesh__vert_border_list_init( this, nu, nv )
+    class(slice_mesh__vert_border_list_t) <out> :: this
+    integer <in> :: nu, nv
+
+    integer :: max_num_overestimate 
+
+    max_num_overestimate = 20*(nu+nv)
+       ! A rough (over) estimate. Increase it, if necessary.
+
+    this.num = 0
+    allocate(this.border_list_dir(nu,nv))
+    allocate(this.border_list.vi(max_num_overestimate))
+    allocate(this.border_list.vj(max_num_overestimate))
+  end subroutine slice_mesh__vert_border_list_init  
+
+
+  subroutine set_default_grid_type( nu, nv,  &
+                                    grid_type )
+    integer <in> :: nu, nv
+    char(len=1) <out> :: grid_type
+    !!>
+                  b b b b b b b b b 
+                  b i i i i i i i b
+                  b i i i i i i i b
+                  b i i i i i i i b
+                  b b b b b b b b b 
+    !!<                  
+    integer :: i, j
+
+    do j = 1, nv
+      do i = 1, nu
+        if ( i==1 .or. i==nu .or.  &
+             j==1 .or. j==nv ) then
+          grid_type(i,j) = 'b'
+        else
+          grid_type(i,j) = 'i'
+        end if
+      end do
+    end do
+  end subroutine set_default_grid_type
+
+
+  subroutine classify_grid_type( nu, nv,       &
+                                 grid_type,    &
+                                 border_list,  &
+                                 dborder_list )
+    integer <in> :: nu, nv
+    char(len=1) <in> :: grid_type
+    type(slice_mesh__vert_border_list_t) <io> :: border_list
+    type(slice_mesh__vert_dborder_list_t) <io> :: dborder_list
+
+    integer :: head_i, head_j, head_i_start, head_j_start
+    char(len=1) :: t
+    integer, dimension(4) :: counts  ! counts(1) 'b'
+                                     ! counts(2) 'd'
+                                     ! counts(3) 'o'
+                                     ! counts(4) 'i'    
+
+    call iCount_grid_type( nu, nv, grid_type, counts )
+    call iFind_a_point_in_border_for_start( nu, nv,    &
+                                            head_i_start, head_j_start )
+
+    i = head_i_start
+    j = head_j_start
+    do 
+      
+
+  
+  contains
+
+    subroutine iFind_a_point_in_border_for_start( nu, nv,           &
+                                                  grid_type,        &
+                                                  head_i, head_j )
+      integer <in> :: nu, nv
+      char(len=1), dimension(nu,nv) <in> :: grid_type
+      integer <out> :: head_i, head_j
+      integer :: i, j
+
+      do j = 1, nv
+        do i = 1, nu
+          t = grid_type(i,j)
+          if ( t == 'b' .or. t == 'd' ) then
+            head_i = i
+            head_j = j
+            return
+          end if
+        end do
+      end do
+
+      call ut__fatal( "__MODULE__(__LINE__): " //  &
+                      "Failed to find a start point on border." )
+    end subroutine iFind_a_point_in_border_for_start
+
+    subroutine iCount_grid_type( nu, nv, grid_type, counts )
+      integer <in> :: nu, nv
+      char(len=1), dimension(nu,nv) <in> :: grid_type
+      integer, dimension(4) <out> :: counts
+
+      integer :: i, j
+
+      counts(:) = 0
+      do j = 1, nv
+        do i = 1, nu
+          t = grid_type(i,j)
+          if ( t == 'b' ) then
+            counts(1) += 1
+          else if ( t == 'd' ) then
+            counts(2) += 1
+          else if ( t = 'o' ) then
+            counts(3) += 1
+          else if ( t = 'i' ) then
+            counts(4) += 1
+          else
+            call ut__fatal( "__MODULE__(__LINE__): "  & 
+                            "Border type error." )
+          end if
+        end do
+      end do
+  
+      call ut__assert( sum(counts) == nu*nv,            &
+                        "__MODULE__(__LINE__): " //     &
+                        "Grid type sum check error." )
+    end subroutine iCount_grid_type
+
+  end subroutine classify_grid_type
+
+
   function linear_interpol( x1, x2, diff1, diff2 ) result( xi )
     real <in> :: x1, x2, diff1, diff2
     real :: xi
@@ -165,7 +311,6 @@ contains
   end function linear_interpol
 
 
-
   function quarter_of_edge_ends( v1, v2, val ) result(ans)
     if ( v1 < level .and. v2 < level ) then
       ans = SLICE_MESH__EDGE_MM
@@ -203,7 +348,7 @@ contains
     integer <in> :: nth
 
     call ut__assert( nth >= 1 .and.                     &
-                     nth <= vert.diag_border_list.num,  &
+                     nth <= vert.dborder_list.num,  &
                      "__MODULE__(__LINE__): " //        &
                      "over the range." )
     this.d_quarter(nth) = SLICE_MESH__EDGE_MM
@@ -222,6 +367,46 @@ contains
     char(len=1), dimension(nu,nv) <optin> :: grid_type ! 'i'(nside of border)
                                                        ! 'b'(border itself)
                                                        ! 'o'(utside of border)
+    !!>
+        case 1  境界上の値がカドの点も含めて設定されている場合
+
+                  b b b b b b b b b 
+                  b i i i i i i i b
+                  b i i i i i i i b
+                  b i i i i i i i b
+                  b b b b b b b b b 
+
+        case 2  境界上のカドの点には値が設定されていない場合
+
+            カドの点はo (outer)点とする。全ての境界格子点を一周、反時計回りに
+            回る。次の格子点が水平あるいは垂直方向にある場合は、b (border) 点とする。
+            次の境界格子点が斜め方向にある場合は、それをd (diagonal) 点とする。
+            シミュレーション領域の内部は i (inner) 点とする。
+                        <--- 
+                  o d b b b b b b o
+              |   b i i i i i i i d  ^
+              |   b i i i i i i i b  |
+              v   d i i i i i i i b  |
+                  o b b b b b b d o 
+                        --->
+
+        case 3a  境界が長方形でなく、d点が存在しない場合
+        
+                  o o o b b b b b o
+                  b b b b i i i b o
+                  b i i i i i i b o
+                  b b b b i i i b o
+                  o o o b b b b b o
+        
+
+        case 3b  境界が長方形でなく、d点が存在する場合
+
+                  o o o o d o o o o
+                  o o o d i d o o o
+                  o o d i i i d o o
+                  o d i i i i b o o
+                  o o b b b b b o o
+    !!<
     real :: u_min, u_max
     real :: v_min, v_max
     integer :: max_num_border_verts
@@ -246,90 +431,22 @@ contains
     allocate(this.pos_u(nu))
     allocate(this.pos_v(nv))
     allocate(this.grid_type(nu,nv))
-    allocate(this.border_list_dir(nu,nv))
-
-    max_num_border_verts = 20*(nu+nv)
-       ! A rough (over) estimate. Increase it, if necessary.
-    allocate(this.border_list.vi(max_num_border_verts))
-    allocate(this.border_list.vj(max_num_border_verts))
+    call this.border_list.init( nu,nv )
+    call this.dborder_list.init( nu, nv )
 
     this.pos_u(:) = grid_pos_u(:)
     this.pos_v(:) = grid_pos_v(:)
 
     if ( present(grid_type) ) then
-      call iCopy_grid_type
+      this.grid_type(:,:) = grid_type(:,:)
     else
-      call iSet_default_grid_type
+      call set_default_grid_type( nu, nv, this.grid_type )      
     end if
 
-  contains
-
-    subroutine iCopy_grid_type
-      char(len=1) :: t
-      integer :: i, j, count_border_type
-
-      !!>
-          Default case
-
-             b b b b b b b b b 
-             b i i i i i i i b
-             b i i i i i i i b
-             b i i i i i i i b
-             b b b b b b b b b 
-          
-             o o o b b b b b o
-             b b b b i i i b o
-             b i i i i i i b o
-             b b b b i i i b o
-             o o o b b b b b o
-          
-             o o o o b o o o o
-             o o o b i b o o o
-             o o b i i i b o o
-             o b i i i i i b o
-             o b b b b b b b o
-      !!<
-
-      count_border_type = 0
-
-      do j = 1, nv
-        do i = 1, nu
-          t = grid_type(i,j)
-          call ut__assert( t == 'i' .or.                &
-                           t == 'b' .or.                &
-                           t == 'o',                    &
-                           "__MODULE__(__LINE__): " //  &
-                           "Invalid grid_type." )
-          this.grid_type(i,j) = t
-          if ( t == 'b' ) then
-            count_border_type += 1
-            this.border_list.vi = i
-            this.border_list.vj = j
-          end if
-        end do
-      end do
-
-      call ut__assert( count_border_type <= max_num_border_verts,  &
-                       "__MODULE__(__LINE__): " //                 &
-                       "Border type grid is too many." )
-      this.border_list.num = count_border_type
-      this.grid_type(:,:) = grid_type(:,:)
-    end subroutine iCopy_grid_type
-
-    subroutine iSet_default_grid_type
-      integer :: i, j
-
-      do j = 1, nv
-        do i = 1, nu
-          if ( i==1 .or. i==nu .or.  &
-               j==1 .or. j==nv ) then
-            this.grid_type(i,j) = 'b'
-          else
-            this.grid_type(i,j) = 'i'
-          end if
-        end do
-      end do
-    end subroutine iSet_default_grid_type
+    call classify_grid_type( nu, nv,            &
+                             this.grid_type,    &
+                             this.border_list,  &
+                             tthis.dborder_list )
 
   end subroutine slice_mesh__vert_initialize_with_grids
 
@@ -362,12 +479,8 @@ contains
     allocate(this.pos_u(nu))
     allocate(this.pos_v(nv))
     allocate(this.grid_type(nu,nv))
-    allocate(this.border_list_dir(nu,nv))
-
-    max_num_border_verts = nu*nv
-       ! An overestimate.
-    allocate(this.border_list_vi(max_num_border_verts))
-    allocate(this.border_list_vj(max_num_border_verts))
+    call this.border_list.init( nu,nv )
+    call this.dborder_list.init( nu, nv )
 
     du = ( u_max - u_min ) / (nu-1)
     dv = ( v_max - v_min ) / (nv-1)
@@ -379,6 +492,13 @@ contains
     do j = 1, nv
       this.pos_v(j) = v_min + dv*(j-1)
     end do
+
+    call set_default_grid_type( nu, nv, this.grid_type )
+
+    call classify_grid_type( nu, nv,            &
+                             this.grid_type,    &
+                             this.border_list,  &
+                             tthis.dborder_list )
   
   end subroutine slice_mesh__vert_initialize_with_uvmaxmin
 
@@ -528,14 +648,6 @@ contains
     end function iShould_go_westward      
     
   end subroutine make_border_list
-
-
-  subroutine slice_mesh__vert_finalize( this )
-    class(slice_mesh__vert_t) <io> :: this
-
-    deallocate(this.pos_u)
-    deallocate(this.pos_v)
-  end subroutine slice_mesh__vert_finalize
 
 
   subroutine slice_mesh__edge_initialize( this,         &
