@@ -26,6 +26,25 @@ module slice_mesh_m
     procedure : initialize => slice_mesh__vert_border_list_init
   end type slice_mesh__vert_border_list_t
 
+  !!>
+       in
+       out
+       border:
+                N
+                S
+                E
+                W
+                NE
+                NW
+                SE
+                SW
+          N
+        d   a   
+      W   +   E
+        c   b
+          S
+  !!<
+
   type, public :: slice_mesh__vert_dborder_list_t
     integer :: num ! number of diagnoal border vertex
     char(len=2), dimension(:), allocatable :: dir  ! NE/NW/SW/SE
