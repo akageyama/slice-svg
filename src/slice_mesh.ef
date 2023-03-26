@@ -1,3 +1,145 @@
+!!>
+
+    # Module slice_mesh
+
+    ## Two kinds of grid mesh info; vert(ex) and edge
+
+    ### Vertex
+
+
+        v: vertex
+            |       |       |       |       |
+            |       |       |       |       |
+       -----v-------v-------v-------v-------v-----
+            |       |       |       |       |
+            |       |       |       |       |
+            |       |       |       |       |
+       -----v-------v-------v-------v-------v-----
+            |       |       |       |       |
+            |       |       |       |       |
+
+
+    ### Edge
+                            v     __a                                 
+        u edge_u            |   /         +----- u
+        v edge_v            | /           | \
+        a edge_ascend       +----- u      |   \   
+        d edge_descend                    v     \ __d
+                                    
+            |     / | \     |     / | \     | 
+            v   a   v   d   v   a   v   d   v
+            | /     |     \ | /     |     \ |
+           -+---u---+---u---+---u---+---u---+-
+            | \     |     / | \     |     / |
+            v   d   v   a   v   d   v   a   v
+            |     \ | /     |     \ | /     |
+           -+---u---+---u---+---u---+---u---+-
+            |     / | \     |     / | \     | 
+            v   a   v   d   v   a   v   d   v
+            | /     |     \ | /     |     \ |
+
+
+     ## Quarter integer for edge
+     
+       Each edge has one of four integers (0-3) for a given
+       value of contour level.
+
+          Take an edge V1-V2. 
+                    V1--edge--V2  
+          Denote "p" when V1 or V2 > level (of the contour),
+          and "m" when V1 or V2 < level. For example, when
+          V1 > level and V2 < level, 
+                     p--edge--m
+             There are four possibilities.
+
+          Combination | quarter
+          ------------+--------
+             m - - m  |  0
+             m - - p  |  1
+             p - - m  |  2
+             p - - p  |  3 (Special quarter for border edges)
+
+
+     ## Border path
+
+        When NU=9, NV=5, the common data assignment for
+        each vertex is 
+
+                5    b b b b b b b b b 
+                4    b i i i i i i i b
+                3    b i i i i i i i b
+                2    b i i i i i i i b
+                1    b b b b b b b b b 
+                     
+                     1 2 3 4 5 6 7 8 9
+
+        where 'b' stands for the boundary data and
+        'i' stands for the bulk data of the simulation.
+
+        We define the border path, a closed line, by connecting 
+        the consequtive 'b' points in the counter-clockwise direction.
+
+                     <--- this way ---  
+                                        \   
+                5    * * * * * * * * *   \
+                4    * . . . . . . . *    |  this way
+                3    * . . . . . . . *    |   
+                2    * . . . . . . . *    |  (counter-clockwise)
+                1    * * * * * * * * *    |
+                     
+                     1 2 3 4 5 6 7 8 9
+
+
+        The border path can have more complex shape than a rectangle,
+        for example,
+
+                     <--- this way ---  
+                                        \   
+                5    * * * * * * . . .   \
+                4    * . . . . * * * *    |  this way
+                3    * * * . . . . . *    |   
+                2    . . * . . . . . *    |  (counter-clockwise)
+                1    . . * * * * * * *    |
+                     
+                     1 2 3 4 5 6 7 8 9
+
+        To denote a border path, we define border_list array that
+        holds vertex position and direction of each edge of the 
+        border path. N/E/S/W for North/East/South/West.
+          
+                     S W W W W W . . .   
+                     S . . . . N W W W   
+                     E E S . . . . . N   
+                     . . S . . . . . N   
+                     . . E E E E E E N   
+
+     ## octa_direct
+
+        We use octal integer (octa_direct) to indicate the direction.
+           0 for North, 2 for East, 4 for South, and 6 for West.
+
+                     4 6 6 6 6 6 . . .   
+                     4 . . . . 0 6 6 6  
+                     2 2 4 . . . . . 0   
+                     . . 4 . . . . . 0   
+                     . . 2 2 2 2 2 2 0   
+
+                     
+        To indicate inner or outer grid point of the bourder, 
+        we use 'i' and 'o' characters.        
+
+                     * * * * * * o o o
+                     * i i i i * * * *   
+                     * * * i i i i i *   
+                     o o * i i i i i *   
+                     o o * * * * * * *   
+
+     ## Flag integer for vert
+     
+        
+
+!!<
+
 module slice_mesh_m
   use const_base_m
   use ut_m
@@ -8,14 +150,10 @@ module slice_mesh_m
             SLICE_MESH__EDGE_MP,  &
             SLICE_MESH__EDGE_PM
 
-  integer <const> :: SLICE_MESH__EDGE_MM = 0  ! --m===m-- 
-  integer <const> :: SLICE_MESH__EDGE_MP = 1  ! --m===p-- 
-  integer <const> :: SLICE_MESH__EDGE_PM = 2  ! --p===m-- 
-  integer <const> :: SLICE_MESH__EDGE_PP = 3  ! --p===p-- 
-    !!>
-        When you change values of SLICE_MESH__EDGE_*,
-        note that their positiveness is assumed in some checks.
-    !!<
+  integer <const> :: SLICE_MESH__EDGE_MM = 0  ! --m---m-- 
+  integer <const> :: SLICE_MESH__EDGE_MP = 1  ! --m---p-- 
+  integer <const> :: SLICE_MESH__EDGE_PM = 2  ! --p---m-- 
+  integer <const> :: SLICE_MESH__EDGE_PP = 3  ! --p---p-- 
 
   type, public :: slice_mesh__vert_border_list_t
     integer :: num ! number of border vertex
@@ -27,18 +165,7 @@ module slice_mesh_m
   end type slice_mesh__vert_border_list_t
 
   type, public :: slice_mesh__vert_t
-    !!>  
-        v: vertex
-            |       |       |       |       |
-            |       |       |       |       |
-       -----v-------v-------v-------v-------v-----
-            |       |       |       |       |
-            |       |       |       |       |
-            |       |       |       |       |
-       -----v-------v-------v-------v-------v-----
-            |       |       |       |       |
-            |       |       |       |       |
-    !!< 
+
     integer :: nu, nv
     real, dimension(:), allocatable :: pos_u
     real, dimension(:), allocatable :: pos_v
@@ -77,43 +204,10 @@ module slice_mesh_m
   end type slice_mesh__edge_border_list_t
 
   type, public :: slice_mesh__edge_t
-    !!>                            
-        + vertex            v     __a                                 
-        u edge_u            |   /         +----- u
-        v edge_v            | /           | \
-        a edge_ascend       +----- u      |   \   
-        d edge_descend                    v     \ __d
-                                    
-            |     / | \     |     / | \     | 
-            v   a   v   d   v   a   v   d   v
-            | /     |     \ | /     |     \ |
-           -+---u---+---u---+---u---+---u---+-
-            | \     |     / | \     |     / |
-            v   d   v   a   v   d   v   a   v
-            |     \ | /     |     \ | /     |
-           -+---u---+---u---+---u---+---u---+-
-            |     / | \     |     / | \     | 
-            v   a   v   d   v   a   v   d   v
-            | /     |     \ | /     |     \ |
-    !!< 
+
     integer :: u_nu, u_nv
     integer :: v_nu, v_nv
-      !!>
-          Take an edge V1-V2. 
-                    V1--edge--V2  
-          Denote "p" when V1 or V2 > level (of the contour),
-          and "m" when V1 or V2 < level. For example, when
-          V1 > level and V2 < level, 
-                     p--edge--m
-             There are four possibilities.
 
-          Combination | quarter
-          ------------+--------
-             m - - m  |  0
-             m - - p  |  1
-             p - - m  |  2
-             p - - p  |  3 (Special quarter for border edges)
-      !!<
     integer, dimension(:,:), allocatable :: u_quarter   ! {0,1,2,3}
     integer, dimension(:,:), allocatable :: v_quarter   ! {0,1,2,3}
     real, dimension(:,:), allocatable :: u_cross_coord
