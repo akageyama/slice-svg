@@ -50,8 +50,6 @@
     vj_next = vert.border_list.vj(nth_next)
     quarter = edge.border.b_quarter(nth)
     odirect = edge.border.octa_direct(nth)
-
-    nth = nth_next
     
     select case ( quarter )
       case (SLICE_MESH__EDGE_PP)
@@ -114,6 +112,8 @@
       case default
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
+
+    nth = nth_next
 
   contains
 
