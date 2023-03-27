@@ -159,38 +159,31 @@ contains
                                     v_min, v_max )
     call this.mesh_edge.initialize( this.mesh_vert )
 
-!!>
-    call iSet_test_border
-    call this.mesh_edge.initialize( this.mesh_vert,   &
-                                    is_border_edge_u, &
-                                    is_border_edge_v )
-!!<
-
     if ( present(val) ) then
       this.val_vert(:,:) = val(:,:)
     else
       this.val_vert(:,:) = 0.0
     end if
 
-    call iSet_test_border
+!     call iSet_test_border
   
-  contains
+!   contains
 
-    subroutine iSet_test_border
+!     subroutine iSet_test_border
 
-      integer :: i, j
-      is_border_edge_u(:,:) = .false.
-      is_border_edge_v(:,:) = .false.
+!       integer :: i, j
+!       is_border_edge_u(:,:) = .false.
+!       is_border_edge_v(:,:) = .false.
 
-!      j = 1
-      do i = 1, nu/2-1
-        is_border_edge_u(i, 1) = .true.
-        is_border_edge_u(i,nv) = .true.
-      end do
+! !      j = 1
+!       do i = 1, nu/2-1
+!         is_border_edge_u(i, 1) = .true.
+!         is_border_edge_u(i,nv) = .true.
+!       end do
 
-      is_border_edge_v(   1,:) = .true.
-      is_border_edge_v(nu/2,:) = .true.
-    end subroutine iSet_test_border
+!       is_border_edge_v(   1,:) = .true.
+!       is_border_edge_v(nu/2,:) = .true.
+!     end subroutine iSet_test_border
 
   end subroutine slice__scalar_initialize_with_uvmax
 
