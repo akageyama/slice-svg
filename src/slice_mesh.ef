@@ -213,15 +213,14 @@ module slice_mesh_m
   end type slice_mesh__vert_border_list_t
 
   type, public :: slice_mesh__vert_t
-
     integer :: nu, nv
     real, dimension(:), allocatable :: pos_u
     real, dimension(:), allocatable :: pos_v
     real :: u_min, u_max
     real :: v_min, v_max
     character, dimension(:,:), allocatable :: flag 
-                       ! 'i' : inside the border
-                       ! 'o' : outside the border
+                       !        'i' : inside the border
+                       !        'o' : outside the border
                        ! 'N' or '0' : border of path direct North
                        !        '1' : border of path direct Nourth-East
                        ! 'E' or '2' : border of path direct East
@@ -240,8 +239,7 @@ module slice_mesh_m
 
 
   type, public :: slice_mesh__edge_border_list_t
-    integer :: num ! number of border vertex
-    character, dimension(:), allocatable :: edge_type  ! 'u'/v/a/d
+    character, dimension(:), allocatable :: edge_type  ! 'u'/'v'/'a'/'d'
     integer, dimension(:), allocatable :: ei  ! edge index
     integer, dimension(:), allocatable :: ej
     integer, dimension(:), allocatable :: b_quarter   ! {0,1,2,3}
@@ -252,10 +250,8 @@ module slice_mesh_m
   end type slice_mesh__edge_border_list_t
 
   type, public :: slice_mesh__edge_t
-
     integer :: u_nu, u_nv
     integer :: v_nu, v_nv
-
     integer, dimension(:,:), allocatable :: u_quarter   ! {0,1,2,3}
     integer, dimension(:,:), allocatable :: v_quarter   ! {0,1,2,3}
     real, dimension(:,:), allocatable :: u_cross_coord
@@ -283,6 +279,7 @@ contains
 
     border_grid_num = iCount_border_grid( nu, nv, vert_flag )
     this.num = border_grid_num
+!debugp "__FUNC__", border_grid_num  
 
     allocate(this.octa_direct(border_grid_num))
     allocate(         this.vi(border_grid_num))
@@ -330,7 +327,7 @@ contains
 
   function flag_to_octa_direct( flag ) result(octa_direct)
     character <in> :: flag
-    integer :: anocta_direct
+    integer :: nocta_direct
 
     select case (flag)
       case ('N')
@@ -620,7 +617,6 @@ contains
 
 
   subroutine make_border_list( vert, edge )
-
     type(slice_mesh__vert_t) <io> :: vert
     type(slice_mesh__edge_t) <io> :: edge
 
@@ -878,7 +874,6 @@ contains
 
     this.pos_u(:) = grid_pos_u(:)
     this.pos_v(:) = grid_pos_v(:)
-    this.flag(:,:) = vert_flag(:,:)
 
     if ( present(vert_flag) ) then
       this.flag(:,:) = vert_flag(:,:)
@@ -938,8 +933,7 @@ contains
   end subroutine slice_mesh__vert_initialize_without_grids
 
 
-  subroutine slice_mesh__edge_initialize( this,  &
-                                          vert )
+  subroutine slice_mesh__edge_initialize( this, vert )
     class(slice_mesh__edge_t) <out> :: this
     type(slice_mesh__vert_t) <io> :: vert
     !!>
@@ -1029,7 +1023,7 @@ contains
 
 
   subroutine slice_mesh__edge_border_list_init( this, vert_border_num )
-    class(slice_mesh__edge_border_list_init_t) <out> :: this
+    class(slice_mesh__edge_border_list_t) <out> :: this
     integer <in> :: vert_border_num
 
     allocate(    this.edge_type(vert_border_num))
