@@ -103,11 +103,11 @@ module contour_curve_m
   !!< 
 
   type, public :: contour_curve__element_t
-    char(len=1) :: which_edge ! 'u' or 'v'
+    char(len=1) :: which_edge ! 'u' or 'v' or 'b'
     char(len=2) :: lane ! 'in' (bulk) or 'on' (border)
     integer :: i, j  ! edge id (for in-lane), or 
                      ! vertex id (for on-lane).
-    char(len=1) :: direct
+    integer :: octa_direct
   end type contour_curve__element_t
 
   type, public :: contour_curve_t
@@ -592,7 +592,7 @@ contains
     call ut__assert( path.head.lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
 
-    select case (path.head.direct)
+    select case (path.head.octa_direct)
       case ('N')
         call go_along_border_on_v_edge_northward( path, vert, edge )
       case ('S')
@@ -801,6 +801,7 @@ contains
     integer :: max_path_element_num
 
     max_path_element_num = vert_nu * vert_nv
+      ! this is clearly an over-estimate.
 
     allocate(this.list_u(max_path_element_num))
     allocate(this.list_v(max_path_element_num))
@@ -856,7 +857,7 @@ contains
 
     integer :: quarter
     integer :: b, i, j
-    char(len=1) :: direct
+    integer :: octa_direct
 
     ! To shorten.
     integer <const> :: MM = SLICE_MESH__EDGE_MM
@@ -1294,15 +1295,22 @@ contains
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
 
+    lane_prev = '  '
     do
       select case (path.head.lane)
         case ('on')
-          call go_along_border( path, vert, edge )
+          if ( lane_prev /= 'on' ) then
+            vi = path.head.i
+            vj = path.head.j 
+            nth = vert.border_list.get_nth_from_vert_pos( vi, vj )
+          end if
+          call go_along_border( path, vert, edge, nth )
         case ('in')
           call jump_to_other_edge( path, vert, edge )
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
+      lane_prev = path.head.lane
       if ( path.is_closed() ) then
         call edge.erase( path.start.which_edge,  &
                          path.start.i,           &

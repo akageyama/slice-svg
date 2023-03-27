@@ -210,6 +210,7 @@ module slice_mesh_m
     integer, dimension(:), allocatable :: vj
   contains
     procedure : initialize => slice_mesh__vert_border_list_init
+    procedure :: get_nth_from_vert_pos => slice_mesh__vert_border_list_get_n
   end type slice_mesh__vert_border_list_t
 
   type, public :: slice_mesh__vert_t
@@ -246,7 +247,8 @@ module slice_mesh_m
     real, dimension(:), allocatable :: u_cross_coord
     real, dimension(:), allocatable :: v_cross_coord
   contains
-    procedure : initialize => slice_mesh__edge_border_list_init
+    procedure :: initialize => slice_mesh__edge_border_list_init
+    procedure :: erase => slice_mesh_edge__erase_border_list_erase
   end type slice_mesh__edge_border_list_t
 
   type, public :: slice_mesh__edge_t
@@ -260,14 +262,27 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh__edge_initialize
     procedure :: set_quarter => slice_mesh__edge_set_quarter
-    procedure, private :: slice_mesh_edge__erase_uv_edge
-    procedure, private :: slice_mesh_edge__erase_border_edge
-    general :: erase => slice_mesh_edge__erase_uv_edge,       &
-                        slice_mesh_edge__erase_border_edge
+    procedure :: erase => slice_mesh_edge__erase_uv_edge
   end type slice_mesh__edge_t    
 
 
 contains
+
+  function slice_mesh__vert_border_list_get_n( this, vi, vj ) result(nth)
+    class(slice_mesh__vert_border_list_t) <in> :: this
+    integer <in> :: vi, vj
+
+    integer :: i, j, n
+    do n = 1, this.border_list.num
+      i = this.border_list.vi(n)
+      j = this.border_list.vj(n)
+      if ( i == vi .and. j == vj ) then
+        nth = n
+        return
+      end if
+    end do
+    call ut__fatal( "__MODULE__(__LINE__): Not a border vert." )
+  end function slice_mesh__vert_border_list_get_n
 
 
   subroutine slice_mesh__vert_border_list_init( this, nu, nv, vert_flag )

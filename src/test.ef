@@ -91,10 +91,26 @@
                          "__MODULE__(__LINE__): Invalid cross coord." )
         call register( path, u, v )
         call edge.border_list.erase( nth )
-        if ( odirect == 0 ) then
-          path.head = contour_curve__element_t( 'v', 'in', vi, vj, 'W' )
-        odir_next = get_new_odirect_for_edge_pm( odir )
-
+        select case ( odirect )
+          case (0)
+            path.head = contour_curve__element_t( 'v', 'in',   vi,   vj, 'W' )
+          case (1)    
+            path.head = contour_curve__element_t( 'a', 'in',   vi,   vj, 'N' )
+          case (2)    
+            path.head = contour_curve__element_t( 'u', 'in',   vi,   vj, 'N' )
+          case (3)  
+            path.head = contour_curve__element_t( 'd', 'in',   vi, vj-1, 'N' )
+          case (4)  
+            path.head = contour_curve__element_t( 'v', 'in',   vi, vj-1, 'E' )
+          case (5)
+            path.head = contour_curve__element_t( 'a', 'in', vi-1, vj-1, 'S' )
+          case (6)
+            path.head = contour_curve__element_t( 'u', 'in', vi-1,   vj, 'S' )
+          case (7)  
+            path.head = contour_curve__element_t( 'd', 'in', vi-1,   vj, 'S' )
+          case default
+            call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
+        end select
       case default
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
