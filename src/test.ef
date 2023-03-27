@@ -1,0 +1,139 @@
+  subroutine vert_pos_shift( i, j, octa_direct )
+    integer <io> :: i, j
+    integer <in> :: octa_direct
+
+    select case (octa_direct)
+      case (0) 
+        j += 1
+      case (1)
+        i += 1
+        j += 1
+      case (2)
+        i += 1
+      case (3) 
+        i += 1
+        j -= 1
+      case (4)
+        j -= 1
+      case (5) 
+        i -= 1
+        j -= 1
+      case (6)
+        i -= 1
+      case (7)
+        i -= 1
+        j += 1
+      case default
+        call ut__faltal( "__MODULE__(__LINE__): case error." )
+    end select
+  end subroutine vert_pos_shift
+
+  subroutine go_along_border( path, vert, edge, nth )
+    type(contour_curve_t) <io> :: path
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
+    integer <io> :: nth ! nth vert on border
+
+    real :: u, v       ! coordinates of path tip that is to be registered.
+    integer :: vi, vj  ! vertex indeces i and j
+    logical :: jumped
+    char(len=1) :: dir
+
+    call ut__assert( path.head.lane == 'on',  &
+                     "__MODULE__(__LINE__): The path should be on border." )
+
+    vi = path.head.i
+    vj = path.head.j
+
+    nth_next = mod( nth+1, vert.border_list.num )
+    vi_next = vert.border_list.vi(nth_next)
+    vj_next = vert.border_list.vj(nth_next)
+    quarter = edge.border.b_quarter(nth)
+    odirect = edge.border.octa_direct(nth)
+
+    nth = nth_next
+    
+    select case ( quarter )
+      case (SLICE_MESH__EDGE_PP)
+        !!>
+              .       |            
+            - + - - - p            
+              .       .\__ Will register this vertex             
+              .       .         in the present step.
+              .       .            
+            - + - - - p <== current head of vertex-type (vi,vj)
+              .       * \__ Already egistered this vertex           
+              .       *                 in the last step.
+              .       * <== You have come along this edge.
+        !!<      
+        jumped = .true.
+        u = vert.pos_u(vi_next)
+        v = vert.pos_v(vj_next)
+        call register( path, u, v )
+        call edge.border_list.erase( nth )
+        if ( )
+        path.head = contour_curve__element_t( 'b', 'on', vi, vj, odirect )
+      case (SLICE_MESH__EDGE_PM )
+        !!>
+                   .       |
+                 - + - - - m
+                   .       .
+                   .       * <== new head of edge-type (vi,vj)
+                   .       *
+                 - + - - - p
+                   .       *
+                   .       *
+        !!<
+        jumped = .true.
+        u = edge.border_list.u_cross_coord(nth)
+        v = edge.border_list.v_cross_coord(nth)
+        call ut__assert( v /= NAN .and. u /= NAN,   &
+                         "__MODULE__(__LINE__): Invalid cross coord." )
+        call register( path, u, v )
+        call edge.border_list.erase( nth )
+        if ( odirect == 0 ) then
+          path.head = contour_curve__element_t( 'v', 'in', vi, vj, 'W' )
+        odir_next = get_new_odirect_for_edge_pm( odir )
+
+      case default
+        call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
+    end select
+
+  contains
+
+    function get_new_odirect_for_edge_pm( odirect ) result(ans)
+      integer <in> :: odirect
+      integer :: ans
+      
+      !!>
+            0 (North) ==> 6 (West)
+                 7         0         1
+                   + - - - + - - - +
+                   .       .       .
+                   . <== * *       .
+                   .       *       .
+                6  + - - - + - - - +  2
+                   .       .       .
+                   .       .       .
+                   .       .       .
+                   + - - - + - - - + 
+                5          4         3
+
+            1 (North-East) ==> 7 (North-South)
+                 7         0         1
+                   + - - - + - - - +
+                   .       . *     .
+                   .       .   *   .
+                   .       . *     .
+                6  + - - - + - - - +  2
+                   .       .       .
+                   .       .       .
+                   .       .       .
+                   + - - - + - - - + 
+                5          4         3
+      !!<
+      ans = odirect - 2
+      if ( ans < 0 ) ans += 8
+    end function get_new_odirect_for_edge_pm
+
+  end subroutine go_along_border_on_v_edge_northward
