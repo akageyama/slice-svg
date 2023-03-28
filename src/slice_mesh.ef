@@ -271,11 +271,13 @@ contains
   function slice_mesh__vert_border_list_get_n( this, vi, vj ) result(nth)
     class(slice_mesh__vert_border_list_t) <in> :: this
     integer <in> :: vi, vj
+    integer :: nth
 
     integer :: i, j, n
-    do n = 1, this.border_list.num
-      i = this.border_list.vi(n)
-      j = this.border_list.vj(n)
+
+    do n = 1, this.num
+      i = this.vi(n)
+      j = this.vj(n)
       if ( i == vi .and. j == vj ) then
         nth = n
         return
