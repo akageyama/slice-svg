@@ -528,12 +528,10 @@ contains
   end function get_edge_id
 
 
-  subroutine set_b_edge_quarter_and_cross_point( vert,             &
-                                                 eblist, &
-                                                 level )
-    type(slice_mesh__vert_t) <io> :: vert
-    type(slice_mesh__edge_border_list_t) <out> :: eblist
+  subroutine set_b_edge_quarter_and_cross_coord( vert, level, edge_border_list )
+    type(slice_mesh__vert_t) <in> :: vert
     real <in> :: level
+    type(slice_mesh__edge_border_list_t) <io> :: edge_border_list
 
     !!>
         注意。b_edge (border edge)における4値（quarter）の定義は
@@ -587,14 +585,14 @@ contains
         どちらも d_edge = PM とする。
         
     !!<
-    integer :: b, vi, vj, ei, ej, vi2, vj2
-    ! integer :: odir, etype
-    real :: val1, u1, v1
-    real :: val2, u2, v2
-    integer :: quarter
+    integer :: b, b2, vi, vj, ei, ej, vi2, vj2
+    real :: val1, u1, v1, diff1
+    real :: val2, u2, v2, diff2
+    integer :: quarter, bvnum
 
-    eblist.u_cross_coord(:) = NAN
-    eblist.v_cross_coord(:) = NAN
+    edge_border_list.u_cross_coord(:) = NAN  ! To help finding errors.
+    edge_border_list.v_cross_coord(:) = NAN
+    edge_border_list.b_quarter(:) = -999 ! Any negative (anormaly) number.
 
     do b = 1, vert.border_list.num
       vi = vert.border_list.vi(b)
@@ -604,31 +602,28 @@ contains
       u1 = vert.pos_u(vi)
       v1 = vert.pos_v(vj)
 
-      if ( b < vert.border_list.num ) then
-        vi2 = vert.border_list.vi(b+1)
-        vj2 = vert.border_list.vj(b+1)
-      else 
-        vi2 = vert.border_list.vi(1)
-        vj2 = vert.border_list.vj(1)
-      end if
+      b2 = b + 1
+      if ( b2 > bvnum ) b2 -= bvnum
 
+      vi2 = vert.border_list.vi(b2)
+      vj2 = vert.border_list.vj(b2)
       val2 = val_vert(vi2,vj2)
       u2 = vert.pos_u(vi2)
       v2 = vert.pos_v(vj2)
 
       quarter = quarter_of_edge_ends( val1, val2, level )
-      eblist.b_quarter(b) = quarter
+      edge_border_list.b_quarter(b) = quarter
 
       if ( quarter == SLICE_MESH__EDGE_MP  .or.  &
            quarter == SLICE_MESH__EDGE_PM ) then
         diff1 = val1 - level
         diff2 = level - val2
-        eblist.u_cross_coord(b) = linear_interpol( u1, u2, diff1, diff2 )
-        eblist.v_cross_coord(b) = linear_interpol( v1, v2, diff1, diff2 )
-      end if
+        edge_border_list.u_cross_coord(b) = linear_interpol( u1, u2, diff1, diff2 )
+        edge_border_list.v_cross_coord(b) = linear_interpol( v1, v2, diff1, diff2 )
+      end if        
     end do    
 
-  end subroutine set_b_edge_quarter_and_cross_point
+  end subroutine set_b_edge_quarter_and_cross_coord
 
 
   subroutine make_border_list( vert, edge )
@@ -1050,19 +1045,14 @@ contains
   end subroutine slice_mesh__edge_border_list_init
 
 
-  function edge_level_check_set_u_quarter( edge_u_nu,  &
-                                           edge_u_nv,  &
-                                           vert_nu,    &
-                                           vert_nv,    &
-                                           val_vert,   &
-                                           level )     &
-                                    result(u_quarter) 
-
-    integer <in> :: edge_u_nu, edge_u_nv
-    integer <in> :: vert_nu, vert_nv
-    real, dimension(vert_nu,vert_nv) <in> :: val_vert
+  subroutine set_uv_edge_quarter( vert,       &
+                                  val_vert,   &
+                                  level,      &
+                                  edge )
+    type(slice_mesh__vert_t) <in> :: vert
+    real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
-    integer, dimension(edge_u_nu,edge_u_nv)  :: u_quarter
+    type(slice_mesh__edge_t) <io> :: edge
     !!>
         Here we compare the scalar field value "vert_val" 
         on each vertex at (i,j) 
@@ -1184,52 +1174,29 @@ contains
         =====
     !!<
 
-    integer :: ei, ej  ! edge indexes. They 
-                       ! are simply converted
-                       ! to vertex indexes
+    integer :: ei, ej  ! edge indexes.
     real :: val1, val2
+
 
     ! edge_u
-    do ej = 1, edge_u_nv  
-      do ei = 1, edge_u_nu
-        val1 = val_vert(ei,  ej)
-        val2 = val_vert(ei+1,ej)
-        u_quarter(ei,ej) = quarter_of_edge_ends( val1, val2, level )
-      end do
-    end do
-  end function edge_level_check_set_u_quarter
-
-
-  function edge_level_check_set_v_quarter( edge_v_nu,  &
-                                           edge_v_nv,  &
-                                           vert_nu,    &
-                                           vert_nv,    &
-                                           val_vert,   &
-                                           level )     &
-                                    result(v_quarter)
-
-    integer <in> :: edge_v_nu, edge_v_nv
-    integer <in> :: vert_nu, vert_nv
-    real, dimension(vert_nu,vert_nv) <in> :: val_vert
-    real <in> :: level
-    integer, dimension(edge_v_nu,edge_v_nv) :: v_quarter
-
-    !!>
-        See comments in "edge_level_check_set_u_quarter".
-    !!<
-
-    integer :: ei, ej  ! edge indexes
-    real :: val1, val2
-
-    do ej = 1, edge_v_nv  
-      do ei = 1, edge_v_nu
-        val1 = val_vert(ei,ej  )
-        val2 = val_vert(ei,ej+1)
-        u_quarter(ei,ej) = quarter_of_edge_ends( val1, val2, level )
+    do ej = 1, edge.u_nv  
+      do ei = 1, edge.u_nu
+        val1 = val_vert(ei,  ej)  ! left vert
+        val2 = val_vert(ei+1,ej)  ! right vert
+        edge.u_quarter(ei,ej) = quarter_of_edge_ends( val1, val2, level )
       end do
     end do
 
-  end function edge_level_check_set_v_quarter  
+    ! edge_v
+    do ej = 1, edge.v_nv  
+      do ei = 1, edge.v_nu
+        val1 = val_vert(ei,ej  )  ! lower vert
+        val2 = val_vert(ei,ej+1)  ! upper vert
+        edge.u_quarter(ei,ej) = quarter_of_edge_ends( val1, val2, level )
+      end do
+    end do    
+
+  end subroutine set_uv_edge_quarter
 
 
   subroutine slice_mesh__edge_set_quarter( this,       &
@@ -1245,88 +1212,73 @@ contains
     this.v_quarter(:,:) = -999  ! check if all edges are set,
                                 ! using ...QUATER_MM, MP, PM, 
                                 ! PP are all non-negative.
-    this.u_cross_coord(:,:) = NAN ! Reset
-    this.v_cross_coord(:,:) = NAN
 
-    this.u_quarter = edge_level_check_set_u_quarter(      &
-                                         this.u_nu,       &
-                                         this.u_nv,       &
-                                         vert.nu,         &
-                                         vert.nv,         &
-                                         val_vert,        &
-                                         level )
+    call set_uv_edge_quarter( vert, val_vert, level, edge )
+    call set_uv_edge_cross_coord( vert, val_vert, level, edge )
+    call set_b_edge_quarter_and_cross_coord( vert, level, this.border_list )
 
-    this.v_quarter = edge_level_check_set_v_quarter(      &
-                                         this.v_nu,       &
-                                         this.v_nv,       &
-                                         vert.nu,         &
-                                         vert.nv,         &
-                                         val_vert,        &
-                                         level )
-
-    call iInterpol_cross_point_edge_u
-    call iInterpol_cross_point_edge_v
-
-    ! call ut__assert( minval(this.u_quarter) >= 0,  &
-    !                  "__MODULE__(__LINE__): You missed some edge_u." )
-    ! call ut__assert( minval(this.v_quarter) >= 0,  &
-    !                  "__MODULE__(__LINE__): You missed some edge_v." )
-
-    call set_b_edge_quarter_and_cross_point( vert, this, level )
-
-  contains
-
-    subroutine iInterpol_cross_point_edge_u
-      real :: u1, u2, diff1, diff2
-      integer :: ei, ej, quarter
-      !!> 
-              .                                 .
-                .       u2            u1      . 
-                | .     |             |     . |
-            ----p===.===m----     ----m===.===p----
-                |   | . |             | . |   |
-               u1   |   .             .   |   u2
-                    |     .         .     |  
-                   u=ui                  u=ui
-      !!<
-
-      do ej = 1, this.u_nv
-        do ei = 1, this.u_nu
-          quarter = this.u_quarter(ei,ej)
-          if ( quarter == SLICE_MESH__EDGE_MP  &
-                      .or.                                   &
-               quarter == SLICE_MESH__EDGE_PM ) then
-            u1 = mesh_vert.pos_u(ei)
-            u2 = mesh_vert.pos_u(ei+1)
-            diff1 = val_vert(ei,ej) - level
-            diff2 = level - val_vert(ei+1,ej)
-            this.u_cross_coord(ei,ej) = linear_interpol( u1, u2, diff1, diff2 )
-              ! For both MP and PM cases.
-          end if
-        end do
-      end do
-    end subroutine iInterpol_cross_point_edge_u
-
-    subroutine iInterpol_cross_point_edge_v
-      real :: v1, v2, diff1, diff2
-      integer :: ei, ej, quarter
-      ! edge_v
-      do ej = 1, this.v_nv
-        do ei = 1, this.v_nu
-          quarter = this.v_quarter(ei,ej)
-          if ( quarter == SLICE_MESH__EDGE_MP  &
-                      .or.                                   &
-               quarter == SLICE_MESH__EDGE_PM ) then
-            v1 = mesh_vert.pos_v(ej)
-            v2 = mesh_vert.pos_v(ej+1)
-            diff1 = val_vert(ei,ej) - level
-            diff2 = level - val_vert(ei,ej+1)
-            this.v_cross_coord(ei,ej) = linear_interpol( v1, v2, diff1, diff2 )
-          end if
-        end do
-      end do
-    end subroutine iInterpol_cross_point_edge_v    
+    call ut__assert( minval(this.u_quarter) >= 0,  &
+                     "__MODULE__(__LINE__): You missed some edge_u.quarter" )
+    call ut__assert( minval(this.v_quarter) >= 0,  &
+                     "__MODULE__(__LINE__): You missed some edge_v.quarter" )
+    call ut__assert( minval(this.border_list.b_quarter) >= 0,  &
+                     "__MODULE__(__LINE__): You missed some edge_b.quarter" )
 
   end subroutine slice_mesh__edge_set_quarter  
+
+
+  subroutine set_uv_edge_cross_coord( vert, val_vert, level, edge )
+    type(slice_mesh__vert_t) <in> :: vert
+    real, dimension(vert.nu,vert.nv) <in> :: val_vert
+    real <in> :: level
+    type(slice_mesh__edge_t) <io> :: edge
+    !!> 
+            .                                 .
+              .       u2            u1      . 
+              | .     |             |     . |
+          ----p===.===m----     ----m===.===p----
+              |   | . |             | . |   |
+              u1  |   .             .   |   u2
+                  |     .         .     |  
+                  u=ui                  u=ui
+    !!<
+    real :: u1, u2, diff1, diff2
+    integer :: ei, ej, quarter
+
+    edge.u_cross_coord(:,:) = NAN ! To find errors.
+    edge.v_cross_coord(:,:) = NAN
+
+    ! edge_u
+    do ej = 1, edge.u_nv
+      do ei = 1, edge.u_nu
+        quarter = edge.u_quarter(ei,ej)
+        if ( quarter == SLICE_MESH__EDGE_MP .or.  &
+             quarter == SLICE_MESH__EDGE_PM ) then
+          u1 = vert.pos_u(ei)   ! left vert
+          u2 = vert.pos_u(ei+1) ! right vert
+          diff1 = val_vert(ei,ej) - level
+          diff2 = level - val_vert(ei+1,ej)
+          edge.u_cross_coord(ei,ej) = linear_interpol( u1, u2, diff1, diff2 )
+            ! For both MP and PM cases.
+        end if
+      end do
+    end do
+
+    ! edge_v
+    do ej = 1, this.v_nv
+      do ei = 1, this.v_nu
+        quarter = this.v_quarter(ei,ej)
+        if ( quarter == SLICE_MESH__EDGE_MP  .or.  &
+             quarter == SLICE_MESH__EDGE_PM ) then
+          v1 = mesh_vert.pos_v(ej)    ! lower vert
+          v2 = mesh_vert.pos_v(ej+1)  ! upper vert
+          diff1 = val_vert(ei,ej) - level
+          diff2 = level - val_vert(ei,ej+1)
+          this.v_cross_coord(ei,ej) = linear_interpol( v1, v2, diff1, diff2 )
+        end if
+      end do
+    end do    
+
+  end subroutine set_uv_edge_cross_coord
 
 end module slice_mesh_m

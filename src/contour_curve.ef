@@ -1124,13 +1124,13 @@ contains
   end subroutine contour_curve__initialize
 
 
-  subroutine find_start_edge_on_boundaries( path,         &
-                                            mesh_vert,    &
-                                            mesh_edge,    &
+  subroutine find_start_edge_on_boundaries( path,    &
+                                            vert,    &
+                                            edge,    &
                                             status )
     type(contour_curve_t) <io> :: path
-    type(slice_mesh__vert_t) <in> :: mesh_vert
-    type(slice_mesh__edge_t) <io> :: mesh_edge
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
     char(len=10) <io> :: status ! 'no contour' or 'have found'
 
 
@@ -1180,25 +1180,20 @@ contains
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
-    do b = 1, mesh_vert.border_list_num
-      i = mesh_vert.border_list_vi(b)
-      j = mesh_vert.border_list_vj(b)
-      direct = mesh_vert.border_list_dir(i,j)
-      call ut__assert( direct == 'N' .or.          &
-                       direct == 'S' .or.          &
-                       direct == 'E' .or.          &
-                       direct == 'W' ,             &
-                       "__MODULE__(__LINE__): " // &
-                       "direct error." )
-      select case (direct)
-        case ('N')        
-          quarter = mesh_edge.v_quarter(i,j)
-        case ('S')        
-          quarter = mesh_edge.v_quarter(i,j-1)
+    do b = 1, vert.border_list_num
+      i = vert.border_list_vi(b)
+      j = vert.border_list_vj(b)
+      octa_direct = vert.border_list.octa_direct(i,j)
+
+      select case (octa_direct)
+        case (0)        
+          quarter = edge.v_quarter(i,j)
+        case (1)        
+          quarter = edge.v_quarter(i,j-1)
         case ('E') 
-          quarter = mesh_edge.u_quarter(i,j)
+          quarter = edge.u_quarter(i,j)
         case ('W') 
-          quarter = mesh_edge.u_quarter(i-1,j)
+          quarter = edge.u_quarter(i-1,j)
       end select
       if ( quarter == PM  .or.  &
            quarter == MP  .or.  &
@@ -1233,27 +1228,27 @@ contains
           !   2nd register     1st register
           !             \     /
           !          * * p * * - - m - -
-          u1 = mesh_edge.u_cross_coord(i-1,j)
-          u2 = mesh_vert.pos_u(i-1)
+          u1 = edge.u_cross_coord(i-1,j)
+          u2 = vert.pos_u(i-1)
           call ut__assert( u1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (MP)
           !       2nd register       1st register
           !                 \       /
           !          - - m - * * * p * *
-          u1 = mesh_vert.pos_u(i)
-          u2 = mesh_edge.u_cross_coord(i-1,j)
+          u1 = vert.pos_u(i)
+          u2 = edge.u_cross_coord(i-1,j)
           call ut__assert( u2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PP)
           !   2nd register           1st register
           !             \           /
           !          * * p * * * * p * *
-          u1 = mesh_vert.pos_u(i)
-          u2 = mesh_vert.pos_u(i-1)
+          u1 = vert.pos_u(i)
+          u2 = vert.pos_u(i-1)
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
 
-      v1 = mesh_vert.pos_v(j)
+      v1 = vert.pos_v(j)
       call register( path, u1, v1 )
       call register( path, u2, v1 )
 
@@ -1266,7 +1261,7 @@ contains
         case (PM,PP)
           vi = i - 1
           vj = j
-          dir = mesh_vert.border_list_dir(vi,vj)
+          dir = vert.border_list_dir(vi,vj)
           path.head = contour_curve__element_t( 'u', 'on', vi, vj, dir )
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
@@ -1342,21 +1337,21 @@ contains
 
       select case (quarter)
         case (MP)
-          u1 = mesh_edge.u_cross_coord(i,j)
-          u2 = mesh_vert.pos_u(i+1)
+          u1 = edge.u_cross_coord(i,j)
+          u2 = vert.pos_u(i+1)
           call ut__assert( u1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PM)
-          u1 = mesh_vert.pos_u(i)
-          u2 = mesh_edge.u_cross_coord(i,j)
+          u1 = vert.pos_u(i)
+          u2 = edge.u_cross_coord(i,j)
           call ut__assert( u2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PP)
-          u1 = mesh_vert.pos_u(i)
-          u2 = mesh_vert.pos_u(i+1)
+          u1 = vert.pos_u(i)
+          u2 = vert.pos_u(i+1)
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
 
-      v1 = mesh_vert.pos_v(j)
+      v1 = vert.pos_v(j)
       call register( path, u1, v1 )
       call register( path, u2, v1 )
 
@@ -1371,7 +1366,7 @@ contains
           ! Continue going along the border.
           vi = i + 1
           vj = j
-          dir = mesh_vert.border_list_dir(vi,vj)
+          dir = vert.border_list_dir(vi,vj)
           path.head = contour_curve__element_t( 'u', 'on', vi, vj, dir )
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
@@ -1419,21 +1414,21 @@ contains
 
       select case (quarter)
         case (PM)
-          v1 = mesh_vert.pos_u(j)
-          v2 = mesh_edge.v_cross_coord(i,j)
+          v1 = vert.pos_u(j)
+          v2 = edge.v_cross_coord(i,j)
           call ut__assert( v2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (MP)
-          v1 = mesh_edge.v_cross_coord(i,j)
-          v2 = mesh_vert.pos_v(j+1)
+          v1 = edge.v_cross_coord(i,j)
+          v2 = vert.pos_v(j+1)
           call ut__assert( v1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PP)
-          v1 = mesh_vert.pos_v(j)
-          v2 = mesh_vert.pos_v(j+1)
+          v1 = vert.pos_v(j)
+          v2 = vert.pos_v(j+1)
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
 
-      u1 = mesh_vert.pos_u(i)
+      u1 = vert.pos_u(i)
       call register( path, u1, v1 )
       call register( path, u1, v2 )
 
@@ -1446,7 +1441,7 @@ contains
         case (MP,PP)
           vi = i
           vj = j + 1
-          dir = mesh_vert.border_list_dir(vi,vj)            
+          dir = vert.border_list_dir(vi,vj)            
           path.head = contour_curve__element_t( 'v', 'on', vi, vj, dir )
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
@@ -1464,21 +1459,21 @@ contains
 
       select case (quarter)
         case (MP)
-          v1 = mesh_vert.pos_u(j)
-          v2 = mesh_edge.v_cross_coord(i,j-1)
+          v1 = vert.pos_u(j)
+          v2 = edge.v_cross_coord(i,j-1)
           call ut__assert( v2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PM)
-          v1 = mesh_edge.v_cross_coord(i,j-1)
-          v2 = mesh_vert.pos_v(j-1)
+          v1 = edge.v_cross_coord(i,j-1)
+          v2 = vert.pos_v(j-1)
           call ut__assert( v1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PP)
-          v1 = mesh_vert.pos_v(j)
-          v2 = mesh_vert.pos_v(j-1)
+          v1 = vert.pos_v(j)
+          v2 = vert.pos_v(j-1)
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
 
-      u1 = mesh_vert.pos_u(i)
+      u1 = vert.pos_u(i)
       call register( path, u1, v1 )
       call register( path, u1, v2 )
 
@@ -1491,7 +1486,7 @@ contains
         case (PM,PP)
           vi = i
           vj = j-1
-          dir = mesh_vert.border_list_dir(vi,vj)
+          dir = vert.border_list_dir(vi,vj)
           path.head = contour_curve__element_t( 'v', 'on', vi, vj, dir )
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
@@ -1503,12 +1498,12 @@ contains
 
 
   subroutine set_start_edge_in_bulk( path,         &
-                                     mesh_vert,    &
-                                     mesh_edge,    &
+                                     vert,    &
+                                     edge,    &
                                      status )  
     type(contour_curve_t) <io> :: path
-    type(slice_mesh__vert_t) <in> :: mesh_vert
-    type(slice_mesh__edge_t) <io> :: mesh_edge
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
     char(len=10) <io> :: status ! 'no contour' or 'have found'
 
     ! To shorten.
@@ -1547,9 +1542,9 @@ contains
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
-    do ej = 2, mesh_edge.u_nv-1
-      do ei = 2, mesh_edge.u_nu-1
-        quarter = mesh_edge.u_quarter(ei,ej)
+    do ej = 2, edge.u_nv-1
+      do ei = 2, edge.u_nu-1
+        quarter = edge.u_quarter(ei,ej)
         if ( quarter == PM ) then
           !!> 
               path tip you
@@ -1562,8 +1557,8 @@ contains
                         | *           |
           !!<
           status = 'have found'
-          u = mesh_edge.u_cross_coord(ei,ej)
-          v = mesh_vert.pos_v(ej)
+          u = edge.u_cross_coord(ei,ej)
+          v = vert.pos_v(ej)
           call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
           call register( path, u, v )
           path.head = contour_curve__element_t( 'u', 'in', ei, ej, 'N' )
@@ -1576,25 +1571,25 @@ contains
   end subroutine set_start_edge_in_bulk
 
 
-  subroutine contour_curve__set_start_edge( this,         &
-                                           mesh_vert,    &
-                                           mesh_edge,    &
-                                           status )
+  subroutine contour_curve__set_start_edge( this,    &
+                                            vert,    &
+                                            edge,    &
+                                            status )
     class(contour_curve_t) <io> :: this
-    type(slice_mesh__vert_t) <in> :: mesh_vert
-    type(slice_mesh__edge_t) <io> :: mesh_edge
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
     char(len=10) <out> :: status ! 'no contour' or 'have found'
 
     status = 'no contour'  ! default 
-    call find_start_edge_on_boundaries( this,         &
-                                        mesh_vert,    &
-                                        mesh_edge,    &
+    call find_start_edge_on_boundaries( this,    &
+                                        vert,    &
+                                        edge,    &
                                         status )
     if ( status == 'have found' ) return
 
-    call set_start_edge_in_bulk( this,         &
-                                 mesh_vert,    &
-                                 mesh_edge,    &
+    call set_start_edge_in_bulk( this,    &
+                                 vert,    &
+                                 edge,    &
                                  status )
 
   end subroutine contour_curve__set_start_edge
