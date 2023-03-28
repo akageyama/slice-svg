@@ -107,7 +107,7 @@ module contour_curve_m
     char(len=2) :: lane ! 'in' (bulk) or 'on' (border)
     integer :: i, j  ! edge id (for in-lane), or 
                      ! vertex id (for on-lane).
-    character :: toward
+    character :: path_go_toward
   end type contour_curve__element_t
 
   type, public :: contour_curve_t
@@ -124,26 +124,82 @@ module contour_curve_m
     procedure :: set_start_edge &
                        => contour_curve__set_start_edge
     procedure :: is_closed => contour_curve__is_closed
+    procedure :: register_new_vert => contour_curve__register_new_vert
+    procedure :: replace_head_edge => contour_curve__replace_head_edge
   end type contour_curve_t
 
 
 contains
 
+  subroutine contour_curve__replace_head_edge( this, vi, vj, octa_direct, lane )
+    class(contour_curve_t) <io> :: this
+    integer <in> :: vi, vj
+    integer <in> :: octa_direct
+    char(len=2) <in> :: lane
 
-  subroutine register( contour_curve, u, v )
-    type(contour_curve_t) <io> :: contour_curve
+    if ( lane == 'on' ) then
+      select case ( octa_direct )
+        case (0)
+          path.head = contour_curve__element_t( 'v', 'on',   vi,   vj, 'N' )
+        case (1)    
+          path.head = contour_curve__element_t( 'a', 'on',   vi,   vj, 'N' )
+        case (2)    
+          path.head = contour_curve__element_t( 'u', 'on',   vi,   vj, 'E' )
+        case (3)  
+          path.head = contour_curve__element_t( 'd', 'on',   vi, vj-1, 'S' )
+        case (4)  
+          path.head = contour_curve__element_t( 'v', 'on',   vi, vj-1, 'S' )
+        case (5)
+          path.head = contour_curve__element_t( 'a', 'on', vi-1, vj-1, 'S' )
+        case (6)
+          path.head = contour_curve__element_t( 'u', 'on', vi-1,   vj, 'W' )
+        case (7)  
+          path.head = contour_curve__element_t( 'd', 'on', vi-1,   vj, 'N' )
+        case default
+          call ut__fatal( '__MODULE__(__LINE__): case error.' )
+      end select
+    else if ( lane == 'in' ) then
+      select case ( odirect )
+        case (0)
+          path.head = contour_curve__element_t( 'v', 'in',   vi,   vj, 'W' )
+        case (1)    
+          path.head = contour_curve__element_t( 'a', 'in',   vi,   vj, 'N' )
+        case (2)    
+          path.head = contour_curve__element_t( 'u', 'in',   vi,   vj, 'N' )
+        case (3)  
+          path.head = contour_curve__element_t( 'd', 'in',   vi, vj-1, 'N' )
+        case (4)  
+          path.head = contour_curve__element_t( 'v', 'in',   vi, vj-1, 'E' )
+        case (5)
+          path.head = contour_curve__element_t( 'a', 'in', vi-1, vj-1, 'S' )
+        case (6)
+          path.head = contour_curve__element_t( 'u', 'in', vi-1,   vj, 'S' )
+        case (7)  
+          path.head = contour_curve__element_t( 'd', 'in', vi-1,   vj, 'S' )
+        case default
+          call ut__fatal( '__MODULE__(__LINE__): case error.' )
+      end select
+    else
+      call ut__fatal( '__MODULE__(__LINE__): lane error.' )
+    end if
+
+  end subroutine contour_curve__replace_head_edge
+
+
+  subroutine contour_curve__register_new_vert( this, u, v )
+    class(contour_curve_t) <io> :: this
     real <in> :: u, v
 
     integer :: n
 
-    n = contour_curve.num + 1
-    call ut__assert( n <= size(contour_curve.list_u,dim=1),  &
+    n = this.num + 1
+    call ut__assert( n <= size(this.list_u,dim=1),  &
                     '__MODULE__(__LINE__): Increase array size of path_vert.' )
 
-    contour_curve.list_u(n) = u
-    contour_curve.list_v(n) = v
-    contour_curve.num = n
-  end subroutine register
+    this.list_u(n) = u
+    this.list_v(n) = v
+    this.num = n
+  end subroutine contour_curve__register_new_vert
 
 
   subroutine jump_to_u_edge_pm_if_possible( path, vert, edge, jumped,  &
@@ -163,10 +219,10 @@ contains
       u = edge.u_cross_coord(ei0,ej0)
       v = vert.pos_v(ej0)
       call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-      call register( path, u, v )  !       __ new head      
-      if ( ej0 == edge.u_nv ) then !      /
-        vi0 = ei0                  ! - - p * * - m - -
-        vj0 = ej0                  !     .     * .
+      path.register_new_vert( u, v )  !       __ new head      
+      if ( ej0 == edge.u_nv ) then    !      /
+        vi0 = ei0                     ! - - p * * - m - -
+        vj0 = ej0                     !     .     * .
         path.head = contour_curve__element_t( 'u', 'on', vi0, vj0, 'W' )
       else
         path.head = contour_curve__element_t( 'u', 'in', ei0, ej0, 'N' )
@@ -193,7 +249,7 @@ contains
       jumped = .true.
       u = edge.u_cross_coord(ei0,ej0)
       v = vert.pos_v(ej0)
-      call register( path, u, v )
+      path.register_new_vert( u, v )
       if ( ej0 == 1 ) then !         *       .  __ new head.
         vi0 = ei0 + 1      !           *     . /
         vj0 = ej0          !     - - m - * * p - - 
@@ -223,11 +279,11 @@ contains
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-      call register( path, u, v ) !              .     * .
-                                  !              m - * - p - 
-      if ( ei0 == 1 ) then        !              . *     .
-        vi0 = ei0                 !              *       .
-        vj0 = ej0                 ! new head --> p - - - p - 
+      path.register_new_vert( u, v ) !              .     * .
+                                     !              m - * - p - 
+      if ( ei0 == 1 ) then           !              . *     .
+        vi0 = ei0                    !              *       .
+        vj0 = ej0                    ! new head --> p - - - p - 
         path.head = contour_curve__element_t( 'v', 'on', vi0, vj0, 'S' )
       else
         path.head = contour_curve__element_t( 'v', 'in', ei0, ej0, 'W' )
@@ -253,11 +309,11 @@ contains
       u = vert.pos_u(ei0)
       v = edge.v_cross_coord(ei0,ej0)
       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-      call register( path, u, v )  !       .       .
-                                   !       p - - - p <== new head
-      if ( ei0 == edge.v_nu ) then !       .       * 
-        vi0 = ei0                  !       .     * .
-        vj0 = ej0 + 1              !       p - * - m
+      path.register_new_vert( u, v )  !       .       .
+                                      !       p - - - p <== new head
+      if ( ei0 == edge.v_nu ) then    !       .       * 
+        vi0 = ei0                     !       .     * .
+        vj0 = ej0 + 1                 !       p - * - m
         path.head = contour_curve__element_t( 'v', 'on', vi0, vj0, 'N' )
       else
         path.head = contour_curve__element_t( 'v', 'in', ei0, ej0, 'E' )
@@ -305,7 +361,7 @@ contains
   !       jumped = .true.
   !       u = vert.pos_u(vi)
   !       v = vert.pos_v(vj)
-  !       call register( path, u, v )
+  !       path.register_new_vert( u, v )
   !       call edge.erase( 'v', vi, vj-1 )
   !       dir = vert.border_list_dir(vi,vj)
   !       select case (dir)
@@ -353,7 +409,7 @@ contains
   !       u = vert.pos_u(vi)
   !       v = edge.v_cross_coord(vi,vj-1)
   !       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-  !       call register( path, u, v )
+  !       path.register_new_vert( u, v )
   !       call edge.erase( 'v', vi, vj-1 )
   !       path.head = contour_curve__element_t( 'v', 'in', vi, vj-1, 'W' )
   !     case default
@@ -390,7 +446,7 @@ contains
   !       jumped = .true.
   !       u = vert.pos_u(vi)
   !       v = vert.pos_v(vj)
-  !       call register( path, u, v )
+  !       path.register_new_vert( u, v )
   !       call edge.erase( 'v', vi, vj )
   !       dir = vert.border_list_dir(vi,vj)
   !       select case (dir)
@@ -417,7 +473,7 @@ contains
   !       u = vert.pos_u(vi)
   !       v = edge.v_cross_coord(vi,vj)
   !       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-  !       call register( path, u, v )
+  !       path.register_new_vert( u, v )
   !       call edge.erase( 'v', vi, vj )
   !       path.head = contour_curve__element_t( 'v', 'in', vi, vj, 'E' )
   !     case default
@@ -468,7 +524,7 @@ contains
   !       jumped = .true.
   !       u = vert.pos_u(vi)
   !       v = vert.pos_v(vj)
-  !       call register( path, u, v )
+  !       path.register_new_vert( u, v )
   !       call edge.erase( 'u', vi, vj )
 
   !       dir = vert.border_list_dir(vi,vj)
@@ -521,7 +577,7 @@ contains
   !       u = edge.u_cross_coord(vi,vj)
   !       v = vert.pos_v(vj)
   !       call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-  !       call register( path, u, v )
+  !       path.register_new_vert( u, v )
   !       call edge.erase( 'u', vi, vj )
   !       path.head = contour_curve__element_t( 'u', 'in', vi, vj, 'S' )
   !     case default
@@ -558,7 +614,7 @@ contains
   !       jumped = .true.
   !       u = vert.pos_u(vi)
   !       v = vert.pos_v(vj)
-  !       call register( path, u, v )
+  !       path.register_new_vert( u, v )
   !       call edge.erase( 'u', vi-1, vj )
   !       dir = vert.border_list_dir(vi,vj)
   !       select case ( dir )
@@ -574,7 +630,7 @@ contains
   !       u = edge.u_cross_coord(vi-1,vj)
   !       v = vert.pos_v(vj)
   !       call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-  !       call register( path, u, v )
+  !       path.register_new_vert( u, v )
   !       call edge.erase( 'u', vi-1, vj )
   !       path.head = contour_curve__element_t( 'u', 'in', vi-1, vj, 'N' )
   !     case default
@@ -656,7 +712,7 @@ contains
         jumped = .true.
         u_new = vert.pos_u(vi_new)
         v_new = vert.pos_v(vj_new)
-        call register( path, u_new, v_new )
+        path.register_new_vert( u_new, v_new )
         call edge.border_list.erase( nth )
         select case ( odirect )
           case (0)
@@ -694,7 +750,7 @@ contains
         v_new = edge.border_list.v_cross_coord(nth)
         call ut__assert( u_new /= NAN .and. v_new /= NAN,   &
                          "__MODULE__(__LINE__): Invalid cross coord." )
-        call register( path, u_new, v_new )
+        path.register_new_vert( u_new, v_new )
         call edge.border_list.erase( nth )
         select case ( odirect )
           case (0)
@@ -940,7 +996,7 @@ contains
 
     select case (path.head.which_edge)
       case ('a')
-      if ( path.head.toward == 'N' ) then
+      if ( path.head.path_go_toward == 'N' ) then
         !!>                     
              vertex(i,j+1)=> P - * - M
                              |   * / |
@@ -1180,25 +1236,54 @@ contains
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
-    do b = 1, vert.border_list_num
-      i = vert.border_list_vi(b)
-      j = vert.border_list_vj(b)
-      octa_direct = vert.border_list.octa_direct(i,j)
+integer :: vi, vj, bvnum, b, b2,
+real :: u1, v1, u2, v2
 
-      select case (octa_direct)
-        case (0)        
-          quarter = edge.v_quarter(i,j)
-        case (1)        
-          quarter = edge.v_quarter(i,j-1)
-        case ('E') 
-          quarter = edge.u_quarter(i,j)
-        case ('W') 
-          quarter = edge.u_quarter(i-1,j)
-      end select
+    bvnum  = vert.border_list_num
+    do b = 1, bvnum
+      quarter = edge.border_list.b_quarter(b)
       if ( quarter == PM  .or.  &
-           quarter == MP  .or.  &
            quarter == PP ) then
         status = 'have found'
+        vi = vert.border_list.vi(b)
+        vj = vert.border_list.vj(b)
+        u1 = vert.pos_u(vi)
+        v1 = vert.pos_v(vj)
+        path.register_new_vert( u1, v1 )
+
+        select case (quarter)
+          case (PP)
+            b2 = b + 1 ! next vert in the border path
+            if ( b2 > bvnum ) b2 -= bvnum
+            u2 = vert.pos_u(vert.border_list.vi(b2))
+            v2 = vert.pos_v(vert.border_list.vj(b2))
+          case (PM)
+            u2 = edge.border_list.u_cross_coord(b)
+            v2 = edge.border_list.v_cross_coord(b)
+            call ut__assert( u2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+            call ut__assert( v2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+        end select
+        path.register_new_vert( u2, v2 )
+        path.replace_head_edge( 'b' )
+        call path.replace_head_edge( vi, vj, octa_direct, lane )
+
+      ! Add path head.
+      select case (quarter)
+        case (PM)
+          ei = i
+          ej = j
+          path.head = contour_curve__element_t( 'v', 'in', ei, ej, 'W' )
+        case (MP,PP)
+          vi = i
+          vj = j + 1
+          dir = vert.border_list_dir(vi,vj)            
+          path.head = contour_curve__element_t( 'v', 'on', vi, vj, dir )
+        case default
+          call ut__fatal( "__MODULE__(__LINE__): case error." )
+      end select
+      path.start = path.head
+
+
         select case (direct)
           case ('N')
             call iRegister_northern_border_edge( i, j, quarter )
@@ -1249,8 +1334,8 @@ contains
       end select
 
       v1 = vert.pos_v(j)
-      call register( path, u1, v1 )
-      call register( path, u2, v1 )
+      path.register_new_vert( u1, v1 )
+      path.register_new_vert( u2, v1 )
 
       ! Add path head.
       select case (quarter)
@@ -1352,8 +1437,8 @@ contains
       end select
 
       v1 = vert.pos_v(j)
-      call register( path, u1, v1 )
-      call register( path, u2, v1 )
+      path.register_new_vert( u1, v1 )
+      path.register_new_vert( u2, v1 )
 
       ! Add path head.
       select case (quarter)
@@ -1417,10 +1502,6 @@ contains
           v1 = vert.pos_u(j)
           v2 = edge.v_cross_coord(i,j)
           call ut__assert( v2 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-        case (MP)
-          v1 = edge.v_cross_coord(i,j)
-          v2 = vert.pos_v(j+1)
-          call ut__assert( v1 /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
         case (PP)
           v1 = vert.pos_v(j)
           v2 = vert.pos_v(j+1)
@@ -1429,8 +1510,8 @@ contains
       end select
 
       u1 = vert.pos_u(i)
-      call register( path, u1, v1 )
-      call register( path, u1, v2 )
+      path.register_new_vert( u1, v1 )
+      path.register_new_vert( u1, v2 )
 
       ! Add path head.
       select case (quarter)
@@ -1474,8 +1555,8 @@ contains
       end select
 
       u1 = vert.pos_u(i)
-      call register( path, u1, v1 )
-      call register( path, u1, v2 )
+      path.register_new_vert( u1, v1 )
+      path.register_new_vert( u1, v2 )
 
       ! Add path head.
       select case (quarter)
@@ -1560,7 +1641,7 @@ contains
           u = edge.u_cross_coord(ei,ej)
           v = vert.pos_v(ej)
           call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-          call register( path, u, v )
+          path.register_new_vert( u, v )
           path.head = contour_curve__element_t( 'u', 'in', ei, ej, 'N' )
           path.start = path.head
           return
