@@ -106,7 +106,7 @@ module contour_curve_m
     char(len=1) :: which_edge ! 'u' or 'v' or 'b'
     char(len=2) :: cruising_lane ! 'in' (bulk) or 'on' (border)
     integer :: i, j  ! edge id (for in-lane), or 
-                     ! vertex id (for on-lane).
+                     ! id of the head edge tip (for on-lane).
     character :: path_go_toward
   end type contour_curve__element_t
 
@@ -328,8 +328,6 @@ contains
 
 
 
-
-
   subroutine go_along_border( path, vert, edge, nth )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
@@ -338,49 +336,59 @@ contains
 
     real :: u, v       ! coordinates of path tip that is to be registered.
     integer :: vi, vj  ! vertex indeces i and j
-    integer :: vi_new, vj_new, nth_new
+    integer :: vi2, vj2, nth_next
     logical :: jumped
-    integer :: num_bverts, quarter, odirect
-    real :: u_new v_new
+    integer :: numbv, quarter, octa_direct
+    real :: u2 v2
 
     call ut__assert( path.head.cruising_lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
 
+    !!>
+               v1--[e2]--v2--[e3]--v3
+              /                    /
+            [e7]                 [e4]
+            /                    /
+           v6--[e6]--v5--[e5]--v4
+    !!<
+
     vi = path.head.i
     vj = path.head.j
-    num_bverts = vert.border_list.num
+    numbv = vert.border_list.num
     call ut__assert( vert.border_list.vi(nth) == vi .and.   &
                      vert.border_list.vj(nth) == vj,        &
                      "__MODULE__(__LINE__): border vert inconsistent." )
 
-    quarter = edge.border.b_quarter(nth)
-    odirect = edge.border.octa_direct(nth)
+    quarter = edge.border_list.b_quarter(nth)
+    octa_direct = vert.border_list.octa_direct(nth)
 
-    nth_new = nth + 1
-    if ( nth_new > num_bverts ) nth_new -= num_bverts ! cyclic.
+    nth_next = nth + 1
+    if ( nth_next > numbv ) nth_next -= numbv ! cyclic.
 
-    vi_new = vert.border_list.vi(nth_new)
-    vj_new = vert.border_list.vj(nth_new)
+    vi2 = vert.border_list.vi(nth_next)
+    vj2 = vert.border_list.vj(nth_next)
     
     select case ( quarter )
       case (SLICE_MESH__EDGE_PP)
         !!>
-                      |            
-                - - - p            
-                      .\__ We will register this vert (vi_new,vj_new)
-                      .    in this function.
-                      .            
-                - - - p <== current head of vertex-type (vi,vj)
-                      * \__ We have already egistered this vertex           
-                      *     in the last step.
-                      * \_______You may have come along this edge.
+                   |            
+               - - p <== this will be the newly registered vert (vi2,vj2)
+                   .
+                   . <== this will be the new head edge
+                   .            
+               - - p <== lastly registered vert (vi,vj)
+                   * 
+                   * <== previous head edge
+                   * 
         !!<      
         jumped = .true.
-        u_new = vert.pos_u(vi_new)
-        v_new = vert.pos_v(vj_new)
-        path.register_new_vert( u_new, v_new )
+        u2 = vert.pos_u(vi2)
+        v2 = vert.pos_v(vj2)
+        call path.register_new_vert( u2, v2 )
         call edge.border_list.erase( nth )
-        select case ( odirect )
+        call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
+        
+        select case ( octa_direct )
           case (0)
             path.head = contour_curve__element_t( 'v', 'on',   vi,   vj, 'N' )
           case (1)    
@@ -412,13 +420,13 @@ contains
                    .       *
         !!<
         jumped = .true.
-        u_new = edge.border_list.u_cross_coord(nth)
-        v_new = edge.border_list.v_cross_coord(nth)
-        call ut__assert( u_new /= NAN .and. v_new /= NAN,   &
+        u2 = edge.border_list.u_cross_coord(nth)
+        v2 = edge.border_list.v_cross_coord(nth)
+        call ut__assert( u2 /= NAN .and. v2 /= NAN,   &
                          "__MODULE__(__LINE__): Invalid cross coord." )
-        path.register_new_vert( u_new, v_new )
+        path.register_new_vert( u2, v2 )
         call edge.border_list.erase( nth )
-        select case ( odirect )
+        select case ( octa_direct )
           case (0)
             path.head = contour_curve__element_t( 'v', 'in',   vi,   vj, 'W' )
           case (1)    
@@ -442,7 +450,7 @@ contains
         call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
     end select
 
-    nth = nth_new
+    nth = nth_next
 
   end subroutine go_along_border
 
@@ -926,7 +934,6 @@ contains
         end select
 
         call path.register_new_vert( u2, v2 )
-        path.replace_head_edge( 'b' )
         octa_direct = vert.border_list.octa_direct(b)
         call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
       end if

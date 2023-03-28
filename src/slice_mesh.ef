@@ -240,6 +240,7 @@ module slice_mesh_m
 
 
   type, public :: slice_mesh__edge_border_list_t
+    integer :: index_min, index_max
     character, dimension(:), allocatable :: edge_type  ! 'u'/'v'/'a'/'d'
     integer, dimension(:), allocatable :: ei  ! edge index
     integer, dimension(:), allocatable :: ej
@@ -587,41 +588,60 @@ contains
         どちらも d_edge = PM とする。
         
     !!<
-    integer :: b, b2, vi, vj, ei, ej, vi2, vj2
+    integer :: index_v, index_v2
+    integer :: index_e
+    integer :: vi, vj, ei, ej, vi2, vj2
     real :: val1, u1, v1, diff1
     real :: val2, u2, v2, diff2
-    integer :: quarter, bvnum
+    integer :: quarter, vbnum
+    real :: interpol_u, interpol_v
 
     edge_border_list.u_cross_coord(:) = NAN  ! To help finding errors.
     edge_border_list.v_cross_coord(:) = NAN
     edge_border_list.b_quarter(:) = -999 ! Any negative (anormaly) number.
 
-    do b = 1, vert.border_list.num
-      vi = vert.border_list.vi(b)
-      vj = vert.border_list.vj(b)
+    !!>
+               v1--[e2]--v2--[e3]--v3
+              /                    /
+            [e7]                 [e4]
+            /                    /
+           v6--[e6]--v5--[e5]--v4
+    !!<
+
+    vbnum = vert.border_list.num ! just to shorten
+    do index_v = 1, vbnum
+      vi = vert.border_list.vi(index_v)
+      vj = vert.border_list.vj(index_v)
 
       val1 = val_vert(vi,vj)
       u1 = vert.pos_u(vi)
       v1 = vert.pos_v(vj)
 
-      b2 = b + 1
-      if ( b2 > bvnum ) b2 -= bvnum
+      index_v2 = index_v1 + 1
+      if ( index_v2 > vbnum ) index_v2 -= vbnum
 
-      vi2 = vert.border_list.vi(b2)
-      vj2 = vert.border_list.vj(b2)
+      vi2 = vert.border_list.vi(index_v2)
+      vj2 = vert.border_list.vj(index_v2)
       val2 = val_vert(vi2,vj2)
       u2 = vert.pos_u(vi2)
       v2 = vert.pos_v(vj2)
 
       quarter = quarter_of_edge_ends( val1, val2, level )
-      edge_border_list.b_quarter(b) = quarter
+
+      index_e = index_v + 1
+      call ut__assert( index_e >= 2 .and. index_e <= vbnum+1,  &
+                       "__MODULE__(__LINE__): "                &
+                       "index_e out of range." )
+      edge_border_list.b_quarter(index_e) = quarter
 
       if ( quarter == SLICE_MESH__EDGE_MP  .or.  &
            quarter == SLICE_MESH__EDGE_PM ) then
         diff1 = val1 - level
         diff2 = level - val2
-        edge_border_list.u_cross_coord(b) = linear_interpol( u1, u2, diff1, diff2 )
-        edge_border_list.v_cross_coord(b) = linear_interpol( v1, v2, diff1, diff2 )
+        interpol_u = linear_interpol( u1, u2, diff1, diff2 )
+        interpol_v = linear_interpol( v1, v2, diff1, diff2 )
+        edge_border_list.u_cross_coord(index_e) = interpol_u
+        edge_border_list.v_cross_coord(index_e) = interpol_v
       end if        
     end do    
 
@@ -1038,12 +1058,19 @@ contains
     class(slice_mesh__edge_border_list_t) <out> :: this
     integer <in> :: vert_border_num
 
-    allocate(    this.edge_type(vert_border_num))
-    allocate(           this.ei(vert_border_num))
-    allocate(           this.ej(vert_border_num))
-    allocate(    this.b_quarter(vert_border_num))
-    allocate(this.u_cross_coord(vert_border_num))
-    allocate(this.v_cross_coord(vert_border_num))
+    integer :: index_min, index_max
+
+    index_min = 2
+    index_max = vert_border_num + 1
+
+    this.index_min = index_min
+    this.index_max = index_max
+    allocate(    this.edge_type(index_min:index_max))
+    allocate(           this.ei(index_min:index_max))
+    allocate(           this.ej(index_min:index_max))
+    allocate(    this.b_quarter(index_min:index_max))
+    allocate(this.u_cross_coord(index_min:index_max))
+    allocate(this.v_cross_coord(index_min:index_max))
   end subroutine slice_mesh__edge_border_list_init
 
 
