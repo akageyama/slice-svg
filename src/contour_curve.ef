@@ -286,17 +286,16 @@ contains
       call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       path.register_new_vert( u, v )
       flag_left = vert.flag(vi_left,vj)
-      if ( flag_left == 'i' ) then
+      if ( flag__left == 'o' ) then
+        call ut__fatal( "__MODULE__(__LINE__): " //  &
+                        "Go out of the border?" )
+      else if ( flag_left == 'i' ) then
         !     . *     .
         !     .  *    .
         ! - - P - * - M - -
         !     .   *   .
-        path.head = contour_curve__element_t( 'u', 'in', ei, ej, 'N' )
         call path.replace_head_edge( 'u', 'in', ei, ej, 'N' ) 
-        call edge.erase( 'u', ei, ej )  Here here 
-      else if ( flag__left == 'o' ) then
-        call ut__fatal( "__MODULE__(__LINE__): " //  &
-                        "Go out of the border?" )
+        call edge.erase( 'u', ei, ej )
       else ! vert_left on the border.
         octa_direct_along_border = flag_to_octa_direct( flag_left )
         !
@@ -307,30 +306,31 @@ contains
                                      vj,                       &
                                      octa_direct_along_border, &
                                      'on' )
-        call edge.erase( 'u', ei0, ej0 ) 
+        call edge.erase( 'u', ei, ej ) 
       end if   
     end if
   end subroutine jump_to_u_edge_pm_if_possible
 
 
   subroutine jump_to_u_edge_mp_if_possible( path, vert, edge, jumped,  &
-                                            ei0, ej0 )
+                                            ei, ej )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
-    integer <in> :: ei0, ej0
+    integer <in> :: ei, ej
 
     real :: u, v
-    integer :: vi0, vj0
+    integer :: vi_left, vi_right, v0
 
     if ( jumped ) return  ! you have already jumped for this cell.
 
-    if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
+    if ( edge.u_quarter(ei,ej) == SLICE_MESH__EDGE_MP ) then
       jumped = .true.
-      u = edge.u_cross_coord(ei0,ej0)
-      v = vert.pos_v(ej0)
+      u = edge.u_cross_coord(ei,ej)
+      v = vert.pos_v(vj)
       path.register_new_vert( u, v )
+      if ( here 
       if ( ej0 == 1 ) then !         *       .  __ new head.
         vi0 = ei0 + 1      !           *     . /
         vj0 = ej0          !     - - m - * * p - - 
