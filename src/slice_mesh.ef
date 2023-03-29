@@ -236,11 +236,11 @@ module slice_mesh_m
     procedure, private :: slice_mesh__vert_initialize_with_uvmaxmin
     generic :: initialize => slice_mesh__vert_initialize_with_grids,  &
                              slice_mesh__vert_initialize_without_grids
+    procedure :: is_border => slice_mesh__vert_is_border
   end type slice_mesh__vert_t  
 
 
   type, public :: slice_mesh__edge_border_list_t
-    integer :: index_min, index_max
     character, dimension(:), allocatable :: edge_type  ! 'u'/'v'/'a'/'d'
     integer, dimension(:), allocatable :: ei  ! edge index
     integer, dimension(:), allocatable :: ej
@@ -268,6 +268,19 @@ module slice_mesh_m
 
 
 contains
+
+  function slice_mesh__vert_is_border( this, vi, vj ) result(ans)
+    class(slice_mesh__vert_t) <in> :: this
+    integer <in> :: vi, vj
+    logical :: ans
+
+    if ( this.flag(vi,vj) == 'i' .or  &
+         this.flag(vi,vj) == 'o' ) then
+      ans = .false.
+    else
+      ans = .true.
+    end if
+  end function slice_mesh__vert_is_border
 
   function slice_mesh__vert_border_list_get_n( this, vi, vj ) result(nth)
     class(slice_mesh__vert_border_list_t) <in> :: this

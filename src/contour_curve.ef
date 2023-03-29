@@ -26,7 +26,7 @@ module contour_curve_m
            - m - - - m - - - m - - - m - - - m -  
              |       |       |       |       |   
 
-     The border is usually rectangular.
+     The border is usually rectangular,
 
           +=======+=======+=======+=======+=======+
           |       .       .       .       .       |
@@ -46,14 +46,12 @@ module contour_curve_m
           +=======+=======+=======+=======+=======+
 
 
-     This library also accepts general border shape such as follows.
-     The letter 'W' stands for the turning direction when you go
-     along the border in the anti-crlockwise.
+     but it can be more complex shape like,
 
-            . . .   . . . S=======+=======+=======W
+          . . . . . . . . S=======+=======+=======W
           .       .       |       .       .       |     
           .       .       |       .       .       |     
-            . . . S=======W . . . + . . . E=======N
+          . . . . S=======W . . . + . . . E=======N
           .       |       .       .       |       .     
           .       |       .       .       |       .     
           S=======W . . . + . . . + . . . N=======W
@@ -62,10 +60,33 @@ module contour_curve_m
           E=======S . . . + . . . + . . . + . . . +
           .       |       .       .       .       |     
           .       |       .       .       .       |     
-            . . . E=======S . . . E=======+=======N
+          . . . . E=======S . . . E=======+=======N
           .       .       |       |       .       .     
           .       .       |       |       .       .     
-            . . .   . . . E=======N . . .   . . .  
+          . . . . . . . . E=======N . . . . . . . .
+     
+     Here the letter 'W' stands for the turning direction 
+     when you go along the border in the anti-crlockwise.
+
+     Another possible complex border is diagonal edge like
+
+                         SW=======W=======W 
+                        / .       .       . \ 
+                      /   .       .       .   \
+                    /     .       .       .     \ 
+                 SW . . . + . . . + . . . + . . . NW
+                / .       .       .       .       |     
+              /   .       .       .       .       |     
+            /     .       .       .       .       |     
+          S . . . + . . . + . . . + . . . + . . . N
+          |       .       .       .       .       |     
+          |       .       .       .       .       |     
+          |       .       .       .       .       |     
+         SE . . . + . . . + . . . + . . . + . . . N
+            \     .       .       .       .     /
+              \   .       .       .       .   /
+                \ .       .       .       . /
+                  E=======E=======E=======NE
 
       Mathematically, every contour line is closed unless it touches 
       on the border of the simulatin box (u=umin/umax or v=vmin/vmax).
@@ -103,11 +124,12 @@ module contour_curve_m
   !!< 
 
   type, public :: contour_curve__element_t
-    char(len=1) :: which_edge ! 'u' or 'v' or 'b'
+    char(len=1) :: which_edge    ! 'u' or 'v' or 'a' or 'd'
     char(len=2) :: cruising_lane ! 'in' (bulk) or 'on' (border)
-    integer :: i, j  ! edge id (for in-lane), or 
-                     ! id of the head edge tip (for on-lane).
-    character :: path_go_toward
+    integer :: i, j  ! id of edge (for in bulk lane), or 
+                     ! id of vert (for on border lane).
+    character :: path_go_toward  ! along the edge (for on border lane)
+                                 ! perp to the edge (for bulk lane)
   end type contour_curve__element_t
 
   type, public :: contour_curve_t
@@ -118,25 +140,29 @@ module contour_curve_m
     real, dimension(:), allocatable :: list_u, list_v
   contains
     procedure :: initialize => contour_curve__initialize
-    procedure :: reset => contour_curve__reset
-    procedure :: trace_and_erase  &
-                       => contour_curve__trace_and_erase
-    procedure :: set_start_edge &
-                       => contour_curve__set_start_edge
-    procedure :: is_closed => contour_curve__is_closed
-    procedure :: register_new_vert => contour_curve__register_new_vert
-    procedure :: replace_head_edge => contour_curve__replace_head_edge
+    procedure :: trace_and_erase => contour_curve__trace_and_erase
+    procedure :: set_start_edge  &
+                 => contour_curve__set_start_edge
+    procedure, private :: reset => contour_curve__reset
+    procedure, private :: is_closed  &
+                          => contour_curve__is_closed
+    procedure, private :: register_new_vert  &
+                          => contour_curve__register_new_vert
+    procedure, private :: contour_curve__replace_head_by_octa
+    procedure, private :: contour_curve__replace_head_direct
+    generic :: replace_head_edge => contour_curve__replace_head_by_octa, &
+                                    contour_curve__replace_head_direct
   end type contour_curve_t
 
 
 contains
 
 
-  subroutine contour_curve__replace_head_edge( this,         &
-                                               vi, vj,       &
-                                               octa_direct,  &
-                                               cruising_lane )
-    class(contour_curve_t) <io> :: this
+  subroutine contour_curve__replace_head_by_octa( this,         &
+                                                  vi, vj,       &
+                                                  octa_direct,  &
+                                                  cruising_lane )
+    class(contour_curve__element_t) <out> :: this
     integer <in> :: vi, vj
     integer <in> :: octa_direct
     char(len=2) <in> :: cruising_lane
@@ -144,42 +170,42 @@ contains
     if ( cruising_lane == 'on' ) then
       select case ( octa_direct )
         case (0)
-          path.head = contour_curve__element_t( 'v', 'on',   vi,   vj, 'N' )
+          this = contour_curve__element_t( 'v', 'on',   vi,   vj, 'N' )
         case (1)    
-          path.head = contour_curve__element_t( 'a', 'on',   vi,   vj, 'N' )
+          this = contour_curve__element_t( 'a', 'on',   vi,   vj, 'N' )
         case (2)    
-          path.head = contour_curve__element_t( 'u', 'on',   vi,   vj, 'E' )
+          this = contour_curve__element_t( 'u', 'on',   vi,   vj, 'E' )
         case (3)  
-          path.head = contour_curve__element_t( 'd', 'on',   vi, vj-1, 'S' )
+          this = contour_curve__element_t( 'd', 'on',   vi, vj-1, 'S' )
         case (4)  
-          path.head = contour_curve__element_t( 'v', 'on',   vi, vj-1, 'S' )
+          this = contour_curve__element_t( 'v', 'on',   vi, vj-1, 'S' )
         case (5)
-          path.head = contour_curve__element_t( 'a', 'on', vi-1, vj-1, 'S' )
+          this = contour_curve__element_t( 'a', 'on', vi-1, vj-1, 'S' )
         case (6)
-          path.head = contour_curve__element_t( 'u', 'on', vi-1,   vj, 'W' )
+          this = contour_curve__element_t( 'u', 'on', vi-1,   vj, 'W' )
         case (7)  
-          path.head = contour_curve__element_t( 'd', 'on', vi-1,   vj, 'N' )
+          this = contour_curve__element_t( 'd', 'on', vi-1,   vj, 'N' )
         case default
           call ut__fatal( '__MODULE__(__LINE__): case error.' )
       end select
     else if ( cruising_lane == 'in' ) then
       select case ( odirect )
         case (0)
-          path.head = contour_curve__element_t( 'v', 'in',   vi,   vj, 'W' )
+          this = contour_curve__element_t( 'v', 'in',   vi,   vj, 'W' )
         case (1)    
-          path.head = contour_curve__element_t( 'a', 'in',   vi,   vj, 'N' )
+          this = contour_curve__element_t( 'a', 'in',   vi,   vj, 'N' )
         case (2)    
-          path.head = contour_curve__element_t( 'u', 'in',   vi,   vj, 'N' )
+          this = contour_curve__element_t( 'u', 'in',   vi,   vj, 'N' )
         case (3)  
-          path.head = contour_curve__element_t( 'd', 'in',   vi, vj-1, 'N' )
+          this = contour_curve__element_t( 'd', 'in',   vi, vj-1, 'N' )
         case (4)  
-          path.head = contour_curve__element_t( 'v', 'in',   vi, vj-1, 'E' )
+          this = contour_curve__element_t( 'v', 'in',   vi, vj-1, 'E' )
         case (5)
-          path.head = contour_curve__element_t( 'a', 'in', vi-1, vj-1, 'S' )
+          this = contour_curve__element_t( 'a', 'in', vi-1, vj-1, 'S' )
         case (6)
-          path.head = contour_curve__element_t( 'u', 'in', vi-1,   vj, 'S' )
+          this = contour_curve__element_t( 'u', 'in', vi-1,   vj, 'S' )
         case (7)  
-          path.head = contour_curve__element_t( 'd', 'in', vi-1,   vj, 'S' )
+          this = contour_curve__element_t( 'd', 'in', vi-1,   vj, 'S' )
         case default
           call ut__fatal( '__MODULE__(__LINE__): case error.' )
       end select
@@ -187,7 +213,27 @@ contains
       call ut__fatal( '__MODULE__(__LINE__): cruising_lane error.' )
     end if
 
-  end subroutine contour_curve__replace_head_edge
+  end subroutine contour_curve__replace_head_by_octa
+
+
+  subroutine contour_curve__replace_head_direct( this,          &
+                                                 cruising_lane, &
+                                                 which_edge,    &
+                                                 i, j,          &
+                                                 toward )
+    class(contour_curve__element_t) <out> :: this
+    char(len=1) <in> :: which_edge
+    char(len=2) <in> :: cruising_lane
+    integer <in> :: i, j
+    character <in> :: cross_this_edge_toward
+
+    this = contour_curve__element_t( which_edge,              &
+                                     cruising_lane,           &
+                                     i,                       &
+                                     j,                       &
+                                     cross_this_edge_toward )
+
+  end subroutine contour_curve__replace_head_direct
 
 
   subroutine contour_curve__register_new_vert( this, u, v )
@@ -207,31 +253,62 @@ contains
 
 
   subroutine jump_to_u_edge_pm_if_possible( path, vert, edge, jumped,  &
-                                            ei0, ej0 )
+                                            ei, ej )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
-    integer <in> :: ei0, ej0
+    integer <in> :: ei, ej
 
-    integer :: vi0, vj0
+    !!>  
+             __ left
+            /       ___ right
+           /       /
+          o - - - o
+              |
+            edge_u
+    !!<
+    integer :: vi_left, vi_right, vj
     real :: u, v
+    character :: flag_left
+    integer :: octa_direct_along_border
+
     if ( jumped ) return  ! you have already jumped for this cell.
 
-    if ( edge.u_quarter(ei0,ej0) == SLICE_MESH__EDGE_PM ) then
+    vi_left  = ei
+    vi_right = ei + 1
+    vj = ej
+
+    if ( edge.u_quarter(ei,ej) == SLICE_MESH__EDGE_PM ) then
       jumped = .true.
-      u = edge.u_cross_coord(ei0,ej0)
-      v = vert.pos_v(ej0)
+      u = edge.u_cross_coord(ei,ej)
+      v = vert.pos_v(vj)
       call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-      path.register_new_vert( u, v )  !       __ new head      
-      if ( ej0 == edge.u_nv ) then    !      /
-        vi0 = ei0                     ! - - p * * - m - -
-        vj0 = ej0                     !     .     * .
-        path.head = contour_curve__element_t( 'u', 'on', vi0, vj0, 'W' )
-      else
-        path.head = contour_curve__element_t( 'u', 'in', ei0, ej0, 'N' )
+      path.register_new_vert( u, v )
+      flag_left = vert.flag(vi_left,vj)
+      if ( flag_left == 'i' ) then
+        !     . *     .
+        !     .  *    .
+        ! - - P - * - M - -
+        !     .   *   .
+        path.head = contour_curve__element_t( 'u', 'in', ei, ej, 'N' )
+        call path.replace_head_edge( 'u', 'in', ei, ej, 'N' ) 
+        call edge.erase( 'u', ei, ej )  Here here 
+      else if ( flag__left == 'o' ) then
+        call ut__fatal( "__MODULE__(__LINE__): " //  &
+                        "Go out of the border?" )
+      else ! vert_left on the border.
+        octa_direct_along_border = flag_to_octa_direct( flag_left )
+        !
+        ! - - P**** - M <== border 
+        !     .    *  .
+        !     .     * .
+        call path.replace_head_edge( vi_left,                  &
+                                     vj,                       &
+                                     octa_direct_along_border, &
+                                     'on' )
+        call edge.erase( 'u', ei0, ej0 ) 
       end if   
-      call edge.erase( 'u', ei0, ej0 ) 
     end if
   end subroutine jump_to_u_edge_pm_if_possible
 
@@ -731,14 +808,14 @@ contains
     integer :: max_path_element_num
 
     max_path_element_num = vert_nu * vert_nv
-      ! this is clearly an over-estimate.
+      ! this is the maximum case (like Peano curve)
 
     allocate(this.list_u(max_path_element_num))
     allocate(this.list_v(max_path_element_num))
 
     this.vert_nu = vert_nu
     this.vert_nv = vert_nv
-    call contour_curve__reset( this )
+    call this.reset
   end subroutine contour_curve__initialize
 
 
@@ -786,44 +863,46 @@ contains
     !!<    
 
     integer :: quarter
-    integer :: b, i, j
+    integer :: v, v2, i, j
     integer :: octa_direct
-    integer :: vi, vj, bvnum, b, b2
+    integer :: vi, vj, bvnum
     real :: u1, v1, u2, v2
     char(len=2) :: cruising_lane
 
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
-    bvnum  = vert.border_list_num
-    do b = 1, bvnum
-      quarter = edge.border_list.b_quarter(b)
+    bvnum = vert.border_list_num
+    do v = 1, bvnum
+      quarter = edge.border_list.b_quarter(v)
       if ( quarter == SLICE_MESH__EDGE_PP  .or.  &
            quarter == SLICE_MESH__EDGE_PM ) then
         status = 'have found'
-        vi = vert.border_list.vi(b)
-        vj = vert.border_list.vj(b)
+        vi = vert.border_list.vi(v)
+        vj = vert.border_list.vj(v)
         u1 = vert.pos_u(vi)
         v1 = vert.pos_v(vj)
         path.register_new_vert( u1, v1 )
 
         if ( quarter == SLICE_MESH__EDGE_PP ) then
-          b2 = b + 1 ! next vert in the border path
-          if ( b2 > bvnum ) b2 -= bvnum
-          u2 = vert.pos_u(vert.border_list.vi(b2))
-          v2 = vert.pos_v(vert.border_list.vj(b2))
+          v2 = v + 1 ! next vert in the border path
+          if ( v2 > bvnum ) v2 -= bvnum
+          u2 = vert.pos_u(vert.border_list.vi(v2))
+          v2 = vert.pos_v(vert.border_list.vj(v2))
           cruising_lane = 'on'
         else ! quarter == SLICE_MESH__EDGE_PM
-          u2 = edge.border_list.u_cross_coord(b)
-          v2 = edge.border_list.v_cross_coord(b)
+          u2 = edge.border_list.u_cross_coord(v)
+          v2 = edge.border_list.v_cross_coord(v)
           call ut__assert( u2 /= NAN .and. v2 /= NAN,  &
                            "__MODULE__(__LINE__): Invalid cross coord." )
           cruising_lane = 'in'
         end select
 
         call path.register_new_vert( u2, v2 )
-        octa_direct = vert.border_list.octa_direct(b)
+        octa_direct = vert.border_list.octa_direct(v)
         call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
+        path.start = path.head
+        return
       end if
     end do
 
