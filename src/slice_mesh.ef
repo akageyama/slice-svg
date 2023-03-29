@@ -1058,19 +1058,16 @@ contains
     class(slice_mesh__edge_border_list_t) <out> :: this
     integer <in> :: vert_border_num
 
-    integer :: index_min, index_max
+    integer :: vbnum
 
-    index_min = 2
-    index_max = vert_border_num + 1
+    vbnum = vert_border_num ! Just to shorten
 
-    this.index_min = index_min
-    this.index_max = index_max
-    allocate(    this.edge_type(index_min:index_max))
-    allocate(           this.ei(index_min:index_max))
-    allocate(           this.ej(index_min:index_max))
-    allocate(    this.b_quarter(index_min:index_max))
-    allocate(this.u_cross_coord(index_min:index_max))
-    allocate(this.v_cross_coord(index_min:index_max))
+    allocate(    this.edge_type(vbnum))
+    allocate(           this.ei(vbnum))
+    allocate(           this.ej(vbnum))
+    allocate(    this.b_quarter(vbnum))
+    allocate(this.u_cross_coord(vbnum))
+    allocate(this.v_cross_coord(vbnum))
   end subroutine slice_mesh__edge_border_list_init
 
 

@@ -338,18 +338,19 @@ contains
     integer :: vi, vj  ! vertex indeces i and j
     integer :: vi2, vj2, nth_next
     logical :: jumped
-    integer :: numbv, quarter, octa_direct
+    integer :: numbv, quarter, octa_direct2
     real :: u2 v2
+    char(len=2) :: cruising_lane
 
     call ut__assert( path.head.cruising_lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
 
     !!>
-               v1--[e2]--v2--[e3]--v3
+               v1--[e1]--v2--[e2]--v3
               /                    /
-            [e7]                 [e4]
+            [e6]                 [e3]
             /                    /
-           v6--[e6]--v5--[e5]--v4
+           v6--[e5]--v5--[e4]--v4
     !!<
 
     vi = path.head.i
@@ -360,98 +361,62 @@ contains
                      "__MODULE__(__LINE__): border vert inconsistent." )
 
     quarter = edge.border_list.b_quarter(nth)
-    octa_direct = vert.border_list.octa_direct(nth)
 
-    nth_next = nth + 1
-    if ( nth_next > numbv ) nth_next -= numbv ! cyclic.
-
-    vi2 = vert.border_list.vi(nth_next)
-    vj2 = vert.border_list.vj(nth_next)
     
-    select case ( quarter )
-      case (SLICE_MESH__EDGE_PP)
-        !!>
-                   |            
-               - - p <== this will be the newly registered vert (vi2,vj2)
-                   .
-                   . <== this will be the new head edge
-                   .            
-               - - p <== lastly registered vert (vi,vj)
-                   * 
-                   * <== previous head edge
-                   * 
-        !!<      
-        jumped = .true.
-        u2 = vert.pos_u(vi2)
-        v2 = vert.pos_v(vj2)
-        call path.register_new_vert( u2, v2 )
-        call edge.border_list.erase( nth )
-        call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
-        
-        select case ( octa_direct )
-          case (0)
-            path.head = contour_curve__element_t( 'v', 'on',   vi,   vj, 'N' )
-          case (1)    
-            path.head = contour_curve__element_t( 'a', 'on',   vi,   vj, 'N' )
-          case (2)    
-            path.head = contour_curve__element_t( 'u', 'on',   vi,   vj, 'E' )
-          case (3)  
-            path.head = contour_curve__element_t( 'd', 'on',   vi, vj-1, 'S' )
-          case (4)  
-            path.head = contour_curve__element_t( 'v', 'on',   vi, vj-1, 'S' )
-          case (5)
-            path.head = contour_curve__element_t( 'a', 'on', vi-1, vj-1, 'S' )
-          case (6)
-            path.head = contour_curve__element_t( 'u', 'on', vi-1,   vj, 'W' )
-          case (7)  
-            path.head = contour_curve__element_t( 'd', 'on', vi-1,   vj, 'N' )
-          case default
-            call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
-        end select
-      case (SLICE_MESH__EDGE_PM )
-        !!>
-                   .       |
-                 - + - - - m
-                   .       .
-                   .       * <== new head of edge-type (vi,vj)
-                   .       *
-                 - + - - - p
-                   .       *
-                   .       *
-        !!<
-        jumped = .true.
-        u2 = edge.border_list.u_cross_coord(nth)
-        v2 = edge.border_list.v_cross_coord(nth)
-        call ut__assert( u2 /= NAN .and. v2 /= NAN,   &
-                         "__MODULE__(__LINE__): Invalid cross coord." )
-        path.register_new_vert( u2, v2 )
-        call edge.border_list.erase( nth )
-        select case ( octa_direct )
-          case (0)
-            path.head = contour_curve__element_t( 'v', 'in',   vi,   vj, 'W' )
-          case (1)    
-            path.head = contour_curve__element_t( 'a', 'in',   vi,   vj, 'N' )
-          case (2)    
-            path.head = contour_curve__element_t( 'u', 'in',   vi,   vj, 'N' )
-          case (3)  
-            path.head = contour_curve__element_t( 'd', 'in',   vi, vj-1, 'N' )
-          case (4)  
-            path.head = contour_curve__element_t( 'v', 'in',   vi, vj-1, 'E' )
-          case (5)
-            path.head = contour_curve__element_t( 'a', 'in', vi-1, vj-1, 'S' )
-          case (6)
-            path.head = contour_curve__element_t( 'u', 'in', vi-1,   vj, 'S' )
-          case (7)  
-            path.head = contour_curve__element_t( 'd', 'in', vi-1,   vj, 'S' )
-          case default
-            call ut__fatal( '__MODULE__(__LINE__): case error.' )
-        end select
-      case default
-        call ut__fatal( '__MODULE__(__LINE__): Strange. Could not find path.' )
-    end select
+    if ( quarter == SLICE_MESH__EDGE_PP ) then
+      !!>
+                 .            
+                 .            
+                 .            
+             - - p <== You are going to register this vert (vi2,vj2)
+                 *
+                 * <== You are going to replace by this edge.
+                 *            
+             - - p <== present num, present (vi,vj)
+                 . \_____ previous (vi2,vj2), lastly registered vert
+                 . <== previous head edge
+                 . 
+             - - p <== previous (vi,vj)
+                 .            
+      !!<      
+      jumped = .true.
+      nth_next = nth + 1
+      if ( nth_next > numbv ) nth_next -= numbv ! cyclic.
+      vi2 = vert.border_list.vi(nth_next)
+      vj2 = vert.border_list.vj(nth_next)
+      u2 = vert.pos_u(vi2)
+      v2 = vert.pos_v(vj2)
+      cruising_lane = 'in'
+    else if ( quarter == SLICE_MESH__EDGE_PM ) then
+      !!>
+                 .
+                 .            
+             - - p  _____ you are going to register this point
+                 . /
+             * * * <== present head edge
+                 *            
+             - - p <== present num, present (vi,vj)
+                 . \_____ previous (vi2,vj2), lastly registered vert
+                 . <== previous head edge
+                 . 
+             - - p <== previous (vi,vj)
+                 .            
+      !!<
+      jumped = .true.
+      u2 = edge.border_list.u_cross_coord(nth)
+      v2 = edge.border_list.v_cross_coord(nth)
+      call ut__assert( u2 /= NAN .and. v2 /= NAN,   &
+                       "__MODULE__(__LINE__): Invalid cross coord." )
+      cruising_lane = 'in'
+    else
+      call ut__fatal( '__MODULE__(__LINE__): Strange. Path terminated?' )
+    end if
 
+    path.register_new_vert( u2, v2 )
+    call edge.border_list.erase( nth )
+    octa_direct = vert.border_list.octa_direct(nth)
+    call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
     nth = nth_next
-
   end subroutine go_along_border
 
 
@@ -630,31 +595,7 @@ contains
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
-    !!>
 
-        vertex(i,j+1)=> + - - - +
-                        | \     |
-                        |   \   |
-                        |   . \ |
-                        + - . - + <==vertex(i+1,j)
-                      /    .    
-                  vertex   .    
-                    (i,j)   .   
-                            .
-                        edge.d(i,j)
-
-                            
-        vertex(i,j+1)=> + - - - +
-                        |     / |
-                        |   /   |
-                        | / .   |
-                        + - . - + <==vertex(i+1,j)
-                      /    .    
-                  vertex   .    
-                    (i,j)   .   
-                            .
-                        edge.a(i,j)
-    !!<
     integer :: ei, ej
     logical :: jumped
 
@@ -670,144 +611,91 @@ contains
 
     select case (path.head.which_edge)
       case ('a')
-      if ( path.head.path_go_toward == 'N' ) then
-        !!>                     
-             vertex(i,j+1)=> P - * - M
-                             |   * / |
-                             |   *   |
-                             | *     |
-              vertex(i,j) => P - - - + 
-        !!<
-        call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
-                                            jumped, ei, ej+1 )
-        !!>                     Here Here
-             vertex(i,j+1)=> M - - - M
-                             |     / |
-                             * * *   |
-                             | *     |
-              vertex(i,j) => P - - - + 
-        !!<
-
-
-
-        call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
-                                            jumped, ei+1, ej )
-                         !!>
-                              p - - p
-                              |    *|To
-                              |   * |
-                              p -*- m
-                                From 
-                         !!<
-                         !!>
-                                To
-                              p -*- m
-                              |  *  |
-                              |  *  |
-                              p -*- m
-                                From 
-                         !!<
-        call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
-                                            jumped, ei, ej )
-                         !!>
-                              m - - m
-                            To*     |
-                              | *   |
-                              p - * m
-                                From 
-                         !!<
-      case (6)
-        call ut__assert( path.head.which_edge == 'v',  &
-                         "__MODULE__(__LINE__): Must be edge-v here." )
-        call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
-                                            jumped, ei-1, ej+1 )
-                         !!>
-                                To
-                              p -*- m
-                              |   * |
-                              |    *|From
-                              p - - p
-                         !!<
-        call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
-                                            jumped, ei-1, ej )
-                         !!>
-                              m - - m
-                              |     |
-                            To|* * *|From
-                              p - - p
-                         !!<
-        call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
-                                            jumped, ei-1, ej )
-                         !!>
-                              m - - m
-                              |    *|
-                              |   * |From
-                              m -*- p
-                                To
-                         !!<
-      case (4)
-        call ut__assert( path.head.which_edge == 'u',  &
-                         "__MODULE__(__LINE__): Must be edge-u here." )
-        call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
-                                            jumped, ei, ej-1 )
-                         !!>
-                                From
-                              m -*- p
-                              | *   |
-                           To |*    |
-                              p - - p
-                         !!<
-        call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
-                                            jumped, ei, ej-1 )
-                         !!>
-                                From
-                              m -*- p
-                              |  *  |
-                              |  *  |
-                              m -*- p
-                                 To
-                         !!<
-        call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
-                                            jumped, ei+1, ej-1 )
-                         !!>
-                                From
-                              m -*- p
-                              |   * |
-                              |    *|To
-                              m - - m
-                         !!<
-      case (2)
-
-        call ut__assert( path.head.which_edge == 'v',  &
-                         "__MODULE__(__LINE__): Must be edge-v here." )
-        call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
-                                            jumped, ei, ej )
-                         !!>
-                              p - - p
-                         From *     |
-                              |*    |
-                              m * - p
-                                To
-                         !!<
-        call jump_to_v_edge_mp_if_possible ( path, vert, edge,  &
-                                            jumped, ei+1, ej )
-                         !!>
-                              p - - p
-                         From * * * * To
-                              |     |
-                              m - - m
-                         !!<
-        call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
-                                            jumped, ei, ej+1 )
-                         !!>
-                                To
-                              p * - m
-                              |*    |
-                         From *     |
-                              m - - m
-                         !!<
+        if ( path.head.path_go_toward == 'N' ) then
+          !!>                     
+               vertex(i,j+1)=> P - * - M
+                               |   * / |
+                               |   *   |
+                               | *     |
+                vertex(i,j) => P - - - + 
+          !!<
+          call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
+                                              jumped, ei, ej+1 )
+          !!>
+               vertex(i,j+1)=> M - - - M
+                               |     / |
+                               * * *   |
+                               | *     |
+                vertex(i,j) => P - - - + 
+          !!<
+          call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
+                                              jumped, ei, ej )
+        else if ( path.head.path_go_toward == 'S' ) then
+          !!>                     
+               vertex(i,j+1)=> + - - - P
+                               |     * |
+                               |   *   |
+                               | / *   |
+                vertex(i,j) => M - * - P 
+          !!<
+          call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
+                                              jumped, ei, ej )
+          !!> 
+               vertex(i,j+1)=> M - - - P
+                               |     * |
+                               |   * * *
+                               | /     |
+                vertex(i,j) => M - - - M 
+          !!<
+          call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
+                                              jumped, ei+1, ej )
+        else 
+          call ut__fatal( "__MODULE__(__LINE__): arg error." )
+        end if
+      case ('d')
+        if ( path.head.path_go_toward == 'N' ) then
+          !!>                     
+               vertex(i,j+1)=> P - - * M
+                               | *  *  |
+                               |   *   |
+                               |     \ |
+                vertex(i,j) => + - - - M 
+          !!<
+          call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
+                                              jumped, ei, ej+1 )
+          !!>
+               vertex(i,j+1)=> P - - - P
+                               | *     |
+                               |   * * *
+                               |     \ |
+                vertex(i,j) => + - - - M 
+          !!<
+          call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
+                                              jumped, ei+1, ej )
+        else if ( path.head.path_go_toward == 'S' ) then
+          !!>                     
+               vertex(i,j+1)=> M - - - +
+                               | \     |
+                               |   *   |
+                               |  *  * |
+                vertex(i,j) => M * - - P 
+          !!<
+          call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
+                                              jumped, ei, ej )
+          !!> 
+               vertex(i,j+1)=> M - - - +
+                               | \     |
+                               * * *   |
+                               |     * |
+                vertex(i,j) => P - - - P 
+          !!<
+          call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
+                                              jumped, ei, ej )
+        else 
+          call ut__fatal( "__MODULE__(__LINE__): arg error." )
+        end if
       case default
-        call ut__fatal( '__MODULE__(__LINE__): case error.' )
+        call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
 
     call ut__assert( jumped,  &
