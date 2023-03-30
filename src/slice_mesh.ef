@@ -741,7 +741,7 @@ contains
         return
       end if
       counter += 1
-      this.edge.octa_direct(counter) = octa_direct
+      this.vert.octa_direct(counter) = octa_direct
       this.vert.vi(counter) = i
       this.vert.vj(counter) = j
       call get_edge_id( i, j, octa_direct, ei, ej, edge_type )
