@@ -57,10 +57,10 @@
              m - - m  |  0
              m - - p  |  1
              p - - m  |  2
-             p - - p  |  3 (Special quarter for border edges)
+             p - - p  |  3 (Special quarter for boundary edges)
 
 
-     ## Border path
+     ## boundary path
 
         When NU=9, NV=5, the common data assignment for
         each vertex is 
@@ -76,7 +76,7 @@
         where 'b' stands for the boundary data and
         'i' stands for the bulk data of the simulation.
 
-        We define the border path, a closed line, by connecting 
+        We define the boundary path, a closed line, by connecting 
         the consequtive 'b' points in the counter-clockwise direction.
 
                      <--- this way ---  
@@ -90,7 +90,7 @@
                      1 2 3 4 5 6 7 8 9
 
 
-        The border path can have more complex shape than a rectangle,
+        The boundary path can have more complex shape than a rectangle,
         for example,
 
                      <--- this way ---  
@@ -103,7 +103,7 @@
                      
                      1 2 3 4 5 6 7 8 9
 
-        To denote a border path, we define border_list array that
+        To denote a boundary path, we define boundary_list array that
         holds vertex position and direction. Here direction is
         defined by two consective verts of the path. In the above
         case, denoting N/E/S/W for North/East/South/West.
@@ -127,7 +127,7 @@
                      . . 4 . . . . . 0   
                      . . 2 2 2 2 2 2 0   
 
-        Border path may have diagonal edge like
+        boundary path may have diagonal edge like
 
                      . * * * * * . . .
                      * . . . . . * . .
@@ -156,8 +156,8 @@
 
      ## Flag integer for vert
      
-        In addition to border verts, we assign 'i' or 'o'
-        letters to inside or outside verts of the border path.
+        In addition to boundary verts, we assign 'i' or 'o'
+        letters to inside or outside verts of the boundary path.
 
                      o 5 6 6 6 6 o o o
                      3 i i i i i 7 o o
@@ -203,16 +203,6 @@ module slice_mesh_m
   integer <const> :: SLICE_MESH__EDGE_PM = 2  ! --p---m-- 
   integer <const> :: SLICE_MESH__EDGE_PP = 3  ! --p---p-- 
 
-  type, public :: slice_mesh__vert_border_list_t
-    integer :: num ! number of border vertex
-    integer, dimension(:), allocatable :: octa_direct
-    integer, dimension(:), allocatable :: vi  ! vert
-    integer, dimension(:), allocatable :: vj
-  contains
-    procedure : initialize => slice_mesh__vert_border_list_init
-    procedure :: get_nth_from_vert_pos => slice_mesh__vert_border_list_get_n
-  end type slice_mesh__vert_border_list_t
-
   type, public :: slice_mesh__vert_t
     integer :: nu, nv
     real, dimension(:), allocatable :: pos_u
@@ -220,38 +210,23 @@ module slice_mesh_m
     real :: u_min, u_max
     real :: v_min, v_max
     character, dimension(:,:), allocatable :: flag 
-                       !        'i' : inside the border
-                       !        'o' : outside the border
-                       ! 'N' or '0' : border of path direct North
-                       !        '1' : border of path direct Nourth-East
-                       ! 'E' or '2' : border of path direct East
-                       !        '3' : border of path direct South-Wast
-                       ! 'S' or '4' : border of path direct South
-                       !        '5' : border of path direct South-West
-                       ! 'W' or '6' : border of path direct West
-                       !        '7' : border of path direct Nourth-West
-    type(slice_mesh__vert_border_list_t) :: border_list
+                       !        'i' : inside the boundary
+                       !        'o' : outside the boundary
+                       ! 'N' or '0' : boundary of path direct North
+                       !        '1' : boundary of path direct Nourth-East
+                       ! 'E' or '2' : boundary of path direct East
+                       !        '3' : boundary of path direct South-Wast
+                       ! 'S' or '4' : boundary of path direct South
+                       !        '5' : boundary of path direct South-West
+                       ! 'W' or '6' : boundary of path direct West
+                       !        '7' : boundary of path direct Nourth-West
   contains
     procedure, private :: slice_mesh__vert_initialize_with_grids
     procedure, private :: slice_mesh__vert_initialize_with_uvmaxmin
     generic :: initialize => slice_mesh__vert_initialize_with_grids,  &
                              slice_mesh__vert_initialize_without_grids
-    procedure :: is_border => slice_mesh__vert_is_border
+    procedure :: is_boundary => slice_mesh__vert_is_boundary
   end type slice_mesh__vert_t  
-
-
-  type, public :: slice_mesh__edge_border_list_t
-    integer :: num ! number of border edges
-    character, dimension(:), allocatable :: edge_type  ! 'u'/'v'/'a'/'d'
-    integer, dimension(:), allocatable :: ei  ! edge index
-    integer, dimension(:), allocatable :: ej
-    integer, dimension(:), allocatable :: b_quarter   ! {0,1,2,3}
-    real, dimension(:), allocatable :: u_cross_coord
-    real, dimension(:), allocatable :: v_cross_coord
-  contains
-    procedure :: initialize => slice_mesh__edge_border_list_init
-    procedure :: erase => slice_mesh_edge__erase_border_list_erase
-  end type slice_mesh__edge_border_list_t
 
   type, public :: slice_mesh__edge_t
     integer :: u_nu, u_nv
@@ -260,22 +235,61 @@ module slice_mesh_m
     integer, dimension(:,:), allocatable :: v_quarter   ! {0,1,2,3}
     real, dimension(:,:), allocatable :: u_cross_coord
     real, dimension(:,:), allocatable :: v_cross_coord
-    type(slice_mesh__edge_border_list_t) border_list
   contains
     procedure :: initialize => slice_mesh__edge_initialize
     procedure :: set_quarter => slice_mesh__edge_set_quarter
     procedure :: erase => slice_mesh_edge__erase_uv_edge
   end type slice_mesh__edge_t    
 
+  type, public :: slice_mesh__boundary_vert_t
+    integer :: num ! number of boundary verts
+    integer, dimension(:), allocatable :: octa_direct
+    integer, dimension(:), allocatable :: vi  ! vert
+    integer, dimension(:), allocatable :: vj
+  contains
+    procedure : initialize => slice_mesh__boundary_vert_init   
+    procedure :: get_nth => slice_mesh__boundary_vert_get_nth
+  end type slice_mesh__boundary_vert_t
+
+  type, public :: slice_mesh__boundary_edge_t
+    integer :: num ! number of boundary edges
+    character, dimension(:), allocatable :: edge_type  ! 'u'/'v'/'a'/'d'
+    integer, dimension(:), allocatable :: ei  ! edge index
+    integer, dimension(:), allocatable :: ej
+    integer, dimension(:), allocatable :: b_quarter   ! {0,1,2,3}
+    real, dimension(:), allocatable :: u_cross_coord
+    real, dimension(:), allocatable :: v_cross_coord
+  contains
+    procedure :: initialize => slice_mesh__boundary_edge_init   
+    procedure :: erase => slice_mesh__boundary_edge_erase
+  end type slice_mesh__boundary_edge_t
+
+  type, public :: slice_mesh__boundary_t
+    type(slice_mesh__boundary_vert_t) :: vert
+    type(slice_mesh__boundary_edge_t) :: edge
+  contains
+    procedure :: initialize => slice_mesh__boundary_initialize
+    procedure :: make_list => slice_mesh__boundary_make_list
+  end type slice_mesh__boundary_t
+
 
 contains
 
 
-  subroutine slice_mesh_edge__erase_border_list_erase( this,        &
+  subroutine slice_mesh__boundary_initialize( this )
+    class(slice_mesh__boundary_t) <out> :: this
+
+    call this.vert.initialize
+    call this.edge.initialize
+    make
+  end subroutine slice_mesh__boundary_initialize
+
+
+  subroutine slice_mesh__boundary_edge_erase( this,        &
                                                        which_edge,  &
                                                        ei,          &
                                                        ej )
-    class(slice_mesh__vert_border_list_t) <io> :: this
+    class(slice_mesh__boundary_vert_t) <io> :: this
     character <in> :: which_edge ! 'u' / 'v' / 'a' / 'd'
     integer <in> :: ei, ej
 
@@ -290,9 +304,9 @@ contains
       end if
     end do
 
-  end subroutine slice_mesh_edge__erase_border_list_erase
+  end subroutine slice_mesh__boundary_edge_erase
 
-  function slice_mesh__vert_is_border( this, vi, vj ) result(ans)
+  function slice_mesh__vert_is_boundary( this, vi, vj ) result(ans)
     class(slice_mesh__vert_t) <in> :: this
     integer <in> :: vi, vj
     logical :: ans
@@ -303,10 +317,10 @@ contains
     else
       ans = .true.
     end if
-  end function slice_mesh__vert_is_border
+  end function slice_mesh__vert_is_boundary
 
-  function slice_mesh__vert_border_list_get_n( this, vi, vj ) result(nth)
-    class(slice_mesh__vert_border_list_t) <in> :: this
+  function slice_mesh__boundary_vert_get_nth( this, vi, vj ) result(nth)
+    class(slice_mesh__boundary_vert_t) <in> :: this
     integer <in> :: vi, vj
     integer :: nth
 
@@ -320,28 +334,28 @@ contains
         return
       end if
     end do
-    call ut__fatal( "__MODULE__(__LINE__): Not a border vert." )
-  end function slice_mesh__vert_border_list_get_n
+    call ut__fatal( "__MODULE__(__LINE__): Not a boundary vert." )
+  end function slice_mesh__boundary_vert_get_nth
 
 
-  subroutine slice_mesh__vert_border_list_init( this, nu, nv, vert_flag )
-    class(slice_mesh__vert_border_list_t) <out> :: this
+  subroutine slice_mesh__boundary_vert_init( this, nu, nv, vert_flag )
+    class(slice_mesh__boundary_vert_t) <out> :: this
     integer <in> :: nu, nv
     character, dimension(nu,nv) <in> :: vert_flag
 
-    integer :: border_grid_num
+    integer :: boundary_vert_num
 
-    border_grid_num = iCount_border_grid( nu, nv, vert_flag )
-    this.num = border_grid_num
-!debugp "__FUNC__", border_grid_num  
+    boundary_vert_num = iCount_boundary_vert( nu, nv, vert_flag )
+    this.num = boundary_vert_num
+!debugp "__FUNC__", boundary_vert_num  
 
-    allocate(this.octa_direct(border_grid_num))
-    allocate(         this.vi(border_grid_num))
-    allocate(         this.vj(border_grid_num))
+    allocate(this.octa_direct(boundary_vert_num))
+    allocate(         this.vi(boundary_vert_num))
+    allocate(         this.vj(boundary_vert_num))
 
   contains
 
-    function iCount_border_grid( nu, nv, vert_flag ) result(num)
+    function iCount_boundary_vert( nu, nv, vert_flag ) result(num)
       integer <in> :: nu, nv
       character, dimension(nu,nv) <in> :: vert_flag
       integer :: num
@@ -374,9 +388,9 @@ contains
           end if
         end do
       end do
-    end subroutine iCount_border_grid
+    end subroutine iCount_boundary_vert
 
-  end subroutine slice_mesh__vert_border_list_init  
+  end subroutine slice_mesh__boundary_vert_init  
 
 
   function flag_to_octa_direct( flag ) result(octa_direct)
@@ -567,13 +581,13 @@ contains
   end function get_edge_id
 
 
-  subroutine set_b_edge_quarter_and_cross_coord( vert, level, edge_border_list )
+  subroutine set_b_edge_quarter_and_cross_coord( vert, level, boundary_edge )
     type(slice_mesh__vert_t) <in> :: vert
     real <in> :: level
-    type(slice_mesh__edge_border_list_t) <io> :: edge_border_list
+    type(slice_mesh__boundary_edge_t) <io> :: boundary_edge
 
     !!>
-        注意。b_edge (border edge)における4値（quarter）の定義は
+        注意。b_edge (boundary edge)における4値（quarter）の定義は
         u_edge や v_edge と異なる。 たとえば u_edge の場合、
             val(vi,vj) - level > 0 .and. val(vi+1,vj) - level < 0
         のとき
@@ -632,13 +646,13 @@ contains
     integer :: quarter, vbnum
     real :: interpol_u, interpol_v
 
-    edge_border_list.u_cross_coord(:) = NAN 
-    edge_border_list.v_cross_coord(:) = NAN
+    boundary_edge.u_cross_coord(:) = NAN 
+    boundary_edge.v_cross_coord(:) = NAN
       !!> 
            To catch errornous cases in which a contour
            path tries to cross a non PM or MP edge.
       !!<
-    edge_border_list.b_quarter(:) = -999 ! Any negative (anormaly) number.
+    boundary_edge.b_quarter(:) = -999 ! Any negative (anormaly) number.
 
     !!>
                v1--[e2]--v2--[e3]--v3
@@ -648,10 +662,10 @@ contains
            v6--[e6]--v5--[e5]--v4
     !!<
 
-    vbnum = vert.border_list.num ! just to shorten
+    vbnum = boundary_vert.num ! just to shorten
     do index_v = 1, vbnum
-      vi = vert.border_list.vi(index_v)
-      vj = vert.border_list.vj(index_v)
+      vi = boundary_vert.vi(index_v)
+      vj = boundary_vert.vj(index_v)
 
       val1 = val_vert(vi,vj)
       u1 = vert.pos_u(vi)
@@ -660,8 +674,8 @@ contains
       index_v2 = index_v1 + 1
       if ( index_v2 > vbnum ) index_v2 -= vbnum
 
-      vi2 = vert.border_list.vi(index_v2)
-      vj2 = vert.border_list.vj(index_v2)
+      vi2 = boundary_vert.vi(index_v2)
+      vj2 = boundary_vert.vj(index_v2)
       val2 = val_vert(vi2,vj2)
       u2 = vert.pos_u(vi2)
       v2 = vert.pos_v(vj2)
@@ -669,10 +683,11 @@ contains
       quarter = quarter_of_edge_ends( val1, val2, level )
 
       index_e = index_v
-      call ut__assert( index_e <= edge_border_list.num, &
+      call ut__assert( index_e <= boundary_edge.num, &
                        "__MODULE__(__LINE__): " //      &
                        "index_e out of range." )
-      edge_border_list.b_quarter(index_e) = quarter
+
+      boundary_edge.b_quarter(index_e) = quarter
 
       if ( quarter == SLICE_MESH__EDGE_MP  .or.  &
            quarter == SLICE_MESH__EDGE_PM ) then
@@ -680,43 +695,43 @@ contains
         diff2 = level - val2
         interpol_u = linear_interpol( u1, u2, diff1, diff2 )
         interpol_v = linear_interpol( v1, v2, diff1, diff2 )
-        edge_border_list.u_cross_coord(index_e) = interpol_u
-        edge_border_list.v_cross_coord(index_e) = interpol_v
+        boundary_edge.u_cross_coord(index_e) = interpol_u
+        boundary_edge.v_cross_coord(index_e) = interpol_v
       end if        
     end do    
 
   end subroutine set_b_edge_quarter_and_cross_coord
 
 
-  subroutine make_border_list( vert, edge )
+  subroutine slice_mesh__boundary_make_list( vert, edge, boundary )
     type(slice_mesh__vert_t) <io> :: vert
     type(slice_mesh__edge_t) <io> :: edge
+    type(slice_mesh__boundary_t) <io> :: boundary
 
     integer :: vi, vj, start_vi, start_vj
-    integer :: num_of_border_vert
+    integer :: num_of_boundary_vert
     integer :: counter
 
-    num_of_border_vert = vert.border_list.num
+    num_of_boundary_vert = boundary.vert.num
 
-    call iFind_a_border_vert_with_octa_direct( nu, nv,        &
-                                               vert_flag,     &
+    call iFind_a_boundary_vert_with_octa_direct( nu, nv,        &
+                                               vert.flag,     &
                                                vi, vj,        &
                                                octa_direct )
-
     start_vi = vi
     start_vj = vj
     counter = 1
-    vert.border_list.octa_direct(counter) = octa_direct
-    vert.border_list.vi(counter) = vi
-    vert.border_list.vj(counter) = vj
+    boundary_vert.octa_direct(counter) = octa_direct
+    boundary_vert.vi(counter) = vi
+    boundary_vert.vj(counter) = vj
 
     call get_edge_id( i, j, octa_direct, ei, ej, edge_type )
     
-    edge.border_list.ei(counter) = ei
-    edge.border_list.ej(counter) = ej
-    edge.border_list.edge_type(counter) = edge_type
+    boundary.edge.ei(counter) = ei
+    boundary.edge.ej(counter) = ej
+    boundary.edge.edge_type(counter) = edge_type
 
-    do counter = 2, num_of_border_grid 
+    do counter = 2, num_of_boundary_vert 
       call get_next_octa_direct_and_vert( nu, nv,           &
                                           i, j,             &
                                           vert_flag(i,j),   &
@@ -726,20 +741,20 @@ contains
         return
       end if
       counter += 1
-      edge.border_list.octa_direct(counter) = octa_direct
-      vert.border_list.vi(counter) = i
-      vert.border_list.vj(counter) = j
+      boundary.edge.octa_direct(counter) = octa_direct
+      boundary.vert.vi(counter) = i
+      boundary.vert.vj(counter) = j
       call get_edge_id( i, j, octa_direct, ei, ej, edge_type )
-      edge.border_list.ei(counter) = ei
-      edge.border_list.ej(counter) = ej
-      edge.border_list.edge_type(counter) = edge_type
+      boundary.edge.ei(counter) = ei
+      boundary.edge.ej(counter) = ej
+      boundary.edge.edge_type(counter) = edge_type
     end do
 
-    call ut__fatal( "__MODULE__(__LINE__): Failed to close border." )
+    call ut__fatal( "__MODULE__(__LINE__): Failed to close boundary." )
   
   contains
 
-    subroutine iFind_a_border_vert_with_octa_direct( nu, nv,           &
+    subroutine iFind_a_boundary_vert_with_octa_direct( nu, nv,           &
                                                      vert_flag,        &
                                                      head_i, head_j,   &
                                                      head_octa_direct )
@@ -765,10 +780,10 @@ contains
       end do
 
       call ut__fatal( "__MODULE__(__LINE__): " //  &
-                      "Failed to find a start point on border." )
-    end subroutine iFind_a_border_vert_with_octa_direct
+                      "Failed to find a start point on boundary." )
+    end subroutine iFind_a_boundary_vert_with_octa_direct
 
-  end subroutine make_border_list
+  end subroutine slice_mesh__boundary_make_list
 
 
   function linear_interpol( x1, x2, diff1, diff2 ) result( xi )
@@ -852,7 +867,7 @@ contains
     integer <in> :: nth
 
     call ut__assert( nth >= 1 .and.                     &
-                     nth <= vert.dborder_list.num,  &
+                     nth <= vert.dboundary_list.num,  &
                      "__MODULE__(__LINE__): " //        &
                      "over the range." )
     this.d_quarter(nth) = SLICE_MESH__EDGE_MM
@@ -869,16 +884,16 @@ contains
     real, dimension(nu) <in> :: grid_pos_u
     real, dimension(nv) <in> :: grid_pos_v
     character, dimension(nu,nv) <optin> :: vert_flag
-                       ! 'i' : inside the border
-                       ! 'o' : outside the border
-                       ! 'N' or '0' : border of path direct North
-                       !        '1' : border of path direct Nourth-East
-                       ! 'E' or '2' : border of path direct East
-                       !        '3' : border of path direct South-Wast
-                       ! 'S' or '4' : border of path direct South
-                       !        '5' : border of path direct South-West
-                       ! 'W' or '6' : border of path direct West
-                       !        '7' : border of path direct Nourth-West
+                       ! 'i' : inside the boundary
+                       ! 'o' : outside the boundary
+                       ! 'N' or '0' : boundary of path direct North
+                       !        '1' : boundary of path direct Nourth-East
+                       ! 'E' or '2' : boundary of path direct East
+                       !        '3' : boundary of path direct South-Wast
+                       ! 'S' or '4' : boundary of path direct South
+                       !        '5' : boundary of path direct South-West
+                       ! 'W' or '6' : boundary of path direct West
+                       !        '7' : boundary of path direct Nourth-West
     !!>
         case 1  境界上の値がカドの点も含めて設定されている場合
 
@@ -891,7 +906,7 @@ contains
         case 2  境界上のカドの点には値が設定されていない場合
 
             カドの点はo (outer)点とする。全ての境界格子点を一周、反時計回りに
-            回る。次の格子点が水平あるいは垂直方向にある場合は、b (border) 点とする。
+            回る。次の格子点が水平あるいは垂直方向にある場合は、b (boundary) 点とする。
             次の境界格子点が斜め方向にある場合は、それをd (diagonal) 点とする。
             シミュレーション領域の内部は i (inner) 点とする。
                         <--- 
@@ -921,7 +936,7 @@ contains
     !!<
     real :: u_min, u_max
     real :: v_min, v_max
-    integer :: max_num_border_verts
+    integer :: max_num_boundary_verts
 
     u_min = grid_pos_u(1)
     u_max = grid_pos_u(nu)
@@ -953,7 +968,7 @@ contains
       call set_default_vert_flag( nu, nv, this.flag )      
     end if
 
-    call this.border_list.initialize( nu, nv, this.flag )
+    call boundary.vert.initialize( nu, nv, this.flag )
 
   end subroutine slice_mesh__vert_initialize_with_grids
 
@@ -968,7 +983,7 @@ contains
 
     real :: du, dv
     integer :: i, j
-    integer :: max_num_border_verts
+    integer :: max_num_boundary_verts
 
     call ut__assert( (nu > 1) .and.         &
                      (nv > 1) .and.         &
@@ -1000,7 +1015,7 @@ contains
 
     call set_default_grid_type( nu, nv, this.flag )
 
-    call this.border_list.initialize( nu, nv, this.flag )
+    call boundary.vert.initialize( nu, nv, this.flag )
   
   end subroutine slice_mesh__vert_initialize_without_grids
 
@@ -1048,57 +1063,53 @@ contains
     allocate(this.u_cross_coord(u_nu,u_nv))
     allocate(this.v_cross_coord(v_nu,v_nv))
 
-    call this.border_list.initialize( vert.border.num )
-
-    call make_border_list( vert, this )    
-
   contains
 
-    subroutine iBorder_set
+    subroutine iboundary_set
       integer :: u_nu_, u_nv_, v_nu_, v_nv_
 
-      this.is_border_u(:,:) = .false.  ! default bulk edges
-      this.is_border_v(:,:) = .false.
+      this.is_boundary_u(:,:) = .false.  ! default bulk edges
+      this.is_boundary_v(:,:) = .false.
 
-      if ( present(is_border_v) ) then
-        call ut__assert( present(is_border_u),              &
+      if ( present(is_boundary_v) ) then
+        call ut__assert( present(is_boundary_u),              &
                          "__MODULE__(__LINE__): "           &
-                         // "Needs both border_u and _v." )
-        u_nu_ = size(is_border_u,dim=1)
-        u_nv_ = size(is_border_u,dim=2)
-        v_nu_ = size(is_border_v,dim=1)
-        v_nv_ = size(is_border_v,dim=2)
+                         // "Needs both boundary_u and _v." )
+        u_nu_ = size(is_boundary_u,dim=1)
+        u_nv_ = size(is_boundary_u,dim=2)
+        v_nu_ = size(is_boundary_v,dim=1)
+        v_nv_ = size(is_boundary_v,dim=2)
         call ut__assert( u_nu_ == this.u_nu,                    &
                          "__MODULE__(__LINE__): "               &
-                         // "Inconsistent nu of border_u and mesh_edge." )
+                         // "Inconsistent nu of boundary_u and mesh_edge." )
         call ut__assert( u_nv_ == this.u_nv,                    &
                          "__MODULE__(__LINE__): "               &
-                         // "Inconsistent nv of border_u and mesh_edge." )
+                         // "Inconsistent nv of boundary_u and mesh_edge." )
         call ut__assert( v_nu_ == this.v_nu,                    &
                          "__MODULE__(__LINE__): "               &
-                         // "Inconsistent nu of border_u and mesh_edge." )
+                         // "Inconsistent nu of boundary_u and mesh_edge." )
         call ut__assert( v_nv_ == this.v_nv,                    &
                          "__MODULE__(__LINE__): "               &
-                         // "Inconsistent nv of border_v and mesh_edge." )
-        this.is_border_u(:,:) = is_border_u(:,:)
-        this.is_border_v(:,:) = is_border_v(:,:)
+                         // "Inconsistent nv of boundary_v and mesh_edge." )
+        this.is_boundary_u(:,:) = is_boundary_u(:,:)
+        this.is_boundary_v(:,:) = is_boundary_v(:,:)
       else 
-        ! the case of usual (rectangular) border
-        this.is_border_u(:,        1) = .true. ! south bourder
-        this.is_border_u(:,this.u_nv) = .true. ! north bourder
-        this.is_border_v(        1,:) = .true. ! west bourder
-        this.is_border_v(this.v_nu,:) = .true. ! east bourder
+        ! the case of usual (rectangular) boundary
+        this.is_boundary_u(:,        1) = .true. ! south bourder
+        this.is_boundary_u(:,this.u_nv) = .true. ! north bourder
+        this.is_boundary_v(        1,:) = .true. ! west bourder
+        this.is_boundary_v(this.v_nu,:) = .true. ! east bourder
       end if
-    end subroutine iBorder_set
+    end subroutine iboundary_set
 
   end subroutine slice_mesh__edge_initialize
 
 
-  subroutine slice_mesh__edge_border_list_init( this, vert_border_num )
-    class(slice_mesh__edge_border_list_t) <out> :: this
-    integer <in> :: vert_border_num
+  subroutine slice_mesh__boundary_edge_init( this, vert_boundary_num )
+    class(slice_mesh__boundary_edge_t) <out> :: this
+    integer <in> :: vert_boundary_num
 
-    this.num = vert_border_num
+    this.num = vert_boundary_num
 
     allocate(    this.edge_type(this.num))
     allocate(           this.ei(this.num))
@@ -1106,7 +1117,7 @@ contains
     allocate(    this.b_quarter(this.num))
     allocate(this.u_cross_coord(this.num))
     allocate(this.v_cross_coord(this.num))
-  end subroutine slice_mesh__edge_border_list_init
+  end subroutine slice_mesh__boundary_edge_init
 
 
   subroutine set_uv_edge_quarter( vert,       &
@@ -1206,7 +1217,7 @@ contains
 
                 The path does not cross this edge.
                 But special care would be taken when
-                this edge is on the border (ej=1 or u_nv).
+                this edge is on the boundary (ej=1 or u_nv).
                           .
                           |    . 
                       ----P====P----.------ level
@@ -1290,13 +1301,13 @@ contains
 
     call set_uv_edge_quarter( vert, val_vert, level, edge )
     call set_uv_edge_cross_coord( vert, val_vert, level, edge )
-    call set_b_edge_quarter_and_cross_coord( vert, level, this.border_list )
+    call set_b_edge_quarter_and_cross_coord( vert, level, boundary.edge )
 
     call ut__assert( minval(this.u_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_u.quarter" )
     call ut__assert( minval(this.v_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_v.quarter" )
-    call ut__assert( minval(this.border_list.b_quarter) >= 0,  &
+    call ut__assert( minval(boundary.edge.b_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_b.quarter" )
 
   end subroutine slice_mesh__edge_set_quarter  

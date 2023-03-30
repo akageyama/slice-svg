@@ -23,6 +23,7 @@ module slice_m
   type, public :: slice__scalar_t
     type(slice_mesh__vert_t) :: mesh_vert
     type(slice_mesh__edge_t) :: mesh_edge
+    type(slice_mesh__boundary_t) :: mesh_boundary
     real, dimension(:,:), allocatable :: val_vert
     real :: val_vert_max, val_vert_min
   contains
@@ -149,15 +150,14 @@ contains
     real <in> :: v_min, v_max
     real, dimension(nu,nv) <optin> :: val
 
-    logical, dimension(nu-1,nv  ) :: is_border_edge_u
-    logical, dimension(nu,  nv-1) :: is_border_edge_v
-
     allocate(this.val_vert(nu,nv))
 
     call this.mesh_vert.initialize( nu, nv,        &
                                     u_min, u_max,  &
                                     v_min, v_max )
     call this.mesh_edge.initialize( this.mesh_vert )
+    call this.mesh_boundary.initialize( this.mesh_vert,  &
+                                        this.mesh_edge )
 
     if ( present(val) ) then
       this.val_vert(:,:) = val(:,:)
@@ -179,9 +179,6 @@ contains
     real, dimension(nv) <in> :: grid_pos_v
     real, dimension(nu,nv) <optin> :: val
 
-    logical, dimension(nu-1,nv  ) :: is_border_edge_u
-    logical, dimension(nu,  nv-1) :: is_border_edge_v
-
     allocate(this.val_vert(nu,nv))
 
     call ut__assert( size(grid_pos_u,dim=1) == nu .and. &
@@ -193,13 +190,6 @@ contains
                                     grid_pos_u, &
                                     grid_pos_v )
     call this.mesh_edge.initialize( this.mesh_vert )
-
-!!>
-    call iSet_test_border
-    call this.mesh_edge.initialize( this.mesh_vert,   &
-                                    is_border_edge_u, &
-                                    is_border_edge_v )
-!!<
 
     if ( present(val) ) then
       this.val_vert(:,:) = val(:,:)
