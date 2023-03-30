@@ -260,7 +260,7 @@ module slice_mesh_m
     real, dimension(:), allocatable :: u_cross_coord
     real, dimension(:), allocatable :: v_cross_coord
   contains
-    procedure :: initialize => slice_mesh__boundary_edge_init   
+    procedure :: initialize => slice_mesh__boundary_edge_initialize   
     procedure :: erase => slice_mesh__boundary_edge_erase
   end type slice_mesh__boundary_edge_t
 
@@ -276,19 +276,19 @@ module slice_mesh_m
 contains
 
 
-  subroutine slice_mesh__boundary_initialize( this )
+  subroutine slice_mesh__boundary_initialize( this, vert. edge )
     class(slice_mesh__boundary_t) <out> :: this
 
     call this.vert.initialize
     call this.edge.initialize
-    make
+    call this.make_list( vert, edge )
   end subroutine slice_mesh__boundary_initialize
 
 
   subroutine slice_mesh__boundary_edge_erase( this,        &
-                                                       which_edge,  &
-                                                       ei,          &
-                                                       ej )
+                                              which_edge,  &
+                                              ei,          &
+                                              ej )
     class(slice_mesh__boundary_vert_t) <io> :: this
     character <in> :: which_edge ! 'u' / 'v' / 'a' / 'd'
     integer <in> :: ei, ej
@@ -703,16 +703,16 @@ contains
   end subroutine set_b_edge_quarter_and_cross_coord
 
 
-  subroutine slice_mesh__boundary_make_list( vert, edge, boundary )
+  subroutine slice_mesh__boundary_make_list( this, vert, edge )
+    class(slice_mesh__boundary_t) <io> :: this
     type(slice_mesh__vert_t) <io> :: vert
     type(slice_mesh__edge_t) <io> :: edge
-    type(slice_mesh__boundary_t) <io> :: boundary
 
     integer :: vi, vj, start_vi, start_vj
     integer :: num_of_boundary_vert
     integer :: counter
 
-    num_of_boundary_vert = boundary.vert.num
+    num_of_boundary_vert = this.vert.num
 
     call iFind_a_boundary_vert_with_octa_direct( nu, nv,        &
                                                vert.flag,     &
@@ -721,15 +721,15 @@ contains
     start_vi = vi
     start_vj = vj
     counter = 1
-    boundary_vert.octa_direct(counter) = octa_direct
-    boundary_vert.vi(counter) = vi
-    boundary_vert.vj(counter) = vj
+    this.vert.octa_direct(counter) = octa_direct
+    this.vert.vi(counter) = vi
+    this.vert.vj(counter) = vj
 
     call get_edge_id( i, j, octa_direct, ei, ej, edge_type )
     
-    boundary.edge.ei(counter) = ei
-    boundary.edge.ej(counter) = ej
-    boundary.edge.edge_type(counter) = edge_type
+    this.edge.ei(counter) = ei
+    this.edge.ej(counter) = ej
+    this.edge.edge_type(counter) = edge_type
 
     do counter = 2, num_of_boundary_vert 
       call get_next_octa_direct_and_vert( nu, nv,           &
@@ -741,13 +741,13 @@ contains
         return
       end if
       counter += 1
-      boundary.edge.octa_direct(counter) = octa_direct
-      boundary.vert.vi(counter) = i
-      boundary.vert.vj(counter) = j
+      this.edge.octa_direct(counter) = octa_direct
+      this.vert.vi(counter) = i
+      this.vert.vj(counter) = j
       call get_edge_id( i, j, octa_direct, ei, ej, edge_type )
-      boundary.edge.ei(counter) = ei
-      boundary.edge.ej(counter) = ej
-      boundary.edge.edge_type(counter) = edge_type
+      this.edge.ei(counter) = ei
+      this.edge.ej(counter) = ej
+      this.edge.edge_type(counter) = edge_type
     end do
 
     call ut__fatal( "__MODULE__(__LINE__): Failed to close boundary." )
@@ -1105,7 +1105,7 @@ contains
   end subroutine slice_mesh__edge_initialize
 
 
-  subroutine slice_mesh__boundary_edge_init( this, vert_boundary_num )
+  subroutine slice_mesh__boundary_edge_initialize( this, vert_boundary_num )
     class(slice_mesh__boundary_edge_t) <out> :: this
     integer <in> :: vert_boundary_num
 
@@ -1117,7 +1117,7 @@ contains
     allocate(    this.b_quarter(this.num))
     allocate(this.u_cross_coord(this.num))
     allocate(this.v_cross_coord(this.num))
-  end subroutine slice_mesh__boundary_edge_init
+  end subroutine slice_mesh__boundary_edge_initialize
 
 
   subroutine set_uv_edge_quarter( vert,       &
@@ -1309,7 +1309,6 @@ contains
                      "__MODULE__(__LINE__): You missed some edge_v.quarter" )
     call ut__assert( minval(boundary.edge.b_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_b.quarter" )
-
   end subroutine slice_mesh__edge_set_quarter  
 
 
