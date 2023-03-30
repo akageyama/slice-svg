@@ -253,7 +253,7 @@ module slice_mesh_m
 
   type, public :: slice_mesh__boundary_edge_t
     integer :: num ! number of boundary edges
-    character, dimension(:), allocatable :: edge_type  ! 'u'/'v'/'a'/'d'
+    character, dimension(:), allocatable :: type  ! 'u'/'v'/'a'/'d'
     integer, dimension(:), allocatable :: ei  ! edge index
     integer, dimension(:), allocatable :: ej
     integer, dimension(:), allocatable :: b_quarter   ! {0,1,2,3}
@@ -705,8 +705,8 @@ contains
 
   subroutine slice_mesh__boundary_make_list( this, vert, edge )
     class(slice_mesh__boundary_t) <io> :: this
-    type(slice_mesh__vert_t) <io> :: vert
-    type(slice_mesh__edge_t) <io> :: edge
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <in> :: edge
 
     integer :: vi, vj, start_vi, start_vj
     integer :: num_of_boundary_vert
@@ -714,10 +714,10 @@ contains
 
     num_of_boundary_vert = this.vert.num
 
-    call iFind_a_boundary_vert_with_octa_direct( nu, nv,        &
-                                               vert.flag,     &
-                                               vi, vj,        &
-                                               octa_direct )
+    call iFind_a_boundary_vert_with_direct( nu, nv,        &
+                                            vert.flag,     &
+                                            vi, vj,        &
+                                            octa_direct )
     start_vi = vi
     start_vj = vj
     counter = 1
@@ -725,11 +725,11 @@ contains
     this.vert.vi(counter) = vi
     this.vert.vj(counter) = vj
 
-    call get_edge_id( i, j, octa_direct, ei, ej, edge_type )
+    call get_edge_id( vi, vj, octa_direct, ei, ej, edge_type )
     
     this.edge.ei(counter) = ei
     this.edge.ej(counter) = ej
-    this.edge.edge_type(counter) = edge_type
+    this.edge.type(counter) = edge_type
 
     do counter = 2, num_of_boundary_vert 
       call get_next_octa_direct_and_vert( nu, nv,           &
@@ -737,7 +737,7 @@ contains
                                           vert_flag(i,j),   &
                                           octa_direct )
       if ( i == head_i .and. j == head_j ) then
-        ! have come back to the start point
+        ! have returned back to the start vert
         return
       end if
       counter += 1
@@ -747,32 +747,33 @@ contains
       call get_edge_id( i, j, octa_direct, ei, ej, edge_type )
       this.edge.ei(counter) = ei
       this.edge.ej(counter) = ej
-      this.edge.edge_type(counter) = edge_type
+      this.edge.type(counter) = edge_type
     end do
 
     call ut__fatal( "__MODULE__(__LINE__): Failed to close boundary." )
   
   contains
 
-    subroutine iFind_a_boundary_vert_with_octa_direct( nu, nv,           &
-                                                     vert_flag,        &
-                                                     head_i, head_j,   &
-                                                     head_octa_direct )
+    subroutine iFind_a_boundary_vert_with_direct( nu, nv,           &
+                                                  vert_flag,        &
+                                                  start_i, start_j, &
+                                                  head_octa_direct )
       integer <in> :: nu, nv
       character, dimension(nu,nv) <in> :: vert_flag
-      integer <out> :: head_i, head_j
+      integer <out> :: start_i, start_j
       integer <out> :: head_octa_direct
 
       integer :: i, j
       character :: flag
+      integer :: octa_direct
 
       do j = 1, nv
         do i = 1, nu
           flag = vert_flag(i,j)
           octa_direct = flag_to_octa_direct( flag )
           if ( octa_direct > 0 ) then
-            head_i = i
-            head_j = j
+            start_i = i
+            start_j = j
             head_octa_direct = octa_direct
             return
           end if
@@ -780,8 +781,8 @@ contains
       end do
 
       call ut__fatal( "__MODULE__(__LINE__): " //  &
-                      "Failed to find a start point on boundary." )
-    end subroutine iFind_a_boundary_vert_with_octa_direct
+                      "Failed to find a start vert on the boundary." )
+    end subroutine iFind_a_boundary_vert_with_direct
 
   end subroutine slice_mesh__boundary_make_list
 
@@ -1050,55 +1051,16 @@ contains
     allocate(this.u_cross_coord(u_nu,u_nv))
     allocate(this.v_cross_coord(v_nu,v_nv))
 
-  contains
-
-    subroutine iboundary_set
-      integer :: u_nu_, u_nv_, v_nu_, v_nv_
-
-      this.is_boundary_u(:,:) = .false.  ! default bulk edges
-      this.is_boundary_v(:,:) = .false.
-
-      if ( present(is_boundary_v) ) then
-        call ut__assert( present(is_boundary_u),              &
-                         "__MODULE__(__LINE__): "           &
-                         // "Needs both boundary_u and _v." )
-        u_nu_ = size(is_boundary_u,dim=1)
-        u_nv_ = size(is_boundary_u,dim=2)
-        v_nu_ = size(is_boundary_v,dim=1)
-        v_nv_ = size(is_boundary_v,dim=2)
-        call ut__assert( u_nu_ == this.u_nu,                    &
-                         "__MODULE__(__LINE__): "               &
-                         // "Inconsistent nu of boundary_u and mesh_edge." )
-        call ut__assert( u_nv_ == this.u_nv,                    &
-                         "__MODULE__(__LINE__): "               &
-                         // "Inconsistent nv of boundary_u and mesh_edge." )
-        call ut__assert( v_nu_ == this.v_nu,                    &
-                         "__MODULE__(__LINE__): "               &
-                         // "Inconsistent nu of boundary_u and mesh_edge." )
-        call ut__assert( v_nv_ == this.v_nv,                    &
-                         "__MODULE__(__LINE__): "               &
-                         // "Inconsistent nv of boundary_v and mesh_edge." )
-        this.is_boundary_u(:,:) = is_boundary_u(:,:)
-        this.is_boundary_v(:,:) = is_boundary_v(:,:)
-      else 
-        ! the case of usual (rectangular) boundary
-        this.is_boundary_u(:,        1) = .true. ! south bourder
-        this.is_boundary_u(:,this.u_nv) = .true. ! north bourder
-        this.is_boundary_v(        1,:) = .true. ! west bourder
-        this.is_boundary_v(this.v_nu,:) = .true. ! east bourder
-      end if
-    end subroutine iboundary_set
-
   end subroutine slice_mesh__edge_initialize
 
 
-  subroutine slice_mesh__boundary_edge_initialize( this, vert_boundary_num )
+  subroutine slice_mesh__boundary_edge_initialize( this, num_boundary_vert )
     class(slice_mesh__boundary_edge_t) <out> :: this
-    integer <in> :: vert_boundary_num
+    integer <in> :: num_boundary_vert
 
-    this.num = vert_boundary_num
+    this.num = num_boundary_vert
 
-    allocate(    this.edge_type(this.num))
+    allocate(         this.type(this.num))
     allocate(           this.ei(this.num))
     allocate(           this.ej(this.num))
     allocate(    this.b_quarter(this.num))
