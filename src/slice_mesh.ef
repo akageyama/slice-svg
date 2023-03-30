@@ -188,6 +188,59 @@
         vert that is assigned the octa_direct integer or 'R/E/S/W'.
 !!<
 
+    !!>
+        注意。b_edge (boundary edge)における4値（quarter）の定義は
+        u_edge や v_edge と異なる。 たとえば u_edge の場合、
+            val(vi,vj) - level > 0 .and. val(vi+1,vj) - level < 0
+        のとき
+            quarter(ei,ej) = PM
+        としていた。vi=ei, vj=ej の場合、つまり現在注目している頂点 {i,j} が
+        このu_edgeの左端である場合は自分が M で右隣がPである。
+
+          自分 {i,j}    {i+1,j}
+              \         /
+              P - - - M
+        
+        だが、vi=ei+1, vj=ej つまりこのu_edgeの右端に注目している
+        頂点 {i,j} がある場合は、おなじ
+            quarter(ei,ej) = PM
+        の値は、自分 {i,j} が P で左隣の頂点が M である。
+
+          {i-1,j}     自分 {i,j}
+              \         /
+              P - - - M
+        つまりこの場合は "PM" を右から左に読む必要がある。
+
+        一方、b_edgeの場合は、u-, v-, a-, d-方向のいずれも常に左から右に読む。
+        たとえば、num番目の境界点の座標が (vi,vj)=(10,NV) だとすると、
+            u_quarter(10,NV) = MP
+        のとき
+            b_quarter(num) = PM
+        である。
+
+        d_edgeの場合も、
+
+                  + - - - - M
+                  |       d |
+                  |    d    |
+                  | d       |
+                  P - - - - +
+                    \
+                  自分 {i,j}
+
+        左斜め上に行く次のような場合も、
+
+                  M - - - - M
+                  | d       |
+                  |    d    |
+                  |       d |
+                  + - - - - P
+                              \
+                              自分 {i,j}
+        どちらも d_edge = PM とする。
+        
+    !!<
+
 module slice_mesh_m
   use const_base_m
   use ut_m
@@ -262,6 +315,7 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh__boundary_edge_initialize
     procedure :: erase => slice_mesh__boundary_edge_erase
+    procedure :: set_quarter => slice_mesh__boundary_edge_set_quarter
   end type slice_mesh__boundary_edge_t
 
   type, public :: slice_mesh__boundary_t
@@ -581,128 +635,6 @@ contains
   end function get_edge_id
 
 
-  subroutine set_b_edge_quarter_and_cross_coord( vert, level, boundary_edge )
-    type(slice_mesh__vert_t) <in> :: vert
-    real <in> :: level
-    type(slice_mesh__boundary_edge_t) <io> :: boundary_edge
-
-    !!>
-        注意。b_edge (boundary edge)における4値（quarter）の定義は
-        u_edge や v_edge と異なる。 たとえば u_edge の場合、
-            val(vi,vj) - level > 0 .and. val(vi+1,vj) - level < 0
-        のとき
-            quarter(ei,ej) = PM
-        としていた。vi=ei, vj=ej の場合、つまり現在注目している頂点 {i,j} が
-        このu_edgeの左端である場合は自分が M で右隣がPである。
-
-          自分 {i,j}    {i+1,j}
-              \         /
-              P - - - M
-        
-        だが、vi=ei+1, vj=ej つまりこのu_edgeの右端に注目している
-        頂点 {i,j} がある場合は、おなじ
-            quarter(ei,ej) = PM
-        の値は、自分 {i,j} が P で左隣の頂点が M である。
-
-          {i-1,j}     自分 {i,j}
-              \         /
-              P - - - M
-        つまりこの場合は "PM" を右から左に読む必要がある。
-
-        一方、b_edgeの場合は、u-, v-, a-, d-方向のいずれも常に左から右に読む。
-        たとえば、num番目の境界点の座標が (vi,vj)=(10,NV) だとすると、
-            u_quarter(10,NV) = MP
-        のとき
-            b_quarter(num) = PM
-        である。
-
-        d_edgeの場合も、
-
-                  + - - - - M
-                  |       d |
-                  |    d    |
-                  | d       |
-                  P - - - - +
-                    \
-                  自分 {i,j}
-
-        左斜め上に行く次のような場合も、
-
-                  M - - - - M
-                  | d       |
-                  |    d    |
-                  |       d |
-                  + - - - - P
-                              \
-                              自分 {i,j}
-        どちらも d_edge = PM とする。
-        
-    !!<
-    integer :: index_v, index_v2 ! verts index for both ends
-    integer :: index_e           ! edge index
-    integer :: vi, vj, ei, ej, vi2, vj2
-    real :: val1, u1, v1, diff1
-    real :: val2, u2, v2, diff2
-    integer :: quarter, vbnum
-    real :: interpol_u, interpol_v
-
-    boundary_edge.u_cross_coord(:) = NAN 
-    boundary_edge.v_cross_coord(:) = NAN
-      !!> 
-           To catch errornous cases in which a contour
-           path tries to cross a non PM or MP edge.
-      !!<
-    boundary_edge.b_quarter(:) = -999 ! Any negative (anormaly) number.
-
-    !!>
-               v1--[e2]--v2--[e3]--v3
-              /                    /
-            [e7]                 [e4]
-            /                    /
-           v6--[e6]--v5--[e5]--v4
-    !!<
-
-    vbnum = boundary_vert.num ! just to shorten
-    do index_v = 1, vbnum
-      vi = boundary_vert.vi(index_v)
-      vj = boundary_vert.vj(index_v)
-
-      val1 = val_vert(vi,vj)
-      u1 = vert.pos_u(vi)
-      v1 = vert.pos_v(vj)
-
-      index_v2 = index_v1 + 1
-      if ( index_v2 > vbnum ) index_v2 -= vbnum
-
-      vi2 = boundary_vert.vi(index_v2)
-      vj2 = boundary_vert.vj(index_v2)
-      val2 = val_vert(vi2,vj2)
-      u2 = vert.pos_u(vi2)
-      v2 = vert.pos_v(vj2)
-
-      quarter = quarter_of_edge_ends( val1, val2, level )
-
-      index_e = index_v
-      call ut__assert( index_e <= boundary_edge.num, &
-                       "__MODULE__(__LINE__): " //      &
-                       "index_e out of range." )
-
-      boundary_edge.b_quarter(index_e) = quarter
-
-      if ( quarter == SLICE_MESH__EDGE_MP  .or.  &
-           quarter == SLICE_MESH__EDGE_PM ) then
-        diff1 = val1 - level
-        diff2 = level - val2
-        interpol_u = linear_interpol( u1, u2, diff1, diff2 )
-        interpol_v = linear_interpol( v1, v2, diff1, diff2 )
-        boundary_edge.u_cross_coord(index_e) = interpol_u
-        boundary_edge.v_cross_coord(index_e) = interpol_v
-      end if        
-    end do    
-
-  end subroutine set_b_edge_quarter_and_cross_coord
-
-
   subroutine slice_mesh__boundary_make_list( this, vert, edge )
     class(slice_mesh__boundary_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: vert
@@ -724,34 +656,32 @@ contains
     this.vert.octa_direct(counter) = octa_direct
     this.vert.vi(counter) = vi
     this.vert.vj(counter) = vj
-
     call get_edge_id( vi, vj, octa_direct, ei, ej, edge_type )
-    
     this.edge.ei(counter) = ei
     this.edge.ej(counter) = ej
     this.edge.type(counter) = edge_type
 
     do counter = 2, num_of_boundary_vert 
       call get_next_octa_direct_and_vert( nu, nv,           &
-                                          i, j,             &
-                                          vert_flag(i,j),   &
+                                          vi, vj,           &
+                                          vert_flag(vi,vj)  &
                                           octa_direct )
-      if ( i == head_i .and. j == head_j ) then
+      if ( vi == head_i .and. vj == head_j ) then
         ! have returned back to the start vert
         return
       end if
       counter += 1
       this.vert.octa_direct(counter) = octa_direct
-      this.vert.vi(counter) = i
-      this.vert.vj(counter) = j
-      call get_edge_id( i, j, octa_direct, ei, ej, edge_type )
+      this.vert.vi(counter) = vi
+      this.vert.vj(counter) = vj
+      call get_edge_id( vi, vj, octa_direct, ei, ej, edge_type )
       this.edge.ei(counter) = ei
       this.edge.ej(counter) = ej
       this.edge.type(counter) = edge_type
     end do
 
     call ut__fatal( "__MODULE__(__LINE__): Failed to close boundary." )
-  
+
   contains
 
     subroutine iFind_a_boundary_vert_with_direct( nu, nv,           &
@@ -1250,15 +1180,91 @@ contains
 
     call set_uv_edge_quarter( vert, val_vert, level, edge )
     call set_uv_edge_cross_coord( vert, val_vert, level, edge )
-    call set_b_edge_quarter_and_cross_coord( vert, level, boundary.edge )
-
     call ut__assert( minval(this.u_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_u.quarter" )
     call ut__assert( minval(this.v_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_v.quarter" )
-    call ut__assert( minval(boundary.edge.b_quarter) >= 0,  &
-                     "__MODULE__(__LINE__): You missed some edge_b.quarter" )
   end subroutine slice_mesh__edge_set_quarter  
+
+
+  subroutine slice_mesh__boundary_edge_set_quarter( this,       &
+                                                    vert,       &
+                                                    val_vert,   &
+                                                    level )
+    class(slice_mesh__boundary_edge_t) <io> :: this
+    type(slice_mesh__vert_t) <in> :: vert
+    real, dimension(vert.nu,vert.nv) <in> :: val_vert
+    real <in> :: level
+
+Here
+
+    integer :: index_v, index_v2 ! verts index for both ends
+    integer :: index_e           ! edge index
+    integer :: vi, vj, ei, ej, vi2, vj2
+    real :: val1, u1, v1, diff1
+    real :: val2, u2, v2, diff2
+    integer :: quarter
+    real :: interpol_u, interpol_v
+
+    boundary_edge.u_cross_coord(:) = NAN 
+    boundary_edge.v_cross_coord(:) = NAN
+    edge.b_quarter(:) = -999  ! Any negative. Note that
+                                  ! all positive.
+      !!> 
+           To catch errornous cases in which a contour
+           path tries to cross a non PM or MP edge.
+      !!<
+    boundary_edge.b_quarter(:) = -999 ! Any negative (anormaly) number.
+
+    !!>
+               v1--[e2]--v2--[e3]--v3
+              /                    /
+            [e7]                 [e4]
+            /                    /
+           v6--[e6]--v5--[e5]--v4
+    !!<
+
+    do index_v = 1, this.num
+      vi = boundary_vert.vi(index_v)
+      vj = boundary_vert.vj(index_v)
+
+      val1 = val_vert(vi,vj)
+      u1 = vert.pos_u(vi)
+      v1 = vert.pos_v(vj)
+
+      index_v2 = index_v1 + 1
+      if ( index_v2 > this.num ) index_v2 -= this.num
+
+      vi2 = boundary_vert.vi(index_v2)
+      vj2 = boundary_vert.vj(index_v2)
+      val2 = val_vert(vi2,vj2)
+      u2 = vert.pos_u(vi2)
+      v2 = vert.pos_v(vj2)
+
+      quarter = quarter_of_edge_ends( val1, val2, level )
+
+      index_e = index_v
+      call ut__assert( index_e <= boundary_edge.num, &
+                       "__MODULE__(__LINE__): " //      &
+                       "index_e out of range." )
+
+      boundary_edge.b_quarter(index_e) = quarter
+
+      if ( quarter == SLICE_MESH__EDGE_MP  .or.  &
+           quarter == SLICE_MESH__EDGE_PM ) then
+        diff1 = val1 - level
+        diff2 = level - val2
+        interpol_u = linear_interpol( u1, u2, diff1, diff2 )
+        interpol_v = linear_interpol( v1, v2, diff1, diff2 )
+        boundary_edge.u_cross_coord(index_e) = interpol_u
+        boundary_edge.v_cross_coord(index_e) = interpol_v
+      end if        
+    end do    
+
+  end subroutine set_b_edge_quarter_and_cross_coord
+    call ut__assert( minval(this.b_quarter(:)) >= 0,  &
+                     "__MODULE__(__LINE__): You missed some edge_b.quarter" )
+  end subroutine slice_mesh__boundary_edge_set_quarter  
 
 
   subroutine set_uv_edge_cross_coord( vert, val_vert, level, edge )
