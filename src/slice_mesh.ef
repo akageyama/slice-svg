@@ -247,7 +247,7 @@ module slice_mesh_m
     integer, dimension(:), allocatable :: vi  ! vert
     integer, dimension(:), allocatable :: vj
   contains
-    procedure : initialize => slice_mesh__boundary_vert_init   
+    procedure : initialize => slice_mesh__boundary_vert_initialize
     procedure :: get_nth => slice_mesh__boundary_vert_get_nth
   end type slice_mesh__boundary_vert_t
 
@@ -260,7 +260,7 @@ module slice_mesh_m
     real, dimension(:), allocatable :: u_cross_coord
     real, dimension(:), allocatable :: v_cross_coord
   contains
-    procedure :: initialize => slice_mesh__boundary_edge_initialize   
+    procedure :: initialize => slice_mesh__boundary_edge_initialize
     procedure :: erase => slice_mesh__boundary_edge_erase
   end type slice_mesh__boundary_edge_t
 
@@ -279,8 +279,8 @@ contains
   subroutine slice_mesh__boundary_initialize( this, vert. edge )
     class(slice_mesh__boundary_t) <out> :: this
 
-    call this.vert.initialize
-    call this.edge.initialize
+    call this.vert.initialize( vert.nu, vert.nv, vert.flag )
+    call this.edge.initialize( this.vert.num )
     call this.make_list( vert, edge )
   end subroutine slice_mesh__boundary_initialize
 
@@ -338,7 +338,7 @@ contains
   end function slice_mesh__boundary_vert_get_nth
 
 
-  subroutine slice_mesh__boundary_vert_init( this, nu, nv, vert_flag )
+  subroutine slice_mesh__boundary_vert_initialize( this, nu, nv, vert_flag )
     class(slice_mesh__boundary_vert_t) <out> :: this
     integer <in> :: nu, nv
     character, dimension(nu,nv) <in> :: vert_flag
@@ -390,7 +390,7 @@ contains
       end do
     end subroutine iCount_boundary_vert
 
-  end subroutine slice_mesh__boundary_vert_init  
+  end subroutine slice_mesh__boundary_vert_initialize
 
 
   function flag_to_octa_direct( flag ) result(octa_direct)
@@ -859,19 +859,6 @@ contains
       call ut__fatal( '__MODULE__(__LINE__): argument error.' )
     end if
   end subroutine slice_mesh_edge__erase_uv_edge
-
-
-  subroutine slice_mesh_edge__erase_d_edge( this, vert, nth )
-    class(slice_mesh__edge_t) <io> :: this
-    type(slice_mesh__vert_t) <in> :: vert
-    integer <in> :: nth
-
-    call ut__assert( nth >= 1 .and.                     &
-                     nth <= vert.dboundary_list.num,  &
-                     "__MODULE__(__LINE__): " //        &
-                     "over the range." )
-    this.d_quarter(nth) = SLICE_MESH__EDGE_MM
-  end subroutine slice_mesh_edge__erase_d_edge
 
 
   subroutine slice_mesh__vert_initialize_with_grids( this,          &
