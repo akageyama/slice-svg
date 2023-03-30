@@ -579,7 +579,7 @@ contains
         のとき
             quarter(ei,ej) = PM
         としていた。vi=ei, vj=ej の場合、つまり現在注目している頂点 {i,j} が
-        このu_edgeの左端である場合は特に問題ない。自分が M で右隣がPである。
+        このu_edgeの左端である場合は自分が M で右隣がPである。
 
           自分 {i,j}    {i+1,j}
               \         /
@@ -593,7 +593,7 @@ contains
           {i-1,j}     自分 {i,j}
               \         /
               P - - - M
-        つまりこの場合は PM を右から左に読む必要がある。
+        つまりこの場合は "PM" を右から左に読む必要がある。
 
         一方、b_edgeの場合は、u-, v-, a-, d-方向のいずれも常に左から右に読む。
         たとえば、num番目の境界点の座標が (vi,vj)=(10,NV) だとすると、
@@ -624,16 +624,20 @@ contains
         どちらも d_edge = PM とする。
         
     !!<
-    integer :: index_v, index_v2
-    integer :: index_e
+    integer :: index_v, index_v2 ! verts index for both ends
+    integer :: index_e           ! edge index
     integer :: vi, vj, ei, ej, vi2, vj2
     real :: val1, u1, v1, diff1
     real :: val2, u2, v2, diff2
     integer :: quarter, vbnum
     real :: interpol_u, interpol_v
 
-    edge_border_list.u_cross_coord(:) = NAN  ! To help finding errors.
+    edge_border_list.u_cross_coord(:) = NAN 
     edge_border_list.v_cross_coord(:) = NAN
+      !!> 
+           To catch errornous cases in which a contour
+           path tries to cross a non PM or MP edge.
+      !!<
     edge_border_list.b_quarter(:) = -999 ! Any negative (anormaly) number.
 
     !!>
@@ -664,9 +668,9 @@ contains
 
       quarter = quarter_of_edge_ends( val1, val2, level )
 
-      index_e = index_v + 1
-      call ut__assert( index_e >= 2 .and. index_e <= vbnum+1,  &
-                       "__MODULE__(__LINE__): "                &
+      index_e = index_v
+      call ut__assert( index_e <= edge_border_list.num, &
+                       "__MODULE__(__LINE__): " //      &
                        "index_e out of range." )
       edge_border_list.b_quarter(index_e) = quarter
 
@@ -1120,7 +1124,7 @@ contains
                   val_vert(i,j)
 
         with "level" of the target contour. The comparison
-        is applied through edges. 
+        is applied on every edge. 
 
         There are two kinds of edges, vertical edges (edgve_v)
         and horizontal edges (edge_u).
@@ -1235,24 +1239,36 @@ contains
     !!<
 
     integer :: ei, ej  ! edge indexes.
-    real :: val1, val2
-
+    real :: val_left, val_right
+    real :: val_lower, val_upper
+    integer :: vi, vi_left, vi_right
+    integer :: vj, vj_lower, vj_upper
 
     ! edge_u
     do ej = 1, edge.u_nv  
       do ei = 1, edge.u_nu
-        val1 = val_vert(ei,  ej)  ! left vert
-        val2 = val_vert(ei+1,ej)  ! right vert
-        edge.u_quarter(ei,ej) = quarter_of_edge_ends( val1, val2, level )
+        vi_left  = ei
+        vi_right = ei + 1
+        vj = ej
+        val_left  = val_vert(vi_left,  vj)  ! left vert
+        val_right = val_vert(vi_right, vj)  ! right vert
+        edge.u_quarter(ei,ej) = quarter_of_edge_ends( val_left,   &
+                                                      val_right,  &
+                                                      level )
       end do
     end do
 
     ! edge_v
     do ej = 1, edge.v_nv  
       do ei = 1, edge.v_nu
-        val1 = val_vert(ei,ej  )  ! lower vert
-        val2 = val_vert(ei,ej+1)  ! upper vert
-        edge.u_quarter(ei,ej) = quarter_of_edge_ends( val1, val2, level )
+        vi = ei
+        vj_lower = ej
+        vj_upper = ej + 1
+        val_lower = val_vert(vi,vj_lower)  ! lower vert
+        val_upper = val_vert(vi,vj_upper)  ! upper vert
+        edge.u_quarter(ei,ej) = quarter_of_edge_ends( val_lower,  &
+                                                      val_upper,  &
+                                                      level )
       end do
     end do    
 
@@ -1268,10 +1284,9 @@ contains
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
 
-    this.u_quarter(:,:) = -999  ! Any negative. Used later to
-    this.v_quarter(:,:) = -999  ! check if all edges are set,
-                                ! using ...QUATER_MM, MP, PM, 
-                                ! PP are all non-negative.
+    this.u_quarter(:,:) = -999  ! Any negative. Note that
+    this.v_quarter(:,:) = -999  ! QUATER_MM, MP, PM, PP are
+                                ! all positive.
 
     call set_uv_edge_quarter( vert, val_vert, level, edge )
     call set_uv_edge_cross_coord( vert, val_vert, level, edge )
@@ -1302,24 +1317,43 @@ contains
                   |     .         .     |  
                   u=ui                  u=ui
     !!<
-    real :: u1, u2, diff1, diff2
+    real :: u_left, u_right
+    real :: v_lower, v_upper
+    real :: diff_left, diff_right
+    real :: diff_lower, diff_upper
     integer :: ei, ej, quarter
+    integer :: vi, vi_left,  vi_right
+    integer :: vj, vj_lower, vj_upper
 
-    edge.u_cross_coord(:,:) = NAN ! To find errors.
-    edge.v_cross_coord(:,:) = NAN
+
+    edge.u_cross_coord(:,:) = NAN 
+    edge.v_cross_coord(:,:) = NAN 
+      !!> 
+           To catch errornous cases in which a contour
+           path tries to cross a non PM or MP edge.
+      !!<
 
     ! edge_u
     do ej = 1, edge.u_nv
       do ei = 1, edge.u_nu
+        vi_left  = ei
+        vi_right = ei + 1
+        vj = ej
         quarter = edge.u_quarter(ei,ej)
         if ( quarter == SLICE_MESH__EDGE_MP .or.  &
              quarter == SLICE_MESH__EDGE_PM ) then
-          u1 = vert.pos_u(ei)   ! left vert
-          u2 = vert.pos_u(ei+1) ! right vert
-          diff1 = val_vert(ei,ej) - level
-          diff2 = level - val_vert(ei+1,ej)
-          edge.u_cross_coord(ei,ej) = linear_interpol( u1, u2, diff1, diff2 )
-            ! For both MP and PM cases.
+          u_left  = vert.pos_u(vi_left)   ! left vert
+          u_right = vert.pos_u(vi_right)  ! right vert
+          diff_left  = val_vert(vi_left,vj) - level
+          diff_right = level - val_vert(vi_right,vj)
+          call ut__assert( diff_left * diff_right >= 0.0,   &
+                           "__MODULE__(__LINE__): Not a PM/MP edge?" )
+          ! The following linter interpol is valid both
+          ! for diff_left > 0 and < 0 cases.
+          edge.u_cross_coord(ei,ej) = linear_interpol( u_left,     &
+                                                       u_right     &
+                                                       diff_left,  &
+                                                       diff_right )
         end if
       end do
     end do
@@ -1327,14 +1361,22 @@ contains
     ! edge_v
     do ej = 1, this.v_nv
       do ei = 1, this.v_nu
+        vi = ei
+        vj_lower = ej
+        vj_upper = ej + 1
         quarter = this.v_quarter(ei,ej)
         if ( quarter == SLICE_MESH__EDGE_MP  .or.  &
              quarter == SLICE_MESH__EDGE_PM ) then
-          v1 = mesh_vert.pos_v(ej)    ! lower vert
-          v2 = mesh_vert.pos_v(ej+1)  ! upper vert
-          diff1 = val_vert(ei,ej) - level
-          diff2 = level - val_vert(ei,ej+1)
-          this.v_cross_coord(ei,ej) = linear_interpol( v1, v2, diff1, diff2 )
+          v_lower = mesh_vert.pos_v(vj_lower)  ! lower vert
+          v_upper = mesh_vert.pos_v(vj_upper)  ! upper vert
+          diff_lower = val_vert(vi,vj_lower) - level
+          diff_upper = level - val_vert(vi,vj_upper)
+          call ut__assert( diff_lower * diff_upper >= 0.0,   &
+                           "__MODULE__(__LINE__): Not a PM/MP edge?" )
+          this.v_cross_coord(ei,ej) = linear_interpol( v_lower,    &
+                                                       v_upper,    &
+                                                       diff_lower, &
+                                                       diff_upper )
         end if
       end do
     end do    

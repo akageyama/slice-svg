@@ -891,7 +891,7 @@ contains
     integer :: max_path_element_num
 
     max_path_element_num = vert_nu * vert_nv
-      ! this is the maximum case (like Peano curve)
+      ! extreme case like a Peano curve
 
     allocate(this.list_u(max_path_element_num))
     allocate(this.list_v(max_path_element_num))
