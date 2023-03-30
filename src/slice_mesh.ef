@@ -241,6 +241,7 @@ module slice_mesh_m
 
 
   type, public :: slice_mesh__edge_border_list_t
+    integer :: num ! number of border edges
     character, dimension(:), allocatable :: edge_type  ! 'u'/'v'/'a'/'d'
     integer, dimension(:), allocatable :: ei  ! edge index
     integer, dimension(:), allocatable :: ej
@@ -268,6 +269,28 @@ module slice_mesh_m
 
 
 contains
+
+
+  subroutine slice_mesh_edge__erase_border_list_erase( this,        &
+                                                       which_edge,  &
+                                                       ei,          &
+                                                       ej )
+    class(slice_mesh__vert_border_list_t) <io> :: this
+    character <in> :: which_edge ! 'u' / 'v' / 'a' / 'd'
+    integer <in> :: ei, ej
+
+    integer :: n, i, j
+
+    do n = 1, this.num
+      i = this.ei(n)
+      j = this.ej(n)
+      if ( i == ei .and. j == ej ) then
+        this.b_quarter(n) = SLICE_MESH__EDGE_MM
+        return
+      end if
+    end do
+
+  end subroutine slice_mesh_edge__erase_border_list_erase
 
   function slice_mesh__vert_is_border( this, vi, vj ) result(ans)
     class(slice_mesh__vert_t) <in> :: this
@@ -1071,16 +1094,14 @@ contains
     class(slice_mesh__edge_border_list_t) <out> :: this
     integer <in> :: vert_border_num
 
-    integer :: vbnum
+    this.num = vert_border_num
 
-    vbnum = vert_border_num ! Just to shorten
-
-    allocate(    this.edge_type(vbnum))
-    allocate(           this.ei(vbnum))
-    allocate(           this.ej(vbnum))
-    allocate(    this.b_quarter(vbnum))
-    allocate(this.u_cross_coord(vbnum))
-    allocate(this.v_cross_coord(vbnum))
+    allocate(    this.edge_type(this.num))
+    allocate(           this.ei(this.num))
+    allocate(           this.ej(this.num))
+    allocate(    this.b_quarter(this.num))
+    allocate(this.u_cross_coord(this.num))
+    allocate(this.v_cross_coord(this.num))
   end subroutine slice_mesh__edge_border_list_init
 
 

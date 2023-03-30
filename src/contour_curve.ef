@@ -268,7 +268,7 @@ contains
               |
             edge_u
     !!<
-    integer :: vi_left, vi_right, vj
+    integer :: vi_left, vj
     real :: u, v
     character :: flag_left
     integer :: octa_direct_along_border
@@ -276,7 +276,6 @@ contains
     if ( jumped ) return  ! you have already jumped for this cell.
 
     vi_left  = ei
-    vi_right = ei + 1
     vj = ej
 
     if ( edge.u_quarter(ei,ej) == SLICE_MESH__EDGE_PM ) then
@@ -290,18 +289,19 @@ contains
         call ut__fatal( "__MODULE__(__LINE__): " //  &
                         "Go out of the border?" )
       else if ( flag_left == 'i' ) then
-        !     . *     .
-        !     .  *    .
+        !     . n     .     
+        !     .  n    .       n: next path
         ! - - P - * - M - -
-        !     .   *   .
+        !     .    *  .
+        !     .     * .
         call path.replace_head_edge( 'u', 'in', ei, ej, 'N' ) 
         call edge.erase( 'u', ei, ej )
       else ! vert_left on the border.
         octa_direct_along_border = flag_to_octa_direct( flag_left )
-        !
-        ! - - P**** - M <== border 
-        !     .    *  .
-        !     .     * .
+        !            
+        !    n  n  P * - - M - - 
+        !          .   *   .
+        !          .     * .
         call path.replace_head_edge( vi_left,                  &
                                      vj,                       &
                                      octa_direct_along_border, &
@@ -320,89 +320,174 @@ contains
     logical <io> :: jumped
     integer <in> :: ei, ej
 
+    integer :: vi_right, vj
     real :: u, v
-    integer :: vi_left, vi_right, v0
+    character :: flag_right
+    integer :: octa_direct_along_border
 
     if ( jumped ) return  ! you have already jumped for this cell.
+
+    vi_right = ei + 1
+    vj = ej
 
     if ( edge.u_quarter(ei,ej) == SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = edge.u_cross_coord(ei,ej)
       v = vert.pos_v(vj)
+      call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       path.register_new_vert( u, v )
-      if ( here 
-      if ( ej0 == 1 ) then !         *       .  __ new head.
-        vi0 = ei0 + 1      !           *     . /
-        vj0 = ej0          !     - - m - * * p - - 
-        path.head = contour_curve__element_t( 'u', 'on', vi0, vj0, 'E' )
-      else
-        path.head = contour_curve__element_t( 'u', 'in', ei0, ej0, 'S' )
-      end if    
-      call edge.erase( 'u', ei0, ej0 ) 
+      flag_right = vert.flag(vi_right,vj)
+      if ( flag__right == 'o' ) then
+        call ut__fatal( "__MODULE__(__LINE__): " //  &
+                        "Go out of the border?" )
+      else if ( flag_right == 'i' ) then
+        !     . *     .
+        !     .  *    .
+        ! - - M - * - P - -
+        !     .     n .   n: next path
+        !     .       n
+        call path.replace_head_edge( 'u', 'in', ei, ej, 'S' ) 
+        call edge.erase( 'u', ei, ej )
+      else ! vert_right on the border.
+        octa_direct_along_border = flag_to_octa_direct( flag_right )
+        !
+        !        . *     .
+        !        .  *    .
+        !    - - M - * * P n n n
+        !
+        call path.replace_head_edge( vi_right,                 &
+                                     vj,                       &
+                                     octa_direct_along_border, &
+                                     'on' )
+        call edge.erase( 'u', ei, ej ) 
+      end if   
     end if
   end subroutine jump_to_u_edge_mp_if_possible  
 
 
   subroutine jump_to_v_edge_pm_if_possible( path, vert, edge, jumped,  &
-                                            ei0, ej0 )
+                                            ei, ej )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
-    integer <in> :: ei0, ej0
+    integer <in> :: ei, ej
 
-    integer :: vi0, vj0
+    integer :: vi, vj_lower
     real :: u, v
+    character :: flag_lower
+    integer :: octa_direct_along_border
+
     if ( jumped ) return  ! you have already jumped for this cell.
 
-    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_PM ) then
+    vi = ei
+    vj_lower = ej
+
+    if ( edge.v_quarter(ei,ej) == SLICE_MESH__EDGE_PM ) then
       jumped = .true.
-      u = vert.pos_u(ei0)
-      v = edge.v_cross_coord(ei0,ej0)
+      u = vert.pos_u(vi)
+      v = edge.v_cross_coord(ei,ej)
       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-      path.register_new_vert( u, v ) !              .     * .
-                                     !              m - * - p - 
-      if ( ei0 == 1 ) then           !              . *     .
-        vi0 = ei0                    !              *       .
-        vj0 = ej0                    ! new head --> p - - - p - 
-        path.head = contour_curve__element_t( 'v', 'on', vi0, vj0, 'S' )
-      else
-        path.head = contour_curve__element_t( 'v', 'in', ei0, ej0, 'W' )
-      end if
-      call edge.erase( 'v', ei0, ej0 ) 
+      path.register_new_vert( u, v )
+      flag_lower = vert.flag(vi,vj_lower)
+
+      if ( flag__lower == 'o' ) then
+        call ut__fatal( "__MODULE__(__LINE__): " //  &
+                        "Go out of the border?" )
+      else if ( flag_lower == 'i' ) then
+        !             
+        !      .   *   .
+        !  - - M - * - + - -
+        !      . *     .
+        !      *       .
+        !    n .       .
+        !  n - P - - - + - -
+        !      .       .
+        call path.replace_head_edge( 'v', 'in', ei, ej, 'W' ) 
+        call edge.erase( 'v', ei, ej )
+      else ! vert_lower on the border.
+        octa_direct_along_border = flag_to_octa_direct( flag_lower )
+        !             
+        !      .   *   .
+        !      M - * - + - -
+        !      . *     .
+        !      *       .
+        !      n       .
+        !      P - - - + - -
+        !      n       .
+        !      n       .
+        !
+        call path.replace_head_edge( vi,                       &
+                                     vj_lower,                 &
+                                     octa_direct_along_border, &
+                                     'on' )
+        call edge.erase( 'v', ei, ej ) 
+      end if   
     end if
   end subroutine jump_to_v_edge_pm_if_possible   
 
 
-  subroutine jump_to_v_edge_mp_if_possible( path, vert, edge, jumped, ei0, ej0 )
+  subroutine jump_to_v_edge_mp_if_possible( path, vert, edge, jumped,  &
+                                            ei, ej )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
-    integer <in> :: ei0, ej0
+    integer <in> :: ei, ej
 
-    integer :: vi0, vj0
+    integer :: vi, vj_upper
     real :: u, v
+    character :: flag_upper
+    integer :: octa_direct_along_border
+
     if ( jumped ) return  ! you have already jumped for this cell.
 
-    if ( edge.v_quarter(ei0,ej0) == SLICE_MESH__EDGE_MP ) then
-      jumped = .true.
-      u = vert.pos_u(ei0)
-      v = edge.v_cross_coord(ei0,ej0)
-      call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-      path.register_new_vert( u, v )  !       .       .
-                                      !       p - - - p <== new head
-      if ( ei0 == edge.v_nu ) then    !       .       * 
-        vi0 = ei0                     !       .     * .
-        vj0 = ej0 + 1                 !       p - * - m
-        path.head = contour_curve__element_t( 'v', 'on', vi0, vj0, 'N' )
-      else
-        path.head = contour_curve__element_t( 'v', 'in', ei0, ej0, 'E' )
-      end if
-      call edge.erase( 'v', ei0, ej0 ) 
-    end if
-  end subroutine jump_to_v_edge_mp_if_possible 
+    vi = ei
+    vj_upper = ej + 1
 
+    if ( edge.v_quarter(ei,ej) == SLICE_MESH__EDGE_MP ) then
+      jumped = .true.
+      u = vert.pos_u(vi)
+      v = edge.v_cross_coord(ei,ej)
+      call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+      path.register_new_vert( u, v ) 
+      flag_upper = vert.flag(vi,vj_upper)
+
+      if ( flag__upper == 'o' ) then
+        call ut__fatal( "__MODULE__(__LINE__): " //  &
+                        "Go out of the border?" )
+      else if ( flag_upper == 'i' ) then
+        !             
+        !   .       .     n 
+        !   + - - - P - n -
+        !   .       . n     
+        !   .       *       
+        !   .     * .       
+        !   + - * - M - - -
+        !   .  *    .       
+        call path.replace_head_edge( 'v', 'in', ei, ej, 'E' ) 
+        call edge.erase( 'v', ei, ej )
+      else ! vert_upper on the border.
+        octa_direct_along_border = flag_to_octa_direct( flag_upper )
+        !             
+        !   .       n 
+        !   .       n 
+        !   + - - - P 
+        !   .       n
+        !   .       *       
+        !   .     * .       
+        !   + - * - M
+        !   .  *    .       
+        !
+        call path.replace_head_edge( vi,                       &
+                                     vj_upper,                 &
+                                     octa_direct_along_border, &
+                                     'on' )
+        call edge.erase( 'v', ei, ej ) 
+      end if   
+    end if
+      
+  end subroutine jump_to_v_edge_mp_if_possible 
 
 
   subroutine go_along_border( path, vert, edge, nth )
@@ -517,7 +602,7 @@ contains
     ei = path.head.i
     ej = path.head.j
 
-    select case (path.head.octa_direct)
+    select case (path.head.path_go_toward)
       !!>
                         edge.u(i,j+1)
                             .
@@ -535,7 +620,7 @@ contains
                             .
                         edge.u(i,j)
       !!<
-      case (0)
+      case ('N')
         call ut__assert( path.head.which_edge == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
         call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
@@ -566,7 +651,7 @@ contains
                               p - * m
                                 From 
                          !!<
-      case (6)
+      case ('W')
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
@@ -595,7 +680,7 @@ contains
                               m -*- p
                                 To
                          !!<
-      case (4)
+      case ('S')
         call ut__assert( path.head.which_edge == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
         call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
@@ -626,7 +711,7 @@ contains
                               |    *|To
                               m - - m
                          !!<
-      case (2)
+      case ('E')
 
         call ut__assert( path.head.which_edge == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
@@ -676,8 +761,6 @@ contains
     integer :: ei, ej
     logical :: jumped
 
-    call ut__assert( mod(path.head.octa_direct,2)==1,  &
-                     "__MODULE__(__LINE__): head.octa_direct must be 1/3/5/7." )
     call ut__assert( path.head.cruising_lane == 'in',  &
                      "__MODULE__(__LINE__): The path should be in the region." )
 
@@ -691,7 +774,7 @@ contains
         if ( path.head.path_go_toward == 'N' ) then
           !!>                     
                vertex(i,j+1)=> P - * - M
-                               |   * / |
+                               |   * . |
                                |   *   |
                                | *     |
                 vertex(i,j) => P - - - + 
@@ -700,7 +783,7 @@ contains
                                               jumped, ei, ej+1 )
           !!>
                vertex(i,j+1)=> M - - - M
-                               |     / |
+                               |     . |
                                * * *   |
                                | *     |
                 vertex(i,j) => P - - - + 
@@ -712,7 +795,7 @@ contains
                vertex(i,j+1)=> + - - - P
                                |     * |
                                |   *   |
-                               | / *   |
+                               | . *   |
                 vertex(i,j) => M - * - P 
           !!<
           call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
@@ -721,7 +804,7 @@ contains
                vertex(i,j+1)=> M - - - P
                                |     * |
                                |   * * *
-                               | /     |
+                               | .     |
                 vertex(i,j) => M - - - M 
           !!<
           call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
@@ -731,42 +814,42 @@ contains
         end if
       case ('d')
         if ( path.head.path_go_toward == 'N' ) then
-          !!>                     
-               vertex(i,j+1)=> P - - * M
-                               | *  *  |
-                               |   *   |
-                               |     \ |
-                vertex(i,j) => + - - - M 
-          !!<
-          call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
-                                              jumped, ei, ej+1 )
           !!>
                vertex(i,j+1)=> P - - - P
                                | *     |
                                |   * * *
-                               |     \ |
+                               |     . |
                 vertex(i,j) => + - - - M 
           !!<
           call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei+1, ej )
-        else if ( path.head.path_go_toward == 'S' ) then
           !!>                     
-               vertex(i,j+1)=> M - - - +
-                               | \     |
+               vertex(i,j+1)=> P - - * M
+                               | *  *  |
                                |   *   |
-                               |  *  * |
-                vertex(i,j) => M * - - P 
+                               |     . |
+                vertex(i,j) => + - - - M 
           !!<
-          call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
-                                              jumped, ei, ej )
+          call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
+                                              jumped, ei, ej+1 )
+        else if ( path.head.path_go_toward == 'S' ) then
           !!> 
                vertex(i,j+1)=> M - - - +
-                               | \     |
+                               | .     |
                                * * *   |
                                |     * |
                 vertex(i,j) => P - - - P 
           !!<
           call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
+                                              jumped, ei, ej )
+          !!>                     
+               vertex(i,j+1)=> M - - - +
+                               | .     |
+                               |   *   |
+                               |  *  * |
+                vertex(i,j) => M * - - P 
+          !!<
+          call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei, ej )
         else 
           call ut__fatal( "__MODULE__(__LINE__): arg error." )
@@ -1022,18 +1105,27 @@ contains
           end if
           call go_along_border( path, vert, edge, nthbv )
         case ('in')
-          if ( mod(path.head.octa_direct,2)==0 ) then
+          if ( path.head.which_edge == 'u' .or.  &
+               path.head.which_edge == 'v'  ) then
             call jump_to_other_edge_from_edge_uv( path, vert, edge )
           else
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
+          end if
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
       cruising_lane_prev = path.head.cruising_lane
       if ( path.is_closed() ) then
-        call edge.erase( path.start.which_edge,  &
-                         path.start.i,           &
-                         path.start.j )
+        select case (path.start.cruising_lane)
+          case ('in')
+            call edge.erase( path.start.which_edge,  &
+                             path.start.i,           &
+                             path.start.j )
+          case ('on')
+            call mesh.border_list.erase( path.start.which_edge,  &
+                                         path.start.i,           &
+                                         path.start.j )
+        end select
         return
       end if
     end do
