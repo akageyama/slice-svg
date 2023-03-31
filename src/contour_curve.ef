@@ -522,7 +522,7 @@ contains
                      vert.border_list.vj(nth) == vj,        &
                      "__MODULE__(__LINE__): border vert inconsistent." )
 
-    quarter = edge.border_list.b_quarter(nth)
+    quarter = edge.border_list.quarter(nth)
 
     
     if ( quarter == SLICE_MESH__EDGE_PP ) then
@@ -957,7 +957,7 @@ contains
 
     bvnum = vert.border_list_num
     do v = 1, bvnum
-      quarter = edge.border_list.b_quarter(v)
+      quarter = edge.border_list.quarter(v)
       if ( quarter == SLICE_MESH__EDGE_PP  .or.  &
            quarter == SLICE_MESH__EDGE_PM ) then
         status = 'have found'
