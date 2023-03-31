@@ -1194,16 +1194,14 @@ contains
       end select
       cruising_lane_prev = path.head.cruising_lane
       if ( path.is_closed() ) then
-        select case (path.start.cruising_lane)
-          case ('in')
-            call edge.erase( path.start.which_edge,  &
-                             path.start.i,           &
-                             path.start.j )
-          case ('on')
-            call mesh.border_list.erase( path.start.which_edge,  &
-                                         path.start.i,           &
-                                         path.start.j )
-        end select
+        ! select case (path.start.cruising_lane)
+        !   case ('in')
+        !     call edge.erase( path.start.which_edge,  &
+        !                      path.start.i,           &
+        !                      path.start.j )
+        !   case ('on')
+        !     call boundary.edge.erase( 1 )
+        ! end select
         return
       end if
     end do
