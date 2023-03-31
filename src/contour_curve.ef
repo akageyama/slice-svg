@@ -488,9 +488,69 @@ contains
     end if
       
   end subroutine jump_to_v_edge_mp_if_possible 
+ 
+
+  subroutine leave_from_boundary( vi, vj,        &
+                                  octa_direct,   &
+                                  ei, ej,        &
+                                  which_edge,    &
+                                  path_go_toward )
+    integer <in> :: vi, vj
+    integer <in> :: octa_direct
+    integer <out> :: ei, ej
+    character <out> :: which_edge
+    character <out> :: path_go_toward
+
+    select case (octa_direct)
+      case (0)
+        which_edge = 'v'
+        path_go_toward = 'W'
+        ei = vi
+        ej = vj
+      case (1) 
+        which_edge = 'a'
+        path_go_toward = 'N'
+        ei = vi
+        ej = vj
+      case (2)
+        which_edge = 'u'
+        path_go_toward = 'N'
+        ei = vi
+        ej = vj
+      case (3) 
+        which_edge = 'd'
+        path_go_toward = 'N'
+        ei = vi
+        ej = vj - 1
+      case (4)
+        which_edge = 'v'
+        path_go_toward = 'E'
+        ei = vi
+        ej = vj - 1
+      case (5) 
+        which_edge = 'a'
+        path_go_toward = 'S'
+        ei = vi - 1
+        ej = vj - 1
+      case (6)
+        which_edge = 'u'
+        path_go_toward = 'S'
+        ei = vi - 1
+        ej = vj
+      case (7) 
+        which_edge = 'd'
+        path_go_toward = 'S'
+        ei = vi - 1
+        ej = vj
+      case default
+        call ut__fatal( "__MODULE__(__LINE__) " //  &
+                        "case error." )
+    end select
+    
+  end subroutine leave_from_boundary
 
 
-  subroutine go_along_border( path, vert, boundary, nth )
+  subroutine one_step_along_boundary( path, vert, boundary, nth )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__boundary_t) <io> :: boundary
@@ -499,9 +559,10 @@ contains
     real :: u, v       ! coordinates of path tip that is to be registered.
     integer :: vi, vj  ! vertex indeces i and j
     integer :: vi2, vj2, nth_next
-    logical :: jumped
+    integer :: ei, ej  ! edge indeces i and j
     integer :: numbv, quarter, octa_direct2
     real :: u2 v2
+    char(len=1) :: which_edge
     char(len=2) :: cruising_lane
 
     call ut__assert( path.head.cruising_lane == 'on',  &
@@ -523,7 +584,6 @@ contains
                      "__MODULE__(__LINE__): border vert inconsistent." )
 
     quarter = bondary.edge.quarter(nth)
-
     
     if ( quarter == SLICE_MESH__EDGE_PP ) then
       !!>
@@ -541,12 +601,17 @@ contains
              - - p <== previous (vi,vj)
                  .            
       !!<      
-      jumped = .true.
       nth_next = nth + 1
       if ( nth_next > numbv ) nth_next -= numbv ! cyclic.
       u2 = vert.pos_u(boundary.vert.vi(nth_next))
       v2 = vert.pos_v(boundary.vert.vj(nth_next))
-      cruising_lane = 'in'
+
+      path.register_new_vert( u2, v2 )
+      call boundary.edge.erase( nth )
+      octa_direct = boundary.vert.octa_direct(nth_next)
+      cruising_lane = 'on'
+      call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
+      nth = nth_next
     else if ( quarter == SLICE_MESH__EDGE_PM ) then
       !!>
                  .
@@ -562,22 +627,30 @@ contains
              - - p <== previous (vi,vj)
                  .            
       !!<
-      jumped = .true.
       u2 = boundary.edge.u_cross_coord(nth)
       v2 = boundary.edge.v_cross_coord(nth)
       call ut__assert( u2 /= NAN .and. v2 /= NAN,   &
                        "__MODULE__(__LINE__): Invalid cross coord." )
+
+      path.register_new_vert( u2, v2 )
+      call boundary.edge.erase( nth )
+      octa_direct = boundary.vert.octa_direct(nth)
+      call leave_from_boundary( vi, vj,         &
+                                octa_direct,    &
+                                ei, ej,         &
+                                which_edge,     &
+                                path_go_toward )
       cruising_lane = 'in'
+      call path.replace_head_edge( which_edge,     &
+                                   cruising_lane,  &
+                                   ei,             &
+                                   ej,             &
+                                   path_go_toward )
     else
       call ut__fatal( '__MODULE__(__LINE__): Strange. Path terminated?' )
     end if
 
-    path.register_new_vert( u2, v2 )
-    call boundary.edge.erase( nth )
-    octa_direct = boundary.vert.octa_direct(nth_next)
-    call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
-    nth = nth_next
-  end subroutine go_along_border
+  end subroutine one_step_along_boundary
 
 
   subroutine jump_to_other_edge_from_edge_uv( path,  &
@@ -1094,7 +1167,6 @@ contains
                                              edge )
     class(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <io> :: edge
     type(slice_mesh__boundary_t) <io> :: boundary
 
     integer :: nthbv ! of border verts
@@ -1109,7 +1181,7 @@ contains
             nthbv = boundary.vert.get_nth( path.head.i,  &
                                            path.head.j )
           end if
-          call go_along_border( path, vert, boundary, nthbv )
+          call one_step_along_boundary( path, vert, boundary, nthbv )
         case ('in')
           if ( path.head.which_edge == 'u' .or.  &
                path.head.which_edge == 'v'  ) then
