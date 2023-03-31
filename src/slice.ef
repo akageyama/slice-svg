@@ -98,8 +98,9 @@ contains
     counter = 0
     do while ( status == 'have found' )
       !!  Tring to find the 1st contour for this level.
-      call contour_curve.trace_and_erase( this.mesh_vert,  &
-                                          this.mesh_edge )
+      call contour_curve.trace_and_erase( this.mesh_vert,    &
+                                          this.mesh_edge,    &
+                                          this.mesh_boundary )
       call  ut__assert( contour_curve.num >= 2,  &
                         "__MODULE__(__LINE__): Path too short." )
         

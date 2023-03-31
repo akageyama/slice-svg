@@ -216,11 +216,11 @@ contains
   end subroutine contour_curve__replace_head_by_octa
 
 
-  subroutine contour_curve__replace_head_direct( this,          &
-                                                 cruising_lane, &
-                                                 which_edge,    &
-                                                 i, j,          &
-                                                 toward )
+  subroutine contour_curve__replace_head_direct( this,                  &
+                                                 which_edge,            &
+                                                 cruising_lane,         &
+                                                 i, j,                  &
+                                                 cross_this_edge_toward )
     class(contour_curve__element_t) <out> :: this
     char(len=1) <in> :: which_edge
     char(len=2) <in> :: cruising_lane
@@ -490,10 +490,10 @@ contains
   end subroutine jump_to_v_edge_mp_if_possible 
 
 
-  subroutine go_along_border( path, vert, edge, nth )
+  subroutine go_along_border( path, vert, boundary, nth )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <io> :: edge
+    type(slice_mesh__boundary_t) <io> :: boundary
     integer <io> :: nth ! this is nth-vert of the border
 
     real :: u, v       ! coordinates of path tip that is to be registered.
@@ -517,12 +517,12 @@ contains
 
     vi = path.head.i
     vj = path.head.j
-    numbv = vert.border_list.num
+    numbv = boundary.vert.num
     call ut__assert( vert.border_list.vi(nth) == vi .and.   &
                      vert.border_list.vj(nth) == vj,        &
                      "__MODULE__(__LINE__): border vert inconsistent." )
 
-    quarter = edge.border_list.quarter(nth)
+    quarter = bondary.edge.quarter(nth)
 
     
     if ( quarter == SLICE_MESH__EDGE_PP ) then
@@ -544,10 +544,8 @@ contains
       jumped = .true.
       nth_next = nth + 1
       if ( nth_next > numbv ) nth_next -= numbv ! cyclic.
-      vi2 = vert.border_list.vi(nth_next)
-      vj2 = vert.border_list.vj(nth_next)
-      u2 = vert.pos_u(vi2)
-      v2 = vert.pos_v(vj2)
+      u2 = vert.pos_u(boundary.vert.vi(nth_next))
+      v2 = vert.pos_v(boundary.vert.vj(nth_next))
       cruising_lane = 'in'
     else if ( quarter == SLICE_MESH__EDGE_PM ) then
       !!>
@@ -565,8 +563,8 @@ contains
                  .            
       !!<
       jumped = .true.
-      u2 = edge.border_list.u_cross_coord(nth)
-      v2 = edge.border_list.v_cross_coord(nth)
+      u2 = boundary.edge.u_cross_coord(nth)
+      v2 = boundary.edge.v_cross_coord(nth)
       call ut__assert( u2 /= NAN .and. v2 /= NAN,   &
                        "__MODULE__(__LINE__): Invalid cross coord." )
       cruising_lane = 'in'
@@ -575,8 +573,8 @@ contains
     end if
 
     path.register_new_vert( u2, v2 )
-    call edge.border_list.erase( nth )
-    octa_direct = vert.border_list.octa_direct(nth)
+    call boundary.edge.erase( nth )
+    octa_direct = boundary.vert.octa_direct(nth_next)
     call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
     nth = nth_next
   end subroutine go_along_border
@@ -902,13 +900,13 @@ contains
   end subroutine contour_curve__initialize
 
 
-  subroutine find_start_edge_on_boundaries( path,    &
-                                            vert,    &
-                                            edge,    &
+  subroutine find_start_edge_on_boundaries( path,     &
+                                            vert,     &
+                                            boundary, &
                                             status )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <in> :: edge
+    type(slice_mesh__boundary_t) <in> :: boundary
     char(len=10) <io> :: status ! 'no contour' or 'have found'
 
 
@@ -948,34 +946,33 @@ contains
     integer :: quarter
     integer :: v, v2, i, j
     integer :: octa_direct
-    integer :: vi, vj, bvnum
+    integer :: vi, vj
     real :: u1, v1, u2, v2
     char(len=2) :: cruising_lane
 
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
-    bvnum = vert.border_list_num
-    do v = 1, bvnum
-      quarter = edge.border_list.quarter(v)
+    do e = 1, boundary.edge.num
+      quarter = boundary.edge.quarter(e)
       if ( quarter == SLICE_MESH__EDGE_PP  .or.  &
            quarter == SLICE_MESH__EDGE_PM ) then
         status = 'have found'
-        vi = vert.border_list.vi(v)
-        vj = vert.border_list.vj(v)
-        u1 = vert.pos_u(vi)
-        v1 = vert.pos_v(vj)
+        v1 = e
+        v2 = v1 + 1
+        u1 = vert.pos_u(boundary.vert.vi(v1))
+        v1 = vert.pos_v(boundary.vert.vj(v1))
         path.register_new_vert( u1, v1 )
 
         if ( quarter == SLICE_MESH__EDGE_PP ) then
-          v2 = v + 1 ! next vert in the border path
-          if ( v2 > bvnum ) v2 -= bvnum
-          u2 = vert.pos_u(vert.border_list.vi(v2))
-          v2 = vert.pos_v(vert.border_list.vj(v2))
+          v2 = v1 + 1 ! next vert in the border path
+          if ( v2 > boundary.vert.num ) v2 -= boundary.vert.num
+          u2 = vert.pos_u(boundary.vert.vi(v2))
+          v2 = vert.pos_v(boundary.vert.vj(v2))
           cruising_lane = 'on'
         else ! quarter == SLICE_MESH__EDGE_PM
-          u2 = edge.border_list.u_cross_coord(v)
-          v2 = edge.border_list.v_cross_coord(v)
+          u2 = boundary.edge.u_cross_coord(e)
+          v2 = boundary.edge.v_cross_coord(e)
           call ut__assert( u2 /= NAN .and. v2 /= NAN,  &
                            "__MODULE__(__LINE__): Invalid cross coord." )
           cruising_lane = 'in'
@@ -1024,14 +1021,17 @@ contains
                                        \___ Try to find this edge of "PM".
                  
     !!< 
-    integer :: ei, ej
+    integer :: ei, ej      ! index of edge position
+    integer :: vj ! index of vert position
     integer :: quarter
     real :: u, v
 
-    call ut__assert( path.num == 0,  &
-                    '__MODULE__(__LINE__): Forgot to reset contour_curve.' )
+    call ut__assert( path.num == 0,                     &
+                    '__MODULE__(__LINE__): ' //         &
+                    'Forgot to reset contour_curve.' )
 
     do ej = 2, edge.u_nv-1
+      vj = ej
       do ei = 2, edge.u_nu-1
         quarter = edge.u_quarter(ei,ej)
         if ( quarter == SLICE_MESH__EDGE_PM ) then
@@ -1047,10 +1047,12 @@ contains
           !!<
           status = 'have found'
           u = edge.u_cross_coord(ei,ej)
-          v = vert.pos_v(ej)
-          call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+          v = vert.pos_v(vj)
+          call ut__assert( u /= NAN,                    &
+                           "__MODULE__(__LINE__): " //  &
+                           "Invalid cross coord." )
           path.register_new_vert( u, v )
-          path.head = contour_curve__element_t( 'u', 'in', ei, ej, 'N' )
+          call path.head.replace_head_edge( 'u', 'in', ei, ej, 'N' )
           path.start = path.head
           return
         end if
@@ -1060,19 +1062,21 @@ contains
   end subroutine set_start_edge_in_bulk
 
 
-  subroutine contour_curve__set_start_edge( this,    &
-                                            vert,    &
-                                            edge,    &
+  subroutine contour_curve__set_start_edge( this,     &
+                                            vert,     &
+                                            edge,     &
+                                            boundary, &
                                             status )
     class(contour_curve_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <in> :: edge
+    type(slice_mesh__boundary_t) <in> :: boundary
     char(len=10) <out> :: status ! 'no contour' or 'have found'
 
     status = 'no contour'  ! default 
-    call find_start_edge_on_boundaries( this,    &
-                                        vert,    &
-                                        edge,    &
+    call find_start_edge_on_boundaries( this,     &
+                                        vert,     &
+                                        boundary, &
                                         status )
     if ( status == 'have found' ) return
 
@@ -1084,26 +1088,28 @@ contains
   end subroutine contour_curve__set_start_edge
 
 
-  subroutine contour_curve__trace_and_erase( path,  &
-                                             vert,  &
+  subroutine contour_curve__trace_and_erase( path,      &
+                                             vert,      &
+                                             boundary,  &
                                              edge )
     class(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
+    type(slice_mesh__boundary_t) <io> :: boundary
 
     integer :: nthbv ! of border verts
     char(len=2) :: cruising_lane_prev
 
-    cruising_lane_prev = '  ' ! char len=2
+    cruising_lane_prev = '  ' ! char len=2 other than 'on'
     do
       select case (path.head.cruising_lane)
         case ('on')
           if ( cruising_lane_prev /= 'on' ) then
             ! newly start tracing on the border.
-            nthbv = vert.border_list.get_nth_from_vert_pos( path.head.i,  &
-                                                            path.head.j )
+            nthbv = boundary.vert.get_nth( path.head.i,  &
+                                           path.head.j )
           end if
-          call go_along_border( path, vert, edge, nthbv )
+          call go_along_border( path, vert, boundary, nthbv )
         case ('in')
           if ( path.head.which_edge == 'u' .or.  &
                path.head.which_edge == 'v'  ) then

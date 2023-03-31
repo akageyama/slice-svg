@@ -335,7 +335,7 @@ module slice_mesh_m
 contains
 
 
-  subroutine slice_mesh__boundary_initialize( this, vert. edge )
+  subroutine slice_mesh__boundary_initialize( this, vert, edge )
     class(slice_mesh__boundary_t) <out> :: this
 
     call this.vert.initialize( vert.nu, vert.nv, vert.flag )
@@ -495,7 +495,7 @@ contains
     integer <in> :: nu, nv
     integer <io> :: i, j
     character <in> :: flag       ! N/S/E/W/[0-7]/f/r/R/l/L
-    integer <out> :: octa_direct ! 0 (North), 1 (North-East),
+    integer <io> :: octa_direct ! 0 (North), 1 (North-East),
                                  ! 2 (East) , 3 (South-East), 
                                  ! 4 (South), 5 (South-West), 
                                  ! 6 (West),  7 (North-West)
