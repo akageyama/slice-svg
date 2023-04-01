@@ -496,7 +496,7 @@ contains
     integer <in> :: nu, nv
     integer <io> :: i, j
     character <in> :: flag       ! N/S/E/W/[0-7]/f/r/R/l/L
-    integer <io> :: octa_direct ! 0 (North), 1 (North-East),
+    integer <io> :: octa_direct  ! 0 (North), 1 (North-East),
                                  ! 2 (East) , 3 (South-East), 
                                  ! 4 (South), 5 (South-West), 
                                  ! 6 (West),  7 (North-West)
@@ -518,7 +518,11 @@ contains
       case ('l')
         octa_direct = mod(octa_direct+7,8)
       case ('L')
+!debugp "__MODULE__(__LINE__) before: ", i, j
+!debugp "__MODULE__(__LINE__) before: ", octa_direct
         octa_direct = mod(octa_direct+6,8)
+!debugp "__MODULE__(__LINE__)  after: ", i, j
+!debugp "__MODULE__(__LINE__)  after: ", octa_direct
       case default
         call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
@@ -548,10 +552,10 @@ contains
         call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
 
-    call assert( i >= 1 .and. i <= nu,  &
-                 "__MODULE__(__LINE__): i-range error." )
-    call assert( j >= 1 .and. j <= nv,  &
-                 "__MODULE__(__LINE__): j-range error." )
+    call ut__assert( i >= 1 .and. i <= nu,  &
+                     "__MODULE__(__LINE__): i-range error." )
+    call ut__assert( j >= 1 .and. j <= nv,  &
+                     "__MODULE__(__LINE__): j-range error." )
   end subroutine get_next_octa_direct_and_vert
 
 
@@ -568,7 +572,7 @@ contains
     vert_flag(2:nu-1,2:nv-1) = 'i'
     vert_flag(     1,     1) = 'L'
     vert_flag(2:nu-1,     1) = 'E'
-    vert_flag(   nu,      1) = 'L'
+    vert_flag(    nu,     1) = 'L'
     vert_flag(    nu,2:nv-1) = 'N'
     vert_flag(    nu,    nv) = 'L'
     vert_flag(2:nu-1,    nv) = 'W'
@@ -661,6 +665,8 @@ contains
                                             octa_direct )
     start_vi = vi
     start_vj = vj
+!debugp start_vi, start_vj
+!debugp octa_direct
     counter = 1
     this.vert.octa_direct(counter) = octa_direct
     this.vert.vi(counter) = vi
@@ -668,13 +674,22 @@ contains
     call get_edge_id( vi, vj, octa_direct, ei, ej, edge_type )
     this.edge.ei(counter) = ei
     this.edge.ej(counter) = ej
+!debugp ei, ej
+!debugp edge_type
     this.edge.type(counter) = edge_type
 
     do counter = 2, num_of_boundary_vert 
+!debugp counter
+!debugp "calling get_next_octa_direct_and_vert", vi, vj
+!debugp "calling get_next_octa_direct_and_vert", octa_direct
+!debugp "calling get_next_octa_direct_and_vert", vert.flag(vi,vj)
       call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
                                           vi, vj,           &
                                           vert.flag(vi,vj), &
                                           octa_direct )
+!debugp "called get_next_octa_direct_and_vert", vi, vj
+!debugp "called get_next_octa_direct_and_vert", octa_direct
+!debugp "next:", octa_direct
       if ( vi == start_vi .and. vj == start_vj ) then
         ! have returned back to the start vert
         return
@@ -949,7 +964,7 @@ contains
       this.pos_v(j) = v_min + dv*(j-1)
     end do
 
-    call set_default_grid_type( nu, nv, this.flag )
+    call set_default_vert_flag( nu, nv, this.flag )      
 
   end subroutine slice_mesh__vert_init_without_grids
 
