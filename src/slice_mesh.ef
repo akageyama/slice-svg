@@ -20,11 +20,11 @@
 
 
     ### Edge
-                            v     __a                                 
-        u edge_u            |   /         +----- u
-        v edge_v            | /           | \
-        a edge_ascend       +----- u      |   \   
-        d edge_descend                    v     \ __d
+                
+        u edge_u
+        v edge_v
+        a edge_a(scend)
+        d edge_d(escend)
                                     
             |     / | \     |     / | \     | 
             v   a   v   d   v   a   v   d   v
@@ -79,28 +79,30 @@
         We define the boundary path, a closed line, by connecting 
         the consequtive 'b' points in the counter-clockwise direction.
 
-                     <--- this way ---  
-                                        \   
-                5    * * * * * * * * *   \
-                4    * . . . . . . . *    |  this way
-                3    * . . . . . . . *    |   
-                2    * . . . . . . . *    |  (counter-clockwise)
-                1    * * * * * * * * *    |
-                     
+                     <--- this way -----+ t
+                                        | h
+                5    * * * * * * * * *  | i
+                4    * . . . . . . . *  | s
+                3    * . . . . . . . *  |   
+                2    * . . . . . . . *  | w
+                1    * * * * * * * * *  | a
+                                        | y
+                                    ----+  
                      1 2 3 4 5 6 7 8 9
 
 
         The boundary path can have more complex shape than a rectangle,
         for example,
 
-                     <--- this way ---  
-                                        \   
-                5    * * * * * * . . .   \
-                4    * . . . . * * * *    |  this way
-                3    * * * . . . . . *    |   
-                2    . . * . . . . . *    |  (counter-clockwise)
-                1    . . * * * * * * *    |
-                     
+                     <--- this way -----+ t
+                                        | h
+                5    * * * * * * . . .  | i
+                4    * . . . . * * * *  | s
+                3    * * * . . . . . *  |
+                2    . . * . . . . . *  | w
+                1    . . * * * * * * *  | a
+                                        | y
+                                    ----+  
                      1 2 3 4 5 6 7 8 9
 
         To denote a boundary path, we define boundary_list array that
@@ -279,7 +281,6 @@ module slice_mesh_m
     procedure, private :: slice_mesh__vert_initialize_with_uvmaxmin
     generic :: initialize => slice_mesh__vert_initialize_with_grids,  &
                              slice_mesh__vert_initialize_without_grids
-    procedure :: is_boundary => slice_mesh__vert_is_boundary
   end type slice_mesh__vert_t  
 
 
@@ -336,7 +337,9 @@ contains
 
 
   subroutine slice_mesh__boundary_initialize( this, vert, edge )
-    class(slice_mesh__boundary_t) <out> :: this
+    class(slice_mesh__boundary_t) <io> :: this
+    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <in> :: edge
 
     call this.vert.initialize( vert.nu, vert.nv, vert.flag )
     call this.edge.initialize( this.vert.num )
@@ -345,25 +348,13 @@ contains
 
 
   subroutine slice_mesh__boundary_edge_erase( this, nth )
-    class(slice_mesh__boundary_vert_t) <io> :: this
+    class(slice_mesh__boundary_edge_t) <io> :: this
     integer <in> :: nth
 
     this.quarter(nth) = SLICE_MESH__EDGE_MM
 
   end subroutine slice_mesh__boundary_edge_erase
 
-  function slice_mesh__vert_is_boundary( this, vi, vj ) result(ans)
-    class(slice_mesh__vert_t) <in> :: this
-    integer <in> :: vi, vj
-    logical :: ans
-
-    if ( this.flag(vi,vj) == 'i' .or  &
-         this.flag(vi,vj) == 'o' ) then
-      ans = .false.
-    else
-      ans = .true.
-    end if
-  end function slice_mesh__vert_is_boundary
 
   function slice_mesh__boundary_vert_get_nth( this, vi, vj ) result(nth)
     class(slice_mesh__boundary_vert_t) <in> :: this
@@ -434,14 +425,14 @@ contains
           end if
         end do
       end do
-    end subroutine iCount_boundary_vert
+    end function iCount_boundary_vert
 
   end subroutine slice_mesh__boundary_vert_initialize
 
 
   function flag_to_octa_direct( flag ) result(octa_direct)
     character <in> :: flag
-    integer :: nocta_direct
+    integer :: octa_direct
 
     select case (flag)
       case ('N')
