@@ -344,24 +344,11 @@ contains
   end subroutine slice_mesh__boundary_initialize
 
 
-  subroutine slice_mesh__boundary_edge_erase( this,        &
-                                              which_edge,  &
-                                              ei,          &
-                                              ej )
+  subroutine slice_mesh__boundary_edge_erase( this, nth )
     class(slice_mesh__boundary_vert_t) <io> :: this
-    character <in> :: which_edge ! 'u' / 'v' / 'a' / 'd'
-    integer <in> :: ei, ej
+    integer <in> :: nth
 
-    integer :: n, i, j
-
-    do n = 1, this.num
-      i = this.ei(n)
-      j = this.ej(n)
-      if ( i == ei .and. j == ej ) then
-        this.quarter(n) = SLICE_MESH__EDGE_MM
-        return
-      end if
-    end do
+    this.quarter(nth) = SLICE_MESH__EDGE_MM
 
   end subroutine slice_mesh__boundary_edge_erase
 

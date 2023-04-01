@@ -1017,7 +1017,8 @@ contains
     !!<    
 
     integer :: quarter
-    integer :: edge_index, vert_index1, vert_index2
+    integer :: vert_index1, vert_index2
+    integer :: edge_index, ei, ej
     integer :: i, j
     integer :: octa_direct
     real :: u1, v1, u2, v2
@@ -1053,7 +1054,18 @@ contains
 
         call path.register_new_vert( u2, v2 )
         octa_direct = vert.border_list.octa_direct(vert_index1)
-        call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
+        call leave_from_boundary( boundary.vert.vi(vert_index1),  &
+                                  boundary.vert.vj(vert_index1),  &
+                                  octa_direct,                    &
+                                  ei, ej,                         &
+                                  which_edge,                     &
+                                  path_go_toward )
+        cruising_lane = 'in'
+        call path.replace_head_edge( which_edge,     &
+                                     cruising_lane,  &
+                                     ei,             &
+                                     ej,             &
+                                     path_go_toward )
         path.start = path.head
         return
       end if
@@ -1091,7 +1103,7 @@ contains
            - m - - - m - - - m - - -\m - - - m -  
              |       |       |       \       |   
                                       \
-                                       \___ Try to find this edge of "PM".
+                                       \___ Try to find this edge with "PM".
                  
     !!< 
     integer :: ei, ej      ! index of edge position
@@ -1103,20 +1115,24 @@ contains
                     '__MODULE__(__LINE__): ' //         &
                     'Forgot to reset contour_curve.' )
 
+    !!>
+        The rectangular edges of v_edge(1,:), u_edge(:,1), etc. 
+        cannot be 'i' grid, i.e., inside the border.
+    !!<
     do ej = 2, edge.u_nv-1
       vj = ej
       do ei = 2, edge.u_nu-1
         quarter = edge.u_quarter(ei,ej)
         if ( quarter == SLICE_MESH__EDGE_PM ) then
           !!> 
-              path tip you
-              have just found.  *
-                        |    \ *      |
-                      --p=====*-------m--
-                        |    *        |
-             contour ---|-->*         |
-                        |  *          |
-                        | *           |
+               path tip you
+               have just found.  *
+                         |    \ *      |
+                       --p=====*-------m--
+                         |    *        |
+              contour ---|-->*         |
+                         |  *          |
+                         | *           |
           !!<
           status = 'have found'
           u = edge.u_cross_coord(ei,ej)
