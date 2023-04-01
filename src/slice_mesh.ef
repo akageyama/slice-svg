@@ -281,7 +281,7 @@ module slice_mesh_m
     procedure, private :: slice_mesh__vert_init_without_grids
     generic :: initialize => slice_mesh__vert_init_with_grids,  &
                              slice_mesh__vert_init_without_grids
-    procedure, nopass :: flag_to_ocat_direct => slice_mesh__vert_flag_to_octa_direct
+    procedure, nopass :: flag_to_octa_direct => slice_mesh__vert_flag_to_octa_direct
   end type slice_mesh__vert_t  
 
 
