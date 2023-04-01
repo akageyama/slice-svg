@@ -282,6 +282,7 @@ module slice_mesh_m
     generic :: initialize => slice_mesh__vert_init_with_grids,  &
                              slice_mesh__vert_init_without_grids
     procedure, nopass :: flag_to_octa_direct => slice_mesh__vert_flag_to_octa_direct
+    procedure :: finalize => slice_mesh__vert_finalize
   end type slice_mesh__vert_t  
 
 
@@ -294,6 +295,7 @@ module slice_mesh_m
     real, dimension(:,:), allocatable :: v_cross_coord
   contains
     procedure :: initialize => slice_mesh__edge_initialize
+    procedure :: finalize => slice_mesh__edge_finalize
     procedure :: set_quarter => slice_mesh__edge_set_quarter
     procedure :: erase => slice_mesh_edge__erase_uv_edge
   end type slice_mesh__edge_t    
@@ -306,6 +308,7 @@ module slice_mesh_m
     integer, dimension(:), allocatable :: vj
   contains
     procedure :: initialize => slice_mesh__boundary_vert_initialize
+    procedure :: finalize => slice_mesh__boundary_vert_finalize
     procedure :: get_nth => slice_mesh__boundary_vert_get_nth
   end type slice_mesh__boundary_vert_t
 
@@ -320,6 +323,7 @@ module slice_mesh_m
     real, dimension(:), allocatable :: v_cross_coord
   contains
     procedure :: initialize => slice_mesh__boundary_edge_initialize
+    procedure :: finalize => slice_mesh__boundary_edge_finalize
     procedure :: erase => slice_mesh__boundary_edge_erase
   end type slice_mesh__boundary_edge_t
 
@@ -329,6 +333,7 @@ module slice_mesh_m
     type(slice_mesh__boundary_edge_t) :: edge
   contains
     procedure :: initialize => slice_mesh__boundary_initialize
+    procedure :: finalize => slice_mesh__boundary_finalize
     procedure :: make_list => slice_mesh__boundary_make_list
     procedure :: set_quarter => slice_mesh__boundary_set_quarter
   end type slice_mesh__boundary_t
@@ -346,6 +351,14 @@ contains
     call this.edge.initialize( this.vert.num )
     call this.make_list( vert, edge )
   end subroutine slice_mesh__boundary_initialize
+
+
+  subroutine slice_mesh__boundary_finalize( this )
+    class(slice_mesh__boundary_t) <io> :: this
+
+    call this.vert.finalize
+    call this.edge.finalize
+  end subroutine slice_mesh__boundary_finalize
 
 
   subroutine slice_mesh__boundary_edge_erase( this, nth )
@@ -429,6 +442,15 @@ contains
     end function iCount_boundary_vert
 
   end subroutine slice_mesh__boundary_vert_initialize
+
+
+  subroutine slice_mesh__boundary_vert_finalize( this )
+    class(slice_mesh__boundary_vert_t) <io> :: this
+
+    deallocate(this.octa_direct)
+    deallocate(this.vi)
+    deallocate(this.vj)
+  end subroutine slice_mesh__boundary_vert_finalize
 
 
   function slice_mesh__vert_flag_to_octa_direct( flag ) result(octa_direct)
@@ -878,6 +900,15 @@ contains
   end subroutine slice_mesh__vert_init_with_grids
 
 
+  subroutine slice_mesh__vert_finalize( this )
+    class(slice_mesh__vert_t) <io> :: this
+
+    deallocate(this.pos_u)
+    deallocate(this.pos_v)
+    deallocate(this.flag)
+  end subroutine slice_mesh__vert_finalize
+
+
   subroutine slice_mesh__vert_init_without_grids( this, nu, nv,  &
                                                   u_min, u_max,  &
                                                   v_min, v_max )
@@ -969,6 +1000,16 @@ contains
   end subroutine slice_mesh__edge_initialize
 
 
+  subroutine slice_mesh__edge_finalize( this )
+    class(slice_mesh__edge_t) <io> :: this
+
+    deallocate(this.u_quarter)
+    deallocate(this.v_quarter)
+    deallocate(this.u_cross_coord)
+    deallocate(this.v_cross_coord)
+  end subroutine slice_mesh__edge_finalize
+
+
   subroutine slice_mesh__boundary_edge_initialize( this, num_boundary_vert )
     class(slice_mesh__boundary_edge_t) <out> :: this
     integer <in> :: num_boundary_vert
@@ -978,10 +1019,22 @@ contains
     allocate(         this.type(this.num))
     allocate(           this.ei(this.num))
     allocate(           this.ej(this.num))
-    allocate(     this.quarter(this.num))
+    allocate(      this.quarter(this.num))
     allocate(this.u_cross_coord(this.num))
     allocate(this.v_cross_coord(this.num))
   end subroutine slice_mesh__boundary_edge_initialize
+
+
+  subroutine slice_mesh__boundary_edge_finalize( this )
+    class(slice_mesh__boundary_edge_t) <io> :: this
+
+    deallocate(this.type)
+    deallocate(this.ei)
+    deallocate(this.ej)
+    deallocate(this.quarter)
+    deallocate(this.u_cross_coord)
+    deallocate(this.v_cross_coord)
+  end subroutine slice_mesh__boundary_edge_finalize
 
 
   subroutine set_uv_edge_quarter( vert_nu,    &

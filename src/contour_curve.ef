@@ -143,10 +143,9 @@ module contour_curve_m
     procedure :: trace_and_erase => contour_curve__trace_and_erase
     procedure :: set_start_edge  &
                  => contour_curve__set_start_edge
-    procedure, private :: reset => contour_curve__reset
-    procedure, private :: is_closed  &
-                          => contour_curve__is_closed
-    procedure, private :: register_new_vert  &
+    procedure :: reset => contour_curve__reset
+    procedure :: is_closed => contour_curve__is_closed
+    procedure :: register_new_vert  &
                           => contour_curve__register_new_vert
     procedure, private :: contour_curve__replace_head_by_octa
     procedure, private :: contour_curve__replace_head_direct
@@ -1184,8 +1183,8 @@ contains
 
   subroutine contour_curve__trace_and_erase( path,      &
                                              vert,      &
-                                             boundary,  &
-                                             edge )
+                                             edge,      &
+                                             boundary )
     class(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__boundary_t) <io> :: boundary
