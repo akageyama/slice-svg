@@ -277,10 +277,11 @@ module slice_mesh_m
                        ! 'W' or '6' : boundary of path direct West
                        !        '7' : boundary of path direct Nourth-West
   contains
-    procedure, private :: slice_mesh__vert_initialize_with_grids
-    procedure, private :: slice_mesh__vert_initialize_with_uvmaxmin
-    generic :: initialize => slice_mesh__vert_initialize_with_grids,  &
-                             slice_mesh__vert_initialize_without_grids
+    procedure, private :: slice_mesh__vert_init_with_grids
+    procedure, private :: slice_mesh__vert_init_without_grids
+    generic :: initialize => slice_mesh__vert_init_with_grids,  &
+                             slice_mesh__vert_init_without_grids
+    procedure, nopass :: flag_to_ocat_direct => slice_mesh__vert_flag_to_octa_direct
   end type slice_mesh__vert_t  
 
 
@@ -320,7 +321,6 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh__boundary_edge_initialize
     procedure :: erase => slice_mesh__boundary_edge_erase
-    procedure :: set_quarter => slice_mesh__boundary_edge_set_quarter
   end type slice_mesh__boundary_edge_t
 
 
@@ -330,6 +330,7 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh__boundary_initialize
     procedure :: make_list => slice_mesh__boundary_make_list
+    procedure :: set_quarter => slice_mesh__boundary_set_quarter
   end type slice_mesh__boundary_t
 
 
@@ -430,7 +431,7 @@ contains
   end subroutine slice_mesh__boundary_vert_initialize
 
 
-  function flag_to_octa_direct( flag ) result(octa_direct)
+  function slice_mesh__vert_flag_to_octa_direct( flag ) result(octa_direct)
     character <in> :: flag
     integer :: octa_direct
 
@@ -463,7 +464,7 @@ contains
         octa_direct = -1 ! any negative number
     end select
 
-  end function flag_to_octa_direct
+  end function slice_mesh__vert_flag_to_octa_direct
 
 
   subroutine get_next_octa_direct_and_vert( nu, nv,       &
@@ -482,7 +483,7 @@ contains
       case ('N', 'E', 'S', 'W',  &
             '0', '1', '2', '3',  &
             '4', '5', '6', '7')
-        octa_direct = flag_to_octa_direct( flag )
+        octa_direct = slice_mesh__vert_flag_to_octa_direct( flag )
         call ut__assert( octa_direct >= 0 .and.  &
                          octa_direct <= 7,       &
                          "__MODULE__(__LINE__): case error." )
@@ -525,9 +526,9 @@ contains
         call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
 
-    call assert( next_i >= 1 .and. next_i <= nu,  &
+    call assert( i >= 1 .and. i <= nu,  &
                  "__MODULE__(__LINE__): i-range error." )
-    call assert( next_j >= 1 .and. next_j <= nv,  &
+    call assert( j >= 1 .and. j <= nv,  &
                  "__MODULE__(__LINE__): j-range error." )
   end subroutine get_next_octa_direct_and_vert
 
@@ -615,7 +616,7 @@ contains
         call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
 
-  end function get_edge_id
+  end subroutine get_edge_id
 
 
   subroutine slice_mesh__boundary_make_list( this, vert, edge )
@@ -624,14 +625,17 @@ contains
     type(slice_mesh__edge_t) <in> :: edge
 
     integer :: vi, vj, start_vi, start_vj
+    integer :: ei, ej
     integer :: num_of_boundary_vert
     integer :: counter
+    integer :: octa_direct
+    character :: edge_type
 
     num_of_boundary_vert = this.vert.num
 
-    call iFind_a_boundary_vert_with_direct( nu, nv,        &
-                                            vert.flag,     &
-                                            vi, vj,        &
+    call iFind_a_boundary_vert_with_direct( vert.nu, vert.nv, &
+                                            vert.flag,        &
+                                            vi, vj,           &
                                             octa_direct )
     start_vi = vi
     start_vj = vj
@@ -645,15 +649,14 @@ contains
     this.edge.type(counter) = edge_type
 
     do counter = 2, num_of_boundary_vert 
-      call get_next_octa_direct_and_vert( nu, nv,           &
+      call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
                                           vi, vj,           &
-                                          vert_flag(vi,vj)  &
+                                          vert.flag(vi,vj), &
                                           octa_direct )
-      if ( vi == head_i .and. vj == head_j ) then
+      if ( vi == start_vi .and. vj == start_vj ) then
         ! have returned back to the start vert
         return
       end if
-      counter += 1
       this.vert.octa_direct(counter) = octa_direct
       this.vert.vi(counter) = vi
       this.vert.vj(counter) = vj
@@ -667,12 +670,12 @@ contains
 
   contains
 
-    subroutine iFind_a_boundary_vert_with_direct( nu, nv,           &
+    subroutine iFind_a_boundary_vert_with_direct( vert_nu, vert_nv, &
                                                   vert_flag,        &
                                                   start_i, start_j, &
                                                   head_octa_direct )
-      integer <in> :: nu, nv
-      character, dimension(nu,nv) <in> :: vert_flag
+      integer <in> :: vert_nu, vert_nv
+      character, dimension(vert_nu,vert_nv) <in> :: vert_flag
       integer <out> :: start_i, start_j
       integer <out> :: head_octa_direct
 
@@ -680,10 +683,10 @@ contains
       character :: flag
       integer :: octa_direct
 
-      do j = 1, nv
-        do i = 1, nu
+      do j = 1, vert_nv
+        do i = 1, vert_nu
           flag = vert_flag(i,j)
-          octa_direct = flag_to_octa_direct( flag )
+          octa_direct = slice_mesh__vert_flag_to_octa_direct( flag )
           if ( octa_direct > 0 ) then
             start_i = i
             start_j = j
@@ -744,7 +747,10 @@ contains
   end function linear_interpol
 
 
-  function quarter_of_edge_ends( v1, v2, val ) result(ans)
+  function quarter_of_edge_ends( v1, v2, level ) result(ans)
+    real <in> :: v1, v2, level
+    integer :: ans
+
     if ( v1 < level .and. v2 < level ) then
       ans = SLICE_MESH__EDGE_MM
     else if ( v1 > level .and. v2 > level ) then
@@ -775,11 +781,11 @@ contains
   end subroutine slice_mesh_edge__erase_uv_edge
 
 
-  subroutine slice_mesh__vert_initialize_with_grids( this,          &
-                                                     nu, nv,        &
-                                                     grid_pos_u,    &
-                                                     grid_pos_v,    &
-                                                     vert_flag )
+  subroutine slice_mesh__vert_init_with_grids( this,          &
+                                               nu, nv,        &
+                                               grid_pos_u,    &
+                                               grid_pos_v,    &
+                                               vert_flag )
     class(slice_mesh__vert_t) <out> :: this
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
@@ -869,14 +875,12 @@ contains
       call set_default_vert_flag( nu, nv, this.flag )      
     end if
 
-    call boundary.vert.initialize( nu, nv, this.flag )
-
-  end subroutine slice_mesh__vert_initialize_with_grids
+  end subroutine slice_mesh__vert_init_with_grids
 
 
-  subroutine slice_mesh__vert_initialize_without_grids( this, nu, nv,  &
-                                                        u_min, u_max,  &
-                                                        v_min, v_max )
+  subroutine slice_mesh__vert_init_without_grids( this, nu, nv,  &
+                                                  u_min, u_max,  &
+                                                  v_min, v_max )
     class(slice_mesh__vert_t) <out> :: this
     integer <in> :: nu, nv
     real <in> :: u_min, u_max
@@ -916,9 +920,7 @@ contains
 
     call set_default_grid_type( nu, nv, this.flag )
 
-    call boundary.vert.initialize( nu, nv, this.flag )
-  
-  end subroutine slice_mesh__vert_initialize_without_grids
+  end subroutine slice_mesh__vert_init_without_grids
 
 
   subroutine slice_mesh__edge_initialize( this, vert )
@@ -1163,8 +1165,8 @@ contains
                                 ! all positive.
 
     call set_uv_edge_quarter( vert.nu, vert.nv,   &
-                              val_vert, level, edge )
-    call set_uv_edge_cross_coord( vert, val_vert, level, edge )
+                              val_vert, level, this )
+    call set_uv_edge_cross_coord( vert, val_vert, level, this )
     call ut__assert( minval(this.u_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_u.quarter" )
     call ut__assert( minval(this.v_quarter) >= 0,  &
@@ -1172,11 +1174,11 @@ contains
   end subroutine slice_mesh__edge_set_quarter  
 
 
-  subroutine slice_mesh__boundary_edge_set_quarter( this,       &
-                                                    vert,       &
-                                                    val_vert,   &
-                                                    level )
-    class(slice_mesh__boundary_edge_t) <io> :: this
+  subroutine slice_mesh__boundary_set_quarter( this,       &
+                                               vert,       &
+                                               val_vert,   &
+                                               level )
+    class(slice_mesh__boundary_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: vert
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
@@ -1190,14 +1192,14 @@ contains
     real :: interpol_u, interpol_v
     integer :: bvnum
 
-    this.u_cross_coord(:) = NAN
-    this.v_cross_coord(:) = NAN
+    this.edge.u_cross_coord(:) = NAN
+    this.edge.v_cross_coord(:) = NAN
       !!> 
            To catch errornous cases in which a contour
            path tries to cross a non PM or MP edge.
       !!<
 
-    this.quarter(:) = -999  ! Any negative (anomourous) number.
+    this.edge.quarter(:) = -999  ! Any negative (anomourous) number.
 
     !!>
                v1--[e2]--v2--[e3]--v3
@@ -1207,27 +1209,27 @@ contains
            v6--[e6]--v5--[e5]--v4
     !!<
 
-    bvnum = this.num ! boundary verts num (= edge num)
+    bvnum = this.vert.num ! boundary verts num (= edge num)
     do index_e = 1, bvnum
       index_v1 = index_e
       index_v2 = index_v1 + 1
       if ( index_v2 > bvnum ) index_v2 -= bvnum
 
-      vi = boundary_vert.vi(index_v1)
-      vj = boundary_vert.vj(index_v1)
+      vi = this.vert.vi(index_v1)
+      vj = this.vert.vj(index_v1)
       val1 = val_vert(vi,vj)
       u1 = vert.pos_u(vi)
       v1 = vert.pos_v(vj)
 
-      vi2 = boundary_vert.vi(index_v2)
-      vj2 = boundary_vert.vj(index_v2)
+      vi2 = this.vert.vi(index_v2)
+      vj2 = this.vert.vj(index_v2)
       val2 = val_vert(vi2,vj2)
       u2 = vert.pos_u(vi2)
       v2 = vert.pos_v(vj2)
 
       quarter = quarter_of_edge_ends( val1, val2, level )
 
-      boundary_edge.quarter(index_e) = quarter
+      this.edge.quarter(index_e) = quarter
 
       if ( quarter == SLICE_MESH__EDGE_PM ) then
         ! Only PM case.
@@ -1239,15 +1241,15 @@ contains
                          "This is not a PM edge?" )
         interpol_u = linear_interpol( u1, u2, diff1, diff2 )
         interpol_v = linear_interpol( v1, v2, diff1, diff2 )
-        this.u_cross_coord(index_e) = interpol_u
-        this.v_cross_coord(index_e) = interpol_v
+        this.edge.u_cross_coord(index_e) = interpol_u
+        this.edge.v_cross_coord(index_e) = interpol_v
       end if        
     end do    
 
-    call ut__assert( minval(this.quarter(:)) >= 0,  &
+    call ut__assert( minval(this.edge.quarter(:)) >= 0,  &
                      "__MODULE__(__LINE__): " //    &
                      "You missed some edge.quarter." )
-  end subroutine slice_mesh__boundary_edge_set_quarter  
+  end subroutine slice_mesh__boundary_set_quarter  
 
 
   subroutine set_uv_edge_cross_coord( vert, val_vert, level, edge )
@@ -1299,7 +1301,7 @@ contains
           ! The following linter interpol is valid both
           ! for diff_left > 0 and < 0 cases.
           edge.u_cross_coord(ei,ej) = linear_interpol( u_left,     &
-                                                       u_right     &
+                                                       u_right,     &
                                                        diff_left,  &
                                                        diff_right )
         end if
@@ -1307,21 +1309,21 @@ contains
     end do
 
     ! edge_v
-    do ej = 1, this.v_nv
-      do ei = 1, this.v_nu
+    do ej = 1, edge.v_nv
+      do ei = 1, edge.v_nu
         vi = ei
         vj_lower = ej
         vj_upper = ej + 1
-        quarter = this.v_quarter(ei,ej)
+        quarter = edge.v_quarter(ei,ej)
         if ( quarter == SLICE_MESH__EDGE_MP  .or.  &
              quarter == SLICE_MESH__EDGE_PM ) then
-          v_lower = mesh_vert.pos_v(vj_lower)  ! lower vert
-          v_upper = mesh_vert.pos_v(vj_upper)  ! upper vert
+          v_lower = vert.pos_v(vj_lower)  ! lower vert
+          v_upper = vert.pos_v(vj_upper)  ! upper vert
           diff_lower = val_vert(vi,vj_lower) - level
           diff_upper = level - val_vert(vi,vj_upper)
           call ut__assert( diff_lower * diff_upper >= 0.0,   &
                            "__MODULE__(__LINE__): Not a PM/MP edge?" )
-          this.v_cross_coord(ei,ej) = linear_interpol( v_lower,    &
+          edge.v_cross_coord(ei,ej) = linear_interpol( v_lower,    &
                                                        v_upper,    &
                                                        diff_lower, &
                                                        diff_upper )

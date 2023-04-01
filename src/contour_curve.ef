@@ -71,10 +71,10 @@ module contour_curve_m
      Another possible complex border is diagonal edge like
 
                          SW=======W=======W 
-                        / .       .       . \ 
-                      /   .       .       .   \
-                    /     .       .       .     \ 
-                 SW . . . + . . . + . . . + . . . NW
+                        / .       .       . \    going
+                      /   .       .       .   \    north-west
+                    /     .       .       .     \    from this
+                 SW . . . + . . . + . . . + . . . NW   <== vert 
                 / .       .       .       .       |     
               /   .       .       .       .       |     
             /     .       .       .       .       |     
@@ -162,7 +162,7 @@ contains
                                                   vi, vj,       &
                                                   octa_direct,  &
                                                   cruising_lane )
-    class(contour_curve__element_t) <out> :: this
+    class(contour_curve_t) <io> :: this
     integer <in> :: vi, vj
     integer <in> :: octa_direct
     char(len=2) <in> :: cruising_lane
@@ -170,42 +170,42 @@ contains
     if ( cruising_lane == 'on' ) then
       select case ( octa_direct )
         case (0)
-          this = contour_curve__element_t( 'v', 'on',   vi,   vj, 'N' )
+          this.head = contour_curve__element_t( 'v', 'on',   vi,   vj, 'N' )
         case (1)    
-          this = contour_curve__element_t( 'a', 'on',   vi,   vj, 'N' )
+          this.head = contour_curve__element_t( 'a', 'on',   vi,   vj, 'N' )
         case (2)    
-          this = contour_curve__element_t( 'u', 'on',   vi,   vj, 'E' )
+          this.head = contour_curve__element_t( 'u', 'on',   vi,   vj, 'E' )
         case (3)  
-          this = contour_curve__element_t( 'd', 'on',   vi, vj-1, 'S' )
+          this.head = contour_curve__element_t( 'd', 'on',   vi, vj-1, 'S' )
         case (4)  
-          this = contour_curve__element_t( 'v', 'on',   vi, vj-1, 'S' )
+          this.head = contour_curve__element_t( 'v', 'on',   vi, vj-1, 'S' )
         case (5)
-          this = contour_curve__element_t( 'a', 'on', vi-1, vj-1, 'S' )
+          this.head = contour_curve__element_t( 'a', 'on', vi-1, vj-1, 'S' )
         case (6)
-          this = contour_curve__element_t( 'u', 'on', vi-1,   vj, 'W' )
+          this.head = contour_curve__element_t( 'u', 'on', vi-1,   vj, 'W' )
         case (7)  
-          this = contour_curve__element_t( 'd', 'on', vi-1,   vj, 'N' )
+          this.head = contour_curve__element_t( 'd', 'on', vi-1,   vj, 'N' )
         case default
           call ut__fatal( '__MODULE__(__LINE__): case error.' )
       end select
     else if ( cruising_lane == 'in' ) then
-      select case ( odirect )
+      select case ( octa_direct )
         case (0)
-          this = contour_curve__element_t( 'v', 'in',   vi,   vj, 'W' )
+          this.head = contour_curve__element_t( 'v', 'in',   vi,   vj, 'W' )
         case (1)    
-          this = contour_curve__element_t( 'a', 'in',   vi,   vj, 'N' )
+          this.head = contour_curve__element_t( 'a', 'in',   vi,   vj, 'N' )
         case (2)    
-          this = contour_curve__element_t( 'u', 'in',   vi,   vj, 'N' )
+          this.head = contour_curve__element_t( 'u', 'in',   vi,   vj, 'N' )
         case (3)  
-          this = contour_curve__element_t( 'd', 'in',   vi, vj-1, 'N' )
+          this.head = contour_curve__element_t( 'd', 'in',   vi, vj-1, 'N' )
         case (4)  
-          this = contour_curve__element_t( 'v', 'in',   vi, vj-1, 'E' )
+          this.head = contour_curve__element_t( 'v', 'in',   vi, vj-1, 'E' )
         case (5)
-          this = contour_curve__element_t( 'a', 'in', vi-1, vj-1, 'S' )
+          this.head = contour_curve__element_t( 'a', 'in', vi-1, vj-1, 'S' )
         case (6)
-          this = contour_curve__element_t( 'u', 'in', vi-1,   vj, 'S' )
+          this.head = contour_curve__element_t( 'u', 'in', vi-1,   vj, 'S' )
         case (7)  
-          this = contour_curve__element_t( 'd', 'in', vi-1,   vj, 'S' )
+          this.head = contour_curve__element_t( 'd', 'in', vi-1,   vj, 'S' )
         case default
           call ut__fatal( '__MODULE__(__LINE__): case error.' )
       end select
@@ -221,18 +221,17 @@ contains
                                                  cruising_lane,         &
                                                  i, j,                  &
                                                  cross_this_edge_toward )
-    class(contour_curve__element_t) <out> :: this
+    class(contour_curve_t) <io> :: this
     character <in> :: which_edge
     char(len=2) <in> :: cruising_lane
     integer <in> :: i, j
     character <in> :: cross_this_edge_toward
 
-    this = contour_curve__element_t( which_edge,              &
-                                     cruising_lane,           &
-                                     i,                       &
-                                     j,                       &
-                                     cross_this_edge_toward )
-
+    this.head = contour_curve__element_t( which_edge,              &
+                                          cruising_lane,           &
+                                          i,                       &
+                                          j,                       &
+                                          cross_this_edge_toward )
   end subroutine contour_curve__replace_head_direct
 
 
@@ -283,9 +282,9 @@ contains
       u = edge.u_cross_coord(ei,ej)
       v = vert.pos_v(vj)
       call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-      path.register_new_vert( u, v )
+      call path.register_new_vert( u, v )
       flag_left = vert.flag(vi_left,vj)
-      if ( flag__left == 'o' ) then
+      if ( flag_left == 'o' ) then
         call ut__fatal( "__MODULE__(__LINE__): " //  &
                         "Go out of the border?" )
       else if ( flag_left == 'i' ) then
@@ -297,7 +296,7 @@ contains
         call path.replace_head_edge( 'u', 'in', ei, ej, 'N' ) 
         call edge.erase( 'u', ei, ej )
       else ! vert_left on the border.
-        octa_direct_along_border = flag_to_octa_direct( flag_left )
+        octa_direct_along_border = vert.flag_to_octa_direct( flag_left )
         !            
         !    n  n  P * - - M - - 
         !          .   *   .
@@ -335,9 +334,9 @@ contains
       u = edge.u_cross_coord(ei,ej)
       v = vert.pos_v(vj)
       call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-      path.register_new_vert( u, v )
+      call path.register_new_vert( u, v )
       flag_right = vert.flag(vi_right,vj)
-      if ( flag__right == 'o' ) then
+      if ( flag_right == 'o' ) then
         call ut__fatal( "__MODULE__(__LINE__): " //  &
                         "Go out of the border?" )
       else if ( flag_right == 'i' ) then
@@ -349,7 +348,7 @@ contains
         call path.replace_head_edge( 'u', 'in', ei, ej, 'S' ) 
         call edge.erase( 'u', ei, ej )
       else ! vert_right on the border.
-        octa_direct_along_border = flag_to_octa_direct( flag_right )
+        octa_direct_along_border = vert.flag_to_octa_direct( flag_right )
         !
         !        . *     .
         !        .  *    .
@@ -388,10 +387,10 @@ contains
       u = vert.pos_u(vi)
       v = edge.v_cross_coord(ei,ej)
       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-      path.register_new_vert( u, v )
+      call path.register_new_vert( u, v )
       flag_lower = vert.flag(vi,vj_lower)
 
-      if ( flag__lower == 'o' ) then
+      if ( flag_lower == 'o' ) then
         call ut__fatal( "__MODULE__(__LINE__): " //  &
                         "Go out of the border?" )
       else if ( flag_lower == 'i' ) then
@@ -406,7 +405,7 @@ contains
         call path.replace_head_edge( 'v', 'in', ei, ej, 'W' ) 
         call edge.erase( 'v', ei, ej )
       else ! vert_lower on the border.
-        octa_direct_along_border = flag_to_octa_direct( flag_lower )
+        octa_direct_along_border = vert.flag_to_octa_direct( flag_lower )
         !             
         !      .   *   .
         !      M - * - + - -
@@ -450,10 +449,10 @@ contains
       u = vert.pos_u(vi)
       v = edge.v_cross_coord(ei,ej)
       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
-      path.register_new_vert( u, v ) 
+      call path.register_new_vert( u, v ) 
       flag_upper = vert.flag(vi,vj_upper)
 
-      if ( flag__upper == 'o' ) then
+      if ( flag_upper == 'o' ) then
         call ut__fatal( "__MODULE__(__LINE__): " //  &
                         "Go out of the border?" )
       else if ( flag_upper == 'i' ) then
@@ -468,7 +467,7 @@ contains
         call path.replace_head_edge( 'v', 'in', ei, ej, 'E' ) 
         call edge.erase( 'v', ei, ej )
       else ! vert_upper on the border.
-        octa_direct_along_border = flag_to_octa_direct( flag_upper )
+        octa_direct_along_border = vert.flag_to_octa_direct( flag_upper )
         !             
         !   .       n 
         !   .       n 
@@ -561,7 +560,9 @@ contains
     integer :: vi2, vj2, nth_next
     integer :: ei, ej  ! edge indeces i and j
     integer :: numbv, quarter, octa_direct2
-    real :: u2 v2
+    real :: u2, v2
+    integer :: octa_direct
+    character :: path_go_toward
     character :: which_edge
     char(len=2) :: cruising_lane
 
@@ -579,11 +580,11 @@ contains
     vi = path.head.i
     vj = path.head.j
     numbv = boundary.vert.num
-    call ut__assert( vert.border_list.vi(nth) == vi .and.   &
-                     vert.border_list.vj(nth) == vj,        &
+    call ut__assert( boundary.vert.vi(nth) == vi .and.   &
+                     boundary.vert.vj(nth) == vj,        &
                      "__MODULE__(__LINE__): border vert inconsistent." )
 
-    quarter = bondary.edge.quarter(nth)
+    quarter = boundary.edge.quarter(nth)
     
     if ( quarter == SLICE_MESH__EDGE_PP ) then
       !!>
@@ -606,7 +607,7 @@ contains
       u2 = vert.pos_u(boundary.vert.vi(nth_next))
       v2 = vert.pos_v(boundary.vert.vj(nth_next))
 
-      path.register_new_vert( u2, v2 )
+      call path.register_new_vert( u2, v2 )
       call boundary.edge.erase( nth )
       octa_direct = boundary.vert.octa_direct(nth_next)
       cruising_lane = 'on'
@@ -632,7 +633,7 @@ contains
       call ut__assert( u2 /= NAN .and. v2 /= NAN,   &
                        "__MODULE__(__LINE__): Invalid cross coord." )
 
-      path.register_new_vert( u2, v2 )
+      call path.register_new_vert( u2, v2 )
       call boundary.edge.erase( nth )
       octa_direct = boundary.vert.octa_direct(nth)
       call leave_from_boundary( vi, vj,         &
@@ -663,8 +664,10 @@ contains
     integer :: ei, ej
     logical :: jumped
 
-    call ut__assert( mod(path.head.octa_direct,2)==0,  &
-                     "__MODULE__(__LINE__): head.octa_direct must be 0/2/4/6." )
+    call ut__assert( path.head.which_edge == 'u' .or.   &
+                     path.head.which_edge == 'v',       &
+                     "__MODULE__(__LINE__): " //        &
+                     "head is to be u_ or v_edge." )
     call ut__assert( path.head.cruising_lane == 'in',  &
                      "__MODULE__(__LINE__): The path should be in the region." )
 
@@ -1023,19 +1026,21 @@ contains
     integer :: octa_direct
     real :: u1, v1, u2, v2
     char(len=2) :: cruising_lane
+    character :: path_go_toward
+    character :: which_edge
 
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
     do edge_index = 1, boundary.edge.num
-      quarter = boundary.edge.quarter(edege_index)
+      quarter = boundary.edge.quarter(edge_index)
       if ( quarter == SLICE_MESH__EDGE_PP  .or.  &
            quarter == SLICE_MESH__EDGE_PM ) then
         status = 'have found'
         vert_index1 = edge_index
         u1 = vert.pos_u(boundary.vert.vi(vert_index1))
         v1 = vert.pos_v(boundary.vert.vj(vert_index1))
-        path.register_new_vert( u1, v1 )
+        call path.register_new_vert( u1, v1 )
 
         if ( quarter == SLICE_MESH__EDGE_PP ) then
           vert_index2 = vert_index1 + 1 ! next vert in the border path
@@ -1050,10 +1055,10 @@ contains
           call ut__assert( u2 /= NAN .and. v2 /= NAN,  &
                            "__MODULE__(__LINE__): Invalid cross coord." )
           cruising_lane = 'in'
-        end select
+        end if
 
         call path.register_new_vert( u2, v2 )
-        octa_direct = vert.border_list.octa_direct(vert_index1)
+        octa_direct = boundary.vert.octa_direct(vert_index1)
         call leave_from_boundary( boundary.vert.vi(vert_index1),  &
                                   boundary.vert.vj(vert_index1),  &
                                   octa_direct,                    &
@@ -1140,8 +1145,8 @@ contains
           call ut__assert( u /= NAN,                    &
                            "__MODULE__(__LINE__): " //  &
                            "Invalid cross coord." )
-          path.register_new_vert( u, v )
-          call path.head.replace_head_edge( 'u', 'in', ei, ej, 'N' )
+          call path.register_new_vert( u, v )
+          call path.replace_head_edge( 'u', 'in', ei, ej, 'N' )
           path.start = path.head
           return
         end if
@@ -1184,6 +1189,7 @@ contains
     class(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__boundary_t) <io> :: boundary
+    type(slice_mesh__edge_t) <io> :: edge
 
     integer :: nthbv ! of border verts
     char(len=2) :: cruising_lane_prev
