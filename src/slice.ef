@@ -326,7 +326,7 @@ contains
     real :: u, v
 
     integer :: skip, stride
-    character(len=11) :: tag_for_group
+    char(len=11) :: tag_for_group
     logical, dimension(:,:), allocatable :: pass_to_sketch_flag
 
     allocate(pass_to_sketch_flag(this.mesh_vert.nu,this.mesh_vert.nv))
