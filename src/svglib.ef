@@ -41,9 +41,9 @@ module svglib_m
                       text_line_s1_r1_s2_r2_s3_r3_s4_r4
   end interface svglib__text_line
 
-  char(len=1) <const> :: QUOTE = '"'
-  char(len=1) <const> :: SPACE = ' '
-  char(len=1) <const> :: COMMA = ','
+  character <const> :: QUOTE = '"'
+  character <const> :: SPACE = ' '
+  character <const> :: COMMA = ','
   integer <const> :: SVGLIB__BSL = 100  ! Basic text string length
                                         ! e.g., '<line = "... >'
 
@@ -631,7 +631,7 @@ contains
                            fill_color )
     class(svglib_t) <io> :: this
     integer <in> :: nverts
-    char(len=1), dimension(nverts) <in> :: path_directive 
+    character, dimension(nverts) <in> :: path_directive 
     real, dimension(nverts) <in> :: verts_x
     real, dimension(nverts) <in> :: verts_y 
     real <in> :: line_width
@@ -643,7 +643,7 @@ contains
     char(len=SVGLIB__BSL) :: str_coords
     char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
     char(len=SVGLIB__BSL*MAX_NOP) :: str_all
-    char(len=1) :: directive
+    character :: directive
 
     str(1) = '<path' 
     str(2) = svglib__text_line( 'stroke-width=', line_width )

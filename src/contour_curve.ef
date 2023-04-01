@@ -124,7 +124,7 @@ module contour_curve_m
   !!< 
 
   type, public :: contour_curve__element_t
-    char(len=1) :: which_edge    ! 'u' or 'v' or 'a' or 'd'
+    character :: which_edge    ! 'u' or 'v' or 'a' or 'd'
     char(len=2) :: cruising_lane ! 'in' (bulk) or 'on' (border)
     integer :: i, j  ! id of edge (for in bulk lane), or 
                      ! id of vert (for on border lane).
@@ -222,7 +222,7 @@ contains
                                                  i, j,                  &
                                                  cross_this_edge_toward )
     class(contour_curve__element_t) <out> :: this
-    char(len=1) <in> :: which_edge
+    character <in> :: which_edge
     char(len=2) <in> :: cruising_lane
     integer <in> :: i, j
     character <in> :: cross_this_edge_toward
@@ -562,7 +562,7 @@ contains
     integer :: ei, ej  ! edge indeces i and j
     integer :: numbv, quarter, octa_direct2
     real :: u2 v2
-    char(len=1) :: which_edge
+    character :: which_edge
     char(len=2) :: cruising_lane
 
     call ut__assert( path.head.cruising_lane == 'on',  &
@@ -1209,17 +1209,7 @@ contains
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
       cruising_lane_prev = path.head.cruising_lane
-      if ( path.is_closed() ) then
-        ! select case (path.start.cruising_lane)
-        !   case ('in')
-        !     call edge.erase( path.start.which_edge,  &
-        !                      path.start.i,           &
-        !                      path.start.j )
-        !   case ('on')
-        !     call boundary.edge.erase( 1 )
-        ! end select
-        return
-      end if
+      if ( path.is_closed() ) return
     end do
 
   end subroutine contour_curve__trace_and_erase

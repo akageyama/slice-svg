@@ -771,7 +771,7 @@ contains
 
   subroutine slice_mesh_edge__erase_uv_edge( this, which_edge, ei, ej )
     class(slice_mesh__edge_t) <io> :: this
-    char(len=1) <in> :: which_edge
+    character <in> :: which_edge
     integer <in> :: ei, ej
     
     if ( which_edge == 'u' ) then

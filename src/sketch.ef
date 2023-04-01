@@ -468,7 +468,7 @@ contains
     class(sketch_t) <io> :: this
     integer <in> :: nverts
     type(sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
-    char(len=1), dimension(nverts) <in> :: path_directive
+    character, dimension(nverts) <in> :: path_directive
     real <optin> :: width_in_pixels
     type(color_t) <optin> :: line_color
     type(color_t) <optin> :: fill_color

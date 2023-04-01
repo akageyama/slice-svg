@@ -70,8 +70,8 @@ contains
     logical :: just_once = .true.
     char(len=10) :: status
     type(sketch__sim_pos_t), dimension(:), allocatable, save :: verts_sim
-    char(len=1), dimension(:), allocatable, save :: path_directive
-    char(len=1) :: SVG_directive
+    character, dimension(:), allocatable, save :: path_directive
+    character :: SVG_directive
     integer :: i, counter
     real :: u_sim, v_sim, dummy
 
