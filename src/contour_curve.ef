@@ -1017,42 +1017,42 @@ contains
     !!<    
 
     integer :: quarter
-    integer :: v, v2, i, j
+    integer :: edge_index, vert_index1, vert_index2
+    integer :: i, j
     integer :: octa_direct
-    integer :: vi, vj
     real :: u1, v1, u2, v2
     char(len=2) :: cruising_lane
 
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
-    do e = 1, boundary.edge.num
-      quarter = boundary.edge.quarter(e)
+    do edge_index = 1, boundary.edge.num
+      quarter = boundary.edge.quarter(edege_index)
       if ( quarter == SLICE_MESH__EDGE_PP  .or.  &
            quarter == SLICE_MESH__EDGE_PM ) then
         status = 'have found'
-        v1 = e
-        v2 = v1 + 1
-        u1 = vert.pos_u(boundary.vert.vi(v1))
-        v1 = vert.pos_v(boundary.vert.vj(v1))
+        vert_index1 = edge_index
+        u1 = vert.pos_u(boundary.vert.vi(vert_index1))
+        v1 = vert.pos_v(boundary.vert.vj(vert_index1))
         path.register_new_vert( u1, v1 )
 
         if ( quarter == SLICE_MESH__EDGE_PP ) then
-          v2 = v1 + 1 ! next vert in the border path
-          if ( v2 > boundary.vert.num ) v2 -= boundary.vert.num
-          u2 = vert.pos_u(boundary.vert.vi(v2))
-          v2 = vert.pos_v(boundary.vert.vj(v2))
+          vert_index2 = vert_index1 + 1 ! next vert in the border path
+          if ( vert_index2 > boundary.vert.num )  &
+               vert_index2 -= boundary.vert.num
+          u2 = vert.pos_u(boundary.vert.vi(vert_index2))
+          v2 = vert.pos_v(boundary.vert.vj(vert_index2))
           cruising_lane = 'on'
         else ! quarter == SLICE_MESH__EDGE_PM
-          u2 = boundary.edge.u_cross_coord(e)
-          v2 = boundary.edge.v_cross_coord(e)
+          u2 = boundary.edge.u_cross_coord(edge_index)
+          v2 = boundary.edge.v_cross_coord(edge_index)
           call ut__assert( u2 /= NAN .and. v2 /= NAN,  &
                            "__MODULE__(__LINE__): Invalid cross coord." )
           cruising_lane = 'in'
         end select
 
         call path.register_new_vert( u2, v2 )
-        octa_direct = vert.border_list.octa_direct(v)
+        octa_direct = vert.border_list.octa_direct(vert_index1)
         call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
         path.start = path.head
         return

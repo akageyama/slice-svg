@@ -1004,12 +1004,13 @@ contains
   end subroutine slice_mesh__boundary_edge_initialize
 
 
-  subroutine set_uv_edge_quarter( vert,       &
+  subroutine set_uv_edge_quarter( vert_nu,    &
+                                  vert_nv,    &
                                   val_vert,   &
                                   level,      &
                                   edge )
-    type(slice_mesh__vert_t) <in> :: vert
-    real, dimension(vert.nu,vert.nv) <in> :: val_vert
+    integer <in> :: vert_nu, vert_nv
+    real, dimension(vert_nu,vert_nv) <in> :: val_vert
     real <in> :: level
     type(slice_mesh__edge_t) <io> :: edge
     !!>
@@ -1183,7 +1184,8 @@ contains
     this.v_quarter(:,:) = -999  ! QUATER_MM, MP, PM, PP are
                                 ! all positive.
 
-    call set_uv_edge_quarter( vert, val_vert, level, edge )
+    call set_uv_edge_quarter( vert.nu, vert.nv,   &
+                              val_vert, level, edge )
     call set_uv_edge_cross_coord( vert, val_vert, level, edge )
     call ut__assert( minval(this.u_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_u.quarter" )
@@ -1201,13 +1203,14 @@ contains
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
 
-    integer :: index_e           ! edge index
-    integer :: index_v1, index_v2 ! verts index for both ends
+    integer :: index_e            ! edge index
+    integer :: index_v1, index_v2 ! vert index for both ends
     integer :: vi, vj, ei, ej, vi2, vj2
     real :: val1, u1, v1, diff1
     real :: val2, u2, v2, diff2
     integer :: quarter
     real :: interpol_u, interpol_v
+    integer :: bvnum
 
     this.u_cross_coord(:) = NAN
     this.v_cross_coord(:) = NAN
@@ -1226,10 +1229,11 @@ contains
            v6--[e6]--v5--[e5]--v4
     !!<
 
-    do index_e = 1, this.num
+    bvnum = this.num ! boundary verts num (= edge num)
+    do index_e = 1, bvnum
       index_v1 = index_e
       index_v2 = index_v1 + 1
-      if ( index_v2 > this.num ) index_v2 -= this.num
+      if ( index_v2 > bvnum ) index_v2 -= bvnum
 
       vi = boundary_vert.vi(index_v1)
       vj = boundary_vert.vj(index_v1)

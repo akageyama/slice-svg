@@ -71,7 +71,7 @@ contains
     char(len=10) :: status
     type(sketch__sim_pos_t), dimension(:), allocatable, save :: verts_sim
     char(len=1), dimension(:), allocatable, save :: path_directive
-    char(len=1) :: directive
+    char(len=1) :: SVG_directive
     integer :: i, counter
     real :: u_sim, v_sim, dummy
 
@@ -107,13 +107,13 @@ contains
       do i = 1, contour_curve.num
         counter += 1
         if ( i == 1 ) then
-          directive = 'M' ! Move to 
+          SVG_directive = 'M' ! Move to 
         else if ( i == 2 ) then
-          directive = 'L' ! Line to
+          SVG_directive = 'L' ! Line to
         else
-          directive = ' ' ! Line to (You can ommit directive after 1st 'L'.)
+          SVG_directive = ' ' ! Line to (You can ommit this after 1st 'L'.)
         end if
-        path_directive(counter) = directive 
+        path_directive(counter) = SVG_directive 
         u_sim = contour_curve.list_u(i)
         v_sim = contour_curve.list_v(i)
         verts_sim(counter) = sketch__sim_pos_t(u_sim,v_sim)
