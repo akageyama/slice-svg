@@ -518,11 +518,7 @@ contains
       case ('l')
         octa_direct = mod(octa_direct+7,8)
       case ('L')
-!debugp "__MODULE__(__LINE__) before: ", i, j
-!debugp "__MODULE__(__LINE__) before: ", octa_direct
         octa_direct = mod(octa_direct+6,8)
-!debugp "__MODULE__(__LINE__)  after: ", i, j
-!debugp "__MODULE__(__LINE__)  after: ", octa_direct
       case default
         call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
@@ -665,8 +661,6 @@ contains
                                             octa_direct )
     start_vi = vi
     start_vj = vj
-!debugp start_vi, start_vj
-!debugp octa_direct
     counter = 1
     this.vert.octa_direct(counter) = octa_direct
     this.vert.vi(counter) = vi
@@ -674,22 +668,14 @@ contains
     call get_edge_id( vi, vj, octa_direct, ei, ej, edge_type )
     this.edge.ei(counter) = ei
     this.edge.ej(counter) = ej
-!debugp ei, ej
-!debugp edge_type
     this.edge.type(counter) = edge_type
 
-    do counter = 2, num_of_boundary_vert 
-!debugp counter
-!debugp "calling get_next_octa_direct_and_vert", vi, vj
-!debugp "calling get_next_octa_direct_and_vert", octa_direct
-!debugp "calling get_next_octa_direct_and_vert", vert.flag(vi,vj)
+    do counter = 2, num_of_boundary_vert + 1
+      ! the last "+1" is necesary to close the path
       call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
                                           vi, vj,           &
                                           vert.flag(vi,vj), &
                                           octa_direct )
-!debugp "called get_next_octa_direct_and_vert", vi, vj
-!debugp "called get_next_octa_direct_and_vert", octa_direct
-!debugp "next:", octa_direct
       if ( vi == start_vi .and. vj == start_vj ) then
         ! have returned back to the start vert
         return
@@ -1202,6 +1188,8 @@ contains
       end do
     end do
 
+!debugp edge.u_quarter(3,1)
+
     ! edge_v
     do ej = 1, edge.v_nv  
       do ei = 1, edge.v_nu
@@ -1210,7 +1198,7 @@ contains
         vj_upper = ej + 1
         val_lower = val_vert(vi,vj_lower)  ! lower vert
         val_upper = val_vert(vi,vj_upper)  ! upper vert
-        edge.u_quarter(ei,ej) = quarter_of_edge_ends( val_lower,  &
+        edge.v_quarter(ei,ej) = quarter_of_edge_ends( val_lower,  &
                                                       val_upper,  &
                                                       level )
       end do
@@ -1234,6 +1222,7 @@ contains
 
     call set_uv_edge_quarter( vert.nu, vert.nv,   &
                               val_vert, level, this )
+!debugp "__LINE__", this.u_quarter(3,1)
     call set_uv_edge_cross_coord( vert, val_vert, level, this )
     call ut__assert( minval(this.u_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_u.quarter" )
@@ -1295,9 +1284,15 @@ contains
       u2 = vert.pos_u(vi2)
       v2 = vert.pos_v(vj2)
 
+!debugp '>', index_e
+!debugp '>', index_v1, index_v2
+!debugp '>', vi, vj, val1
+!debugp '>', vi2, vj2, val2
       quarter = quarter_of_edge_ends( val1, val2, level )
+!debugp '>', val1, val2, level
 
       this.edge.quarter(index_e) = quarter
+!debugp '>', index_e, quarter
 
       if ( quarter == SLICE_MESH__EDGE_PM ) then
         ! Only PM case.
@@ -1350,7 +1345,7 @@ contains
            To catch errornous cases in which a contour
            path tries to cross a non PM or MP edge.
       !!<
-
+!debugp edge.u_quarter(3,1)
     ! edge_u
     do ej = 1, edge.u_nv
       do ei = 1, edge.u_nu
@@ -1358,12 +1353,18 @@ contains
         vi_right = ei + 1
         vj = ej
         quarter = edge.u_quarter(ei,ej)
+!debugp vi_left, vj, quarter
         if ( quarter == SLICE_MESH__EDGE_MP .or.  &
              quarter == SLICE_MESH__EDGE_PM ) then
           u_left  = vert.pos_u(vi_left)   ! left vert
           u_right = vert.pos_u(vi_right)  ! right vert
+!debugp u_left, u_right
           diff_left  = val_vert(vi_left,vj) - level
           diff_right = level - val_vert(vi_right,vj)
+!debugp val_vert(vi_left,vj)
+!debugp level
+!debugp val_vert(vi_right,vj)
+!debugp diff_left, diff_right
           call ut__assert( diff_left * diff_right >= 0.0,   &
                            "__MODULE__(__LINE__): Not a PM/MP edge?" )
           ! The following linter interpol is valid both
