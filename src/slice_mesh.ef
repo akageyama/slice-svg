@@ -398,7 +398,6 @@ contains
 
     boundary_vert_num = iCount_boundary_vert( nu, nv, vert_flag )
     this.num = boundary_vert_num
-!debugp "__FUNC__", boundary_vert_num  
 
     allocate(this.octa_direct(boundary_vert_num))
     allocate(         this.vi(boundary_vert_num))
@@ -748,8 +747,6 @@ contains
     !!<
     real :: weight1, weight2
 
-    call ut__assert( x1 < x2,  &
-                     "__MODULE__(__LINE__): Bad grids order." )
     call ut__assert( diff1*diff2 >= 0.0,  &
                      "__MODULE__(__LINE__): Cannot interpolate." )
 
@@ -763,9 +760,9 @@ contains
       !  (2) diff1 < 0 & diff2 < 0
       weight1 = diff2 / (diff1 + diff2)
       weight2 = 1.0 - weight1
+      call ut__assert( weight1 >= 0.0 .and. weight1 <= 1.0,  &
+                       "__MODULE__(__LINE__): weight1 is out of range." )
       xi = weight1 * x1 + weight2 * x2
-      call ut__assert( xi >= x1 .and. xi <= x2,  &
-                       "__MODULE__(__LINE__): Weight is out of range." )
     end if
   end function linear_interpol
 
@@ -1188,8 +1185,6 @@ contains
       end do
     end do
 
-!debugp edge.u_quarter(3,1)
-
     ! edge_v
     do ej = 1, edge.v_nv  
       do ei = 1, edge.v_nu
@@ -1222,7 +1217,6 @@ contains
 
     call set_uv_edge_quarter( vert.nu, vert.nv,   &
                               val_vert, level, this )
-!debugp "__LINE__", this.u_quarter(3,1)
     call set_uv_edge_cross_coord( vert, val_vert, level, this )
     call ut__assert( minval(this.u_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_u.quarter" )
@@ -1284,23 +1278,17 @@ contains
       u2 = vert.pos_u(vi2)
       v2 = vert.pos_v(vj2)
 
-!debugp '>', index_e
-!debugp '>', index_v1, index_v2
-!debugp '>', vi, vj, val1
-!debugp '>', vi2, vj2, val2
       quarter = quarter_of_edge_ends( val1, val2, level )
-!debugp '>', val1, val2, level
 
       this.edge.quarter(index_e) = quarter
-!debugp '>', index_e, quarter
 
       if ( quarter == SLICE_MESH__EDGE_PM ) then
         ! Only PM case.
         diff1 = val1 - level
         diff2 = level - val2
         call ut__assert( diff1 >= 0.0 .and.          &
-                         diff2 <  0.0,               &
-                         "__MODULE__(__FUNC__): " // &
+                         diff2 >  0.0,               &
+                         "__MODULE__(__LINE__): " // &
                          "This is not a PM edge?" )
         interpol_u = linear_interpol( u1, u2, diff1, diff2 )
         interpol_v = linear_interpol( v1, v2, diff1, diff2 )
@@ -1345,7 +1333,6 @@ contains
            To catch errornous cases in which a contour
            path tries to cross a non PM or MP edge.
       !!<
-!debugp edge.u_quarter(3,1)
     ! edge_u
     do ej = 1, edge.u_nv
       do ei = 1, edge.u_nu
@@ -1353,18 +1340,12 @@ contains
         vi_right = ei + 1
         vj = ej
         quarter = edge.u_quarter(ei,ej)
-!debugp vi_left, vj, quarter
         if ( quarter == SLICE_MESH__EDGE_MP .or.  &
              quarter == SLICE_MESH__EDGE_PM ) then
           u_left  = vert.pos_u(vi_left)   ! left vert
           u_right = vert.pos_u(vi_right)  ! right vert
-!debugp u_left, u_right
           diff_left  = val_vert(vi_left,vj) - level
           diff_right = level - val_vert(vi_right,vj)
-!debugp val_vert(vi_left,vj)
-!debugp level
-!debugp val_vert(vi_right,vj)
-!debugp diff_left, diff_right
           call ut__assert( diff_left * diff_right >= 0.0,   &
                            "__MODULE__(__LINE__): Not a PM/MP edge?" )
           ! The following linter interpol is valid both
