@@ -662,7 +662,7 @@ contains
 
     integer :: ei, ej
     logical :: jumped
-
+!debugp "test"
     call ut__assert( path.head.which_edge == 'u' .or.   &
                      path.head.which_edge == 'v',       &
                      "__MODULE__(__LINE__): " //        &
@@ -674,6 +674,11 @@ contains
 
     ei = path.head.i
     ej = path.head.j
+
+!debugp "test2"
+!debugp ei, ej
+!debugp path.head.path_go_toward
+!debugp "test3"
 
     select case (path.head.path_go_toward)
       !!>
@@ -696,8 +701,10 @@ contains
       case ('N')
         call ut__assert( path.head.which_edge == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
+!debugp "calling jump_to_v_edge_mp_if_possible"
         call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                             jumped, ei+1, ej )
+!debugp "called ", jumped
                          !!>
                               p - - p
                               |    *|To
@@ -707,6 +714,7 @@ contains
                          !!<
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej+1 )
+!debugp "called ", jumped
                          !!>
                                 To
                               p -*- m
@@ -717,6 +725,7 @@ contains
                          !!<
         call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej )
+!debugp "called ", jumped
                          !!>
                               m - - m
                             To*     |
