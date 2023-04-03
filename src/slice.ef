@@ -97,13 +97,13 @@ contains
 !debugp "calling contour_curve.set_start_edge"
 !debugp level
 !debugp this.val_vert(1,1)
-!debugp this.val_vert(1,2)
-!debugp this.val_vert(1,3)
-!debugp this.val_vert(1,4)
-!debugp this.val_vert(1,5)
-!debugp this.val_vert(1,6)
-!debugp this.val_vert(1,7)
-!debugp this.val_vert(1,8)
+!debugp this.val_vert(2,1)
+!debugp this.val_vert(3,1)
+!debugp this.val_vert(4,1)
+!debugp this.val_vert(5,1)
+!debugp this.val_vert(6,1)
+!debugp this.val_vert(7,1)
+!debugp this.val_vert(8,1)
     call contour_curve.set_start_edge( this.mesh_vert,     &
                                        this.mesh_edge,     &
                                        this.mesh_boundary, &

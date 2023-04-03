@@ -1056,16 +1056,22 @@ contains
            quarter == SLICE_MESH__EDGE_PM ) then
         status = 'have found'
         vert_index1 = edge_index
+!debugp vert_index1
+!debugp boundary.vert.vi(vert_index1)
+!debugp boundary.vert.vj(vert_index1)
         u1 = vert.pos_u(boundary.vert.vi(vert_index1))
         v1 = vert.pos_v(boundary.vert.vj(vert_index1))
         call path.register_new_vert( u1, v1 )
 
         if ( quarter == SLICE_MESH__EDGE_PP ) then
+!debugp "entered quarter == SLICE_MESH__EDGE_PP"
           vert_index2 = vert_index1 + 1 ! next vert in the border path
           if ( vert_index2 > boundary.vert.num )  &
                vert_index2 -= boundary.vert.num
+!debugp vert_index1, vert_index2
           u2 = vert.pos_u(boundary.vert.vi(vert_index2))
           v2 = vert.pos_v(boundary.vert.vj(vert_index2))
+!debugp u2, v2
           cruising_lane = 'on'
         else ! quarter == SLICE_MESH__EDGE_PM
           u2 = boundary.edge.u_cross_coord(edge_index)
@@ -1083,7 +1089,6 @@ contains
                                   ei, ej,                         &
                                   which_edge,                     &
                                   path_go_toward )
-        cruising_lane = 'in'
         call path.replace_head_edge( which_edge,     &
                                      cruising_lane,  &
                                      ei,             &
