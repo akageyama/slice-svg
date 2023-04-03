@@ -94,12 +94,27 @@ contains
                                          this.val_vert,   &
                                          level )
     call contour_curve.reset
+!debugp "calling contour_curve.set_start_edge"
+!debugp level
+!debugp this.val_vert(1,1)
+!debugp this.val_vert(1,2)
+!debugp this.val_vert(1,3)
+!debugp this.val_vert(1,4)
+!debugp this.val_vert(1,5)
+!debugp this.val_vert(1,6)
+!debugp this.val_vert(1,7)
+!debugp this.val_vert(1,8)
     call contour_curve.set_start_edge( this.mesh_vert,     &
                                        this.mesh_edge,     &
                                        this.mesh_boundary, &
                                        status )
-
+!debugp contour_curve.start.which_edge
+!debugp contour_curve.start.cruising_lane
+!debugp contour_curve.start.path_go_toward
+!debugp contour_curve.start.i
+!debugp contour_curve.start.j
     counter = 0
+!debugp "calling do while"
     do while ( status == 'have found' )
       !!  Tring to find the 1st contour for this level.
       call contour_curve.trace_and_erase( this.mesh_vert,    &
