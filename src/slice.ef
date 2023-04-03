@@ -78,43 +78,24 @@ contains
     ==<just_once>==
       nu = this.mesh_vert.nu
       nv = this.mesh_vert.nv
-!debugp "calling contour_curve.initialize"
       call contour_curve.initialize( nu, nv )
       allocate(verts_sim(nu*nv))
       allocate(path_directive(nu*nv))
     ==</just_once>==
 
-!debugp "calling mesh_edge.set_quarter"
     call this.mesh_edge.set_quarter( this.mesh_vert,  &
                                      this.val_vert,   &
                                      level )
 
-!debugp "calling this.mesh_boundary.set_quarter"
     call this.mesh_boundary.set_quarter( this.mesh_vert,  &
                                          this.val_vert,   &
                                          level )
     call contour_curve.reset
-!debugp "calling contour_curve.set_start_edge"
-!debugp level
-!debugp this.val_vert(1,1)
-!debugp this.val_vert(2,1)
-!debugp this.val_vert(3,1)
-!debugp this.val_vert(4,1)
-!debugp this.val_vert(5,1)
-!debugp this.val_vert(6,1)
-!debugp this.val_vert(7,1)
-!debugp this.val_vert(8,1)
     call contour_curve.set_start_edge( this.mesh_vert,     &
                                        this.mesh_edge,     &
                                        this.mesh_boundary, &
                                        status )
-!debugp contour_curve.start.which_edge
-!debugp contour_curve.start.cruising_lane
-!debugp contour_curve.start.path_go_toward
-!debugp contour_curve.start.i
-!debugp contour_curve.start.j
     counter = 0
-!debugp "calling do while"
     do while ( status == 'have found' )
       !!  Tring to find the 1st contour for this level.
       call contour_curve.trace_and_erase( this.mesh_vert,    &

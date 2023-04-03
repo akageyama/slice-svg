@@ -276,8 +276,6 @@ contains
     vi_left  = ei
     vj = ej
 
-!debugp ei, ej
-!debugp edge.u_quarter(ei,ej)
     if ( edge.u_quarter(ei,ej) == SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = edge.u_cross_coord(ei,ej)
@@ -383,8 +381,6 @@ contains
     vi = ei
     vj_lower = ej
 
-!debugp ei, ej
-!debugp edge.v_quarter(ei,ej)
     if ( edge.v_quarter(ei,ej) == SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = vert.pos_u(vi)
@@ -446,9 +442,6 @@ contains
 
     vi = ei
     vj_upper = ej + 1
-!debugp vi, vj_upper
-!debugp ei, ej
-!debugp edge.v_quarter(ei,ej)
     if ( edge.v_quarter(ei,ej) == SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = vert.pos_u(vi)
@@ -668,7 +661,6 @@ contains
 
     integer :: ei, ej
     logical :: jumped
-!debugp "test"
     call ut__assert( path.head.which_edge == 'u' .or.   &
                      path.head.which_edge == 'v',       &
                      "__MODULE__(__LINE__): " //        &
@@ -680,10 +672,6 @@ contains
 
     ei = path.head.i
     ej = path.head.j
-
-!debugp "test2"
-!debugp ei, ej
-!debugp path.head.path_go_toward
 
     select case (path.head.path_go_toward)
       !!>
@@ -706,10 +694,8 @@ contains
       case ('N')
         call ut__assert( path.head.which_edge == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
-!debugp "calling jump_to_v_edge_mp_if_possible"
         call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                             jumped, ei+1, ej )
-!debugp "called ", jumped
                          !!>
                               p - - p
                               |    *|To
@@ -717,10 +703,8 @@ contains
                               p -*- m
                                 From 
                          !!<
-!debugp "calling jump_to_u_edge_pm_if_possible"
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej+1 )
-!debugp "called ", jumped
                          !!>
                                 To
                               p -*- m
@@ -729,10 +713,8 @@ contains
                               p -*- m
                                 From 
                          !!<
-!debugp "calling jump_to_v_edge_pm_if_possible"
         call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej )
-!debugp "called ", jumped
                          !!>
                               m - - m
                             To*     |
@@ -1047,31 +1029,22 @@ contains
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
 
-!debugp "calling do edge_index"
     do edge_index = 1, boundary.edge.num
-!debugp edge_index
       quarter = boundary.edge.quarter(edge_index)
-!debugp quarter
       if ( quarter == SLICE_MESH__EDGE_PP  .or.  &
            quarter == SLICE_MESH__EDGE_PM ) then
         status = 'have found'
         vert_index1 = edge_index
-!debugp vert_index1
-!debugp boundary.vert.vi(vert_index1)
-!debugp boundary.vert.vj(vert_index1)
         u1 = vert.pos_u(boundary.vert.vi(vert_index1))
         v1 = vert.pos_v(boundary.vert.vj(vert_index1))
         call path.register_new_vert( u1, v1 )
 
         if ( quarter == SLICE_MESH__EDGE_PP ) then
-!debugp "entered quarter == SLICE_MESH__EDGE_PP"
           vert_index2 = vert_index1 + 1 ! next vert in the border path
           if ( vert_index2 > boundary.vert.num )  &
                vert_index2 -= boundary.vert.num
-!debugp vert_index1, vert_index2
           u2 = vert.pos_u(boundary.vert.vi(vert_index2))
           v2 = vert.pos_v(boundary.vert.vj(vert_index2))
-!debugp u2, v2
           cruising_lane = 'on'
         else ! quarter == SLICE_MESH__EDGE_PM
           u2 = boundary.edge.u_cross_coord(edge_index)
@@ -1191,14 +1164,12 @@ contains
     char(len=10) <out> :: status ! 'no contour' or 'have found'
 
     status = 'no contour'  ! default 
-!debugp "calling find_start_edge_on_boundaries"
     call find_start_edge_on_boundaries( this,     &
                                         vert,     &
                                         boundary, &
                                         status )
     if ( status == 'have found' ) return
 
-!debugp "calling set_start_edge_in_bulk"
     call set_start_edge_in_bulk( this,    &
                                  vert,    &
                                  edge,    &
@@ -1220,27 +1191,20 @@ contains
     char(len=2) :: cruising_lane_prev
 
     cruising_lane_prev = '  ' ! char len=2 other than 'on'
-!debugp "entering do-loop"
     do
       select case (path.head.cruising_lane)
         case ('on')
-!debugp "case on"
           if ( cruising_lane_prev /= 'on' ) then
             ! newly start tracing on the border.
-!debugp "calling boundary.vert.get_nth"
             nthbv = boundary.vert.get_nth( path.head.i,  &
                                            path.head.j )
           end if
-!debugp "calling one_step_along_boundary"
           call one_step_along_boundary( path, vert, boundary, nthbv )
         case ('in')
-!debugp "case in"
           if ( path.head.which_edge == 'u' .or.  &
                path.head.which_edge == 'v'  ) then
-!debugp "calling jump_to_other_edge_from_edge_uv"
             call jump_to_other_edge_from_edge_uv( path, vert, edge )
           else
-!debugp "calling jump_to_other_edge_from_edge_ad"
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
           end if
         case default
