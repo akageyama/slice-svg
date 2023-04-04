@@ -309,7 +309,11 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh__boundary_vert_initialize
     procedure :: finalize => slice_mesh__boundary_vert_finalize
-    procedure :: get_nth => slice_mesh__boundary_vert_get_nth
+    procedure, private :: slice_mesh__boundary_vert_get_nth1
+    procedure, private :: slice_mesh__boundary_vert_get_nth2
+    generic :: get_nth => slice_mesh__boundary_vert_get_nth1,  &
+                          slice_mesh__boundary_vert_get_nth2  ! from edge id and direct
+                          here here Here
   end type slice_mesh__boundary_vert_t
 
 
