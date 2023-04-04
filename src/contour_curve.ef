@@ -1244,7 +1244,8 @@ contains
           if ( cruising_lane_prev /= 'on' ) then
 !debugp "     **entred if"
             ! newly start tracing on the border.
-            nthbv = boundary.vert.get_nth( path.head.ei,  &
+            nthbv = boundary.edge.get_nth( path.head.type,  &
+                                           path.head.ei,    &
                                            path.head.ej )
           end if
 !debugp "   calling one_step_along_boundary"

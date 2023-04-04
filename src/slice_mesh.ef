@@ -309,11 +309,7 @@ module slice_mesh_m
   contains
     procedure :: initialize => slice_mesh__boundary_vert_initialize
     procedure :: finalize => slice_mesh__boundary_vert_finalize
-    procedure, private :: slice_mesh__boundary_vert_get_nth1
-    procedure, private :: slice_mesh__boundary_vert_get_nth2
-    generic :: get_nth => slice_mesh__boundary_vert_get_nth1,  &
-                          slice_mesh__boundary_vert_get_nth2  ! from edge id and direct
-                          here here Here
+    procedure :: get_nth => slice_mesh__boundary_vert_vij_to_nth
   end type slice_mesh__boundary_vert_t
 
 
@@ -329,6 +325,7 @@ module slice_mesh_m
     procedure :: initialize => slice_mesh__boundary_edge_initialize
     procedure :: finalize => slice_mesh__boundary_edge_finalize
     procedure :: erase => slice_mesh__boundary_edge_erase
+    procedure :: get_nth => slice_mesh__boundary_edge_eij_to_nth
   end type slice_mesh__boundary_edge_t
 
 
@@ -374,7 +371,7 @@ contains
   end subroutine slice_mesh__boundary_edge_erase
 
 
-  function slice_mesh__boundary_vert_get_nth( this, vi, vj ) result(nth)
+  function slice_mesh__boundary_vert_vij_to_nth( this, vi, vj ) result(nth)
     class(slice_mesh__boundary_vert_t) <in> :: this
     integer <in> :: vi, vj
     integer :: nth
@@ -390,7 +387,33 @@ contains
       end if
     end do
     call ut__fatal( "__MODULE__(__LINE__): Not a boundary vert." )
-  end function slice_mesh__boundary_vert_get_nth
+  end function slice_mesh__boundary_vert_vij_to_nth
+
+
+  function slice_mesh__boundary_edge_eij_to_nth( this,      &
+                                                 edge_type, &
+                                                 ei,        &
+                                                 ej )       &
+                                                 result(nth)
+    class(slice_mesh__boundary_edge_t) <in> :: this
+    character <in> :: edge_type
+    integer <in> :: ei, ej
+    integer :: nth
+
+    integer :: i, j, n
+    character :: t
+
+    do n = 1, this.num
+      i = this.ei(n)
+      j = this.ej(n)
+      t = this.type(n)
+      if ( i == ei .and. j == ej .and. t == edge_type ) then
+        nth = n
+        return
+      end if
+    end do
+    call ut__fatal( "__MODULE__(__LINE__): Not a boundary vert." )
+  end function slice_mesh__boundary_edge_eij_to_nth
 
 
   subroutine slice_mesh__boundary_vert_initialize( this, nu, nv, vert_flag )
