@@ -786,14 +786,14 @@ contains
   end function quarter_of_edge_ends
 
 
-  subroutine slice_mesh_edge__erase_uv_edge( this, which_edge, ei, ej )
+  subroutine slice_mesh_edge__erase_uv_edge( this, edge_type, ei, ej )
     class(slice_mesh__edge_t) <io> :: this
-    character <in> :: which_edge
+    character <in> :: edge_type
     integer <in> :: ei, ej
     
-    if ( which_edge == 'u' ) then
+    if ( edge_type == 'u' ) then
       this.u_quarter(ei,ej) = SLICE_MESH__EDGE_MM
-    else if ( which_edge == 'v' ) then
+    else if ( edge_type == 'v' ) then
       this.v_quarter(ei,ej) = SLICE_MESH__EDGE_MM
     else 
       call ut__fatal( '__MODULE__(__LINE__): argument error.' )

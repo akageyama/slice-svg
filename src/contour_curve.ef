@@ -124,10 +124,9 @@ module contour_curve_m
   !!< 
 
   type, public :: contour_curve__element_t
-    character :: which_edge    ! 'u' or 'v' or 'a' or 'd'
+    character :: edge_type       ! 'u' or 'v' or 'a' or 'd'
     char(len=2) :: cruising_lane ! 'in' (bulk) or 'on' (border)
-    integer :: i, j  ! id of edge (for in bulk lane), or 
-                     ! id of vert (for on border lane).
+    integer :: ei, ej  ! edge id
     character :: path_go_toward  ! along the edge (for on border lane)
                                  ! perp to the edge (for bulk lane)
   end type contour_curve__element_t
@@ -158,53 +157,53 @@ contains
 
 
   subroutine contour_curve__replace_head_by_octa( this,         &
-                                                  vi, vj,       &
+                                                  ei, ej,       &
                                                   octa_direct,  &
                                                   cruising_lane )
     class(contour_curve_t) <io> :: this
-    integer <in> :: vi, vj
+    integer <in> :: ei, ej
     integer <in> :: octa_direct
     char(len=2) <in> :: cruising_lane
 
     if ( cruising_lane == 'on' ) then
       select case ( octa_direct )
         case (0)
-          this.head = contour_curve__element_t( 'v', 'on',   vi,   vj, 'N' )
+          this.head = contour_curve__element_t( 'v', 'on', ei, ej, 'N' )
         case (1)    
-          this.head = contour_curve__element_t( 'a', 'on',   vi,   vj, 'N' )
+          this.head = contour_curve__element_t( 'a', 'on', ei, ej, 'N' )
         case (2)    
-          this.head = contour_curve__element_t( 'u', 'on',   vi,   vj, 'E' )
+          this.head = contour_curve__element_t( 'u', 'on', ei, ej, 'E' )
         case (3)  
-          this.head = contour_curve__element_t( 'd', 'on',   vi, vj-1, 'S' )
+          this.head = contour_curve__element_t( 'd', 'on', ei, ej, 'S' )
         case (4)  
-          this.head = contour_curve__element_t( 'v', 'on',   vi, vj-1, 'S' )
+          this.head = contour_curve__element_t( 'v', 'on', ei, ej, 'S' )
         case (5)
-          this.head = contour_curve__element_t( 'a', 'on', vi-1, vj-1, 'S' )
+          this.head = contour_curve__element_t( 'a', 'on', ei, ej, 'S' )
         case (6)
-          this.head = contour_curve__element_t( 'u', 'on', vi-1,   vj, 'W' )
+          this.head = contour_curve__element_t( 'u', 'on', ei, ej, 'W' )
         case (7)  
-          this.head = contour_curve__element_t( 'd', 'on', vi-1,   vj, 'N' )
+          this.head = contour_curve__element_t( 'd', 'on', ei, ej, 'N' )
         case default
           call ut__fatal( '__MODULE__(__LINE__): case error.' )
       end select
     else if ( cruising_lane == 'in' ) then
       select case ( octa_direct )
         case (0)
-          this.head = contour_curve__element_t( 'v', 'in',   vi,   vj, 'W' )
+          this.head = contour_curve__element_t( 'v', 'in', ei, ej, 'W' )
         case (1)    
-          this.head = contour_curve__element_t( 'a', 'in',   vi,   vj, 'N' )
+          this.head = contour_curve__element_t( 'a', 'in', ei, ej, 'N' )
         case (2)    
-          this.head = contour_curve__element_t( 'u', 'in',   vi,   vj, 'N' )
+          this.head = contour_curve__element_t( 'u', 'in', ei, ej, 'N' )
         case (3)  
-          this.head = contour_curve__element_t( 'd', 'in',   vi, vj-1, 'N' )
+          this.head = contour_curve__element_t( 'd', 'in', ei, ej, 'N' )
         case (4)  
-          this.head = contour_curve__element_t( 'v', 'in',   vi, vj-1, 'E' )
+          this.head = contour_curve__element_t( 'v', 'in', ei, ej, 'E' )
         case (5)
-          this.head = contour_curve__element_t( 'a', 'in', vi-1, vj-1, 'S' )
+          this.head = contour_curve__element_t( 'a', 'in', ei, ej, 'S' )
         case (6)
-          this.head = contour_curve__element_t( 'u', 'in', vi-1,   vj, 'S' )
+          this.head = contour_curve__element_t( 'u', 'in', ei, ej, 'S' )
         case (7)  
-          this.head = contour_curve__element_t( 'd', 'in', vi-1,   vj, 'S' )
+          this.head = contour_curve__element_t( 'd', 'in', ei, ej, 'S' )
         case default
           call ut__fatal( '__MODULE__(__LINE__): case error.' )
       end select
@@ -216,20 +215,20 @@ contains
 
 
   subroutine contour_curve__replace_head_direct( this,                  &
-                                                 which_edge,            &
+                                                 edge_type,             &
                                                  cruising_lane,         &
-                                                 i, j,                  &
+                                                 ei, ej,                &
                                                  cross_this_edge_toward )
     class(contour_curve_t) <io> :: this
-    character <in> :: which_edge
+    character <in> :: edge_type
     char(len=2) <in> :: cruising_lane
-    integer <in> :: i, j
+    integer <in> :: ei, ej
     character <in> :: cross_this_edge_toward
 
-    this.head = contour_curve__element_t( which_edge,              &
+    this.head = contour_curve__element_t( edge_type,               &
                                           cruising_lane,           &
-                                          i,                       &
-                                          j,                       &
+                                          ei,                      &
+                                          ej,                      &
                                           cross_this_edge_toward )
   end subroutine contour_curve__replace_head_direct
 
@@ -239,7 +238,6 @@ contains
     real <in> :: u, v
 
     integer :: n
-
     n = this.num + 1
     call ut__assert( n <= size(this.list_u,dim=1),  &
                     '__MODULE__(__LINE__): Increase array size of path_vert.' )
@@ -300,8 +298,8 @@ contains
         !    n  n  P * - - M - - 
         !          .   *   .
         !          .     * .
-        call path.replace_head_edge( vi_left,                  &
-                                     vj,                       &
+        call path.replace_head_edge( ei,                       &
+                                     ej,                       &
                                      octa_direct_along_border, &
                                      'on' )
         call edge.erase( 'u', ei, ej ) 
@@ -353,8 +351,8 @@ contains
         !        .  *    .
         !    - - M - * * P n n n
         !
-        call path.replace_head_edge( vi_right,                 &
-                                     vj,                       &
+        call path.replace_head_edge( ei,                       &
+                                     ej,                       &
                                      octa_direct_along_border, &
                                      'on' )
         call edge.erase( 'u', ei, ej ) 
@@ -415,8 +413,8 @@ contains
         !      n       .
         !      n       .
         !
-        call path.replace_head_edge( vi,                       &
-                                     vj_lower,                 &
+        call path.replace_head_edge( ei,                       &
+                                     ej,                       &
                                      octa_direct_along_border, &
                                      'on' )
         call edge.erase( 'v', ei, ej ) 
@@ -476,8 +474,8 @@ contains
         !   + - * - M
         !   .  *    .       
         !
-        call path.replace_head_edge( vi,                       &
-                                     vj_upper,                 &
+        call path.replace_head_edge( ei,                       &
+                                     ej,                       &
                                      octa_direct_along_border, &
                                      'on' )
         call edge.erase( 'v', ei, ej ) 
@@ -490,52 +488,52 @@ contains
   subroutine leave_from_boundary( vi, vj,        &
                                   octa_direct,   &
                                   ei, ej,        &
-                                  which_edge,    &
+                                  edge_type,     &
                                   path_go_toward )
     integer <in> :: vi, vj
     integer <in> :: octa_direct
     integer <out> :: ei, ej
-    character <out> :: which_edge
+    character <out> :: edge_type
     character <out> :: path_go_toward
 
     select case (octa_direct)
       case (0)
-        which_edge = 'v'
+        edge_type = 'v'
         path_go_toward = 'W'
         ei = vi
         ej = vj
       case (1) 
-        which_edge = 'a'
+        edge_type = 'a'
         path_go_toward = 'N'
         ei = vi
         ej = vj
       case (2)
-        which_edge = 'u'
+        edge_type = 'u'
         path_go_toward = 'N'
         ei = vi
         ej = vj
       case (3) 
-        which_edge = 'd'
+        edge_type = 'd'
         path_go_toward = 'N'
         ei = vi
         ej = vj - 1
       case (4)
-        which_edge = 'v'
+        edge_type = 'v'
         path_go_toward = 'E'
         ei = vi
         ej = vj - 1
       case (5) 
-        which_edge = 'a'
+        edge_type = 'a'
         path_go_toward = 'S'
         ei = vi - 1
         ej = vj - 1
       case (6)
-        which_edge = 'u'
+        edge_type = 'u'
         path_go_toward = 'S'
         ei = vi - 1
         ej = vj
       case (7) 
-        which_edge = 'd'
+        edge_type = 'd'
         path_go_toward = 'S'
         ei = vi - 1
         ej = vj
@@ -561,7 +559,7 @@ contains
     real :: u2, v2
     integer :: octa_direct
     character :: path_go_toward
-    character :: which_edge
+    character :: edge_type
     char(len=2) :: cruising_lane
 
     call ut__assert( path.head.cruising_lane == 'on',  &
@@ -575,12 +573,12 @@ contains
            v6--[e5]--v5--[e4]--v4
     !!<
 
-    vi = path.head.i
-    vj = path.head.j
+    ei = path.head.ei
+    ej = path.head.ej
     numbv = boundary.vert.num
-    call ut__assert( boundary.vert.vi(nth) == vi .and.   &
-                     boundary.vert.vj(nth) == vj,        &
-                     "__MODULE__(__LINE__): border vert inconsistent." )
+!    call ut__assert( boundary.vert.vi(nth) == vi .and.   &
+!                     boundary.vert.vj(nth) == vj,        &
+!                     "__MODULE__(__LINE__): border vert inconsistent." )
 
     quarter = boundary.edge.quarter(nth)
     
@@ -609,7 +607,7 @@ contains
       call boundary.edge.erase( nth )
       octa_direct = boundary.vert.octa_direct(nth_next)
       cruising_lane = 'on'
-      call path.replace_head_edge( vi, vj, octa_direct, cruising_lane )
+      call path.replace_head_edge( ei, ej, octa_direct, cruising_lane )
       nth = nth_next
     else if ( quarter == SLICE_MESH__EDGE_PM ) then
       !!>
@@ -637,10 +635,10 @@ contains
       call leave_from_boundary( vi, vj,         &
                                 octa_direct,    &
                                 ei, ej,         &
-                                which_edge,     &
+                                edge_type,      &
                                 path_go_toward )
       cruising_lane = 'in'
-      call path.replace_head_edge( which_edge,     &
+      call path.replace_head_edge( edge_type,      &
                                    cruising_lane,  &
                                    ei,             &
                                    ej,             &
@@ -661,17 +659,17 @@ contains
 
     integer :: ei, ej
     logical :: jumped
-    call ut__assert( path.head.which_edge == 'u' .or.   &
-                     path.head.which_edge == 'v',       &
-                     "__MODULE__(__LINE__): " //        &
+    call ut__assert( path.head.edge_type == 'u' .or.   &
+                     path.head.edge_type == 'v',       &
+                     "__MODULE__(__LINE__): " //       &
                      "head is to be u_ or v_edge." )
     call ut__assert( path.head.cruising_lane == 'in',  &
                      "__MODULE__(__LINE__): The path should be in the region." )
 
     jumped = .false.  ! Default.
 
-    ei = path.head.i
-    ej = path.head.j
+    ei = path.head.ei
+    ej = path.head.ej
 
     select case (path.head.path_go_toward)
       !!>
@@ -692,7 +690,7 @@ contains
                         edge.u(i,j)
       !!<
       case ('N')
-        call ut__assert( path.head.which_edge == 'u',  &
+        call ut__assert( path.head.edge_type == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
         call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                             jumped, ei+1, ej )
@@ -723,7 +721,7 @@ contains
                                 From 
                          !!<
       case ('W')
-        call ut__assert( path.head.which_edge == 'v',  &
+        call ut__assert( path.head.edge_type == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei-1, ej+1 )
@@ -752,7 +750,7 @@ contains
                                 To
                          !!<
       case ('S')
-        call ut__assert( path.head.which_edge == 'u',  &
+        call ut__assert( path.head.edge_type == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
         call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej-1 )
@@ -784,7 +782,7 @@ contains
                          !!<
       case ('E')
 
-        call ut__assert( path.head.which_edge == 'v',  &
+        call ut__assert( path.head.edge_type == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
         call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                             jumped, ei, ej )
@@ -837,10 +835,10 @@ contains
 
     jumped = .false.  ! Default.
 
-    ei = path.head.i
-    ej = path.head.j
+    ei = path.head.ei
+    ej = path.head.ej
 
-    select case (path.head.which_edge)
+    select case (path.head.edge_type)
       case ('a')
         if ( path.head.path_go_toward == 'N' ) then
           !!>                     
@@ -940,9 +938,9 @@ contains
 
     logical :: con1, con2, con3
 
-    con1 = ( this.head.which_edge == this.start.which_edge )
-    con2 = ( this.head.i == this.start.i )
-    con3 = ( this.head.j == this.start.j )
+    con1 = ( this.head.edge_type == this.start.edge_type )
+    con2 = ( this.head.ei == this.start.ei )
+    con3 = ( this.head.ej == this.start.ej )
     ans = ( con1 .and. con2 .and. con3 )
   end function contour_curve__is_closed  
 
@@ -1024,7 +1022,7 @@ contains
     real :: u1, v1, u2, v2
     char(len=2) :: cruising_lane
     character :: path_go_toward
-    character :: which_edge
+    character :: edge_type
 
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset contour_curve.' )
@@ -1045,24 +1043,27 @@ contains
                vert_index2 -= boundary.vert.num
           u2 = vert.pos_u(boundary.vert.vi(vert_index2))
           v2 = vert.pos_v(boundary.vert.vj(vert_index2))
+          edge_type = boundary.edge.type(edge_index)
           cruising_lane = 'on'
+          ei = boundary.edge.ei(edge_index)
+          ej = boundary.edge.ej(edge_index)
         else ! quarter == SLICE_MESH__EDGE_PM
           u2 = boundary.edge.u_cross_coord(edge_index)
           v2 = boundary.edge.v_cross_coord(edge_index)
           call ut__assert( u2 /= NAN .and. v2 /= NAN,  &
                            "__MODULE__(__LINE__): Invalid cross coord." )
           cruising_lane = 'in'
+          call leave_from_boundary( boundary.vert.vi(vert_index1),  &
+                                    boundary.vert.vj(vert_index1),  &
+                                    octa_direct,                    &
+                                    ei, ej,                         &
+                                    edge_type,                      &
+                                    path_go_toward )
         end if
 
         call path.register_new_vert( u2, v2 )
         octa_direct = boundary.vert.octa_direct(vert_index1)
-        call leave_from_boundary( boundary.vert.vi(vert_index1),  &
-                                  boundary.vert.vj(vert_index1),  &
-                                  octa_direct,                    &
-                                  ei, ej,                         &
-                                  which_edge,                     &
-                                  path_go_toward )
-        call path.replace_head_edge( which_edge,     &
+        call path.replace_head_edge( edge_type,      &
                                      cruising_lane,  &
                                      ei,             &
                                      ej,             &
@@ -1196,13 +1197,13 @@ contains
         case ('on')
           if ( cruising_lane_prev /= 'on' ) then
             ! newly start tracing on the border.
-            nthbv = boundary.vert.get_nth( path.head.i,  &
-                                           path.head.j )
+            nthbv = boundary.vert.get_nth( path.head.ei,  &
+                                           path.head.ej )
           end if
           call one_step_along_boundary( path, vert, boundary, nthbv )
         case ('in')
-          if ( path.head.which_edge == 'u' .or.  &
-               path.head.which_edge == 'v'  ) then
+          if ( path.head.edge_type == 'u' .or.  &
+               path.head.edge_type == 'v'  ) then
             call jump_to_other_edge_from_edge_uv( path, vert, edge )
           else
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
@@ -1211,7 +1212,9 @@ contains
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
       cruising_lane_prev = path.head.cruising_lane
-      if ( path.is_closed() ) return
+      if ( path.is_closed() ) then
+        return
+      end if
     end do
 
   end subroutine contour_curve__trace_and_erase
