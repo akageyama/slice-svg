@@ -499,7 +499,6 @@ contains
                                  ! 2 (East) , 3 (South-East), 
                                  ! 4 (South), 5 (South-West), 
                                  ! 6 (West),  7 (North-West)
-
     select case (flag)
       case ('N', 'E', 'S', 'W',  &
             '0', '1', '2', '3',  &
@@ -640,7 +639,7 @@ contains
   end subroutine get_edge_id
 
 
-  subroutine slice_mesh__boundary_make_list( this, vert, edge )
+  subroutine slice_mesh__boundary_make_list( this, verT, edge )
     class(slice_mesh__boundary_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <in> :: edge
@@ -668,7 +667,7 @@ contains
     this.edge.ei(counter) = ei
     this.edge.ej(counter) = ej
     this.edge.type(counter) = edge_type
-
+!debugp counter, ei, ej, edge_type
     do counter = 2, num_of_boundary_vert + 1
       ! the last "+1" is necesary to close the path
       call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
@@ -682,10 +681,13 @@ contains
       this.vert.octa_direct(counter) = octa_direct
       this.vert.vi(counter) = vi
       this.vert.vj(counter) = vj
+!debugp "calling get_edge_id", vi, vj
       call get_edge_id( vi, vj, octa_direct, ei, ej, edge_type )
+!debugp "   called.", ei, ej
       this.edge.ei(counter) = ei
       this.edge.ej(counter) = ej
       this.edge.type(counter) = edge_type
+!debugp counter, ei, ej, edge_type
     end do
 
     call ut__fatal( "__MODULE__(__LINE__): Failed to close boundary." )

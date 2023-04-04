@@ -603,9 +603,12 @@ contains
       u2 = vert.pos_u(boundary.vert.vi(nth_next))
       v2 = vert.pos_v(boundary.vert.vj(nth_next))
 
+!debugp "xx", nth_next
       call path.register_new_vert( u2, v2 )
       call boundary.edge.erase( nth )
       octa_direct = boundary.vert.octa_direct(nth_next)
+!debugp "xx", octa_direct
+!debugp "xx", ei, ej
       cruising_lane = 'on'
       call path.replace_head_edge( ei, ej, octa_direct, cruising_lane )
       nth = nth_next
@@ -668,9 +671,12 @@ contains
 
     jumped = .false.  ! Default.
 
+!debugp "__FUNC__"
     ei = path.head.ei
     ej = path.head.ej
 
+!debugp ei, ej
+!debugp path.head.path_go_toward
     select case (path.head.path_go_toward)
       !!>
                         edge.u(i,j+1)
@@ -690,8 +696,10 @@ contains
                         edge.u(i,j)
       !!<
       case ('N')
+!debugp "case N"
         call ut__assert( path.head.edge_type == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
+!debugp "calling: jump_to_v_edge_mp_if_possible"
         call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                             jumped, ei+1, ej )
                          !!>
@@ -701,6 +709,7 @@ contains
                               p -*- m
                                 From 
                          !!<
+!debugp "calling: jump_to_u_edge_pm_if_possible"
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej+1 )
                          !!>
@@ -711,6 +720,7 @@ contains
                               p -*- m
                                 From 
                          !!<
+!debugp "calling: jump_to_v_edge_pm_if_possible"
         call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej )
                          !!>
@@ -1192,26 +1202,39 @@ contains
     char(len=2) :: cruising_lane_prev
 
     cruising_lane_prev = '  ' ! char len=2 other than 'on'
+!debugp "__FUNC__"
     do
+!debugp " in do-loop"
+!debugp path.head.ei, path.head.ej
+!debugp path.head.edge_type
       select case (path.head.cruising_lane)
         case ('on')
+!debugp "   case on"
           if ( cruising_lane_prev /= 'on' ) then
+!debugp "     **entred if"
             ! newly start tracing on the border.
             nthbv = boundary.vert.get_nth( path.head.ei,  &
                                            path.head.ej )
           end if
+!debugp "   calling one_step_along_boundary"
           call one_step_along_boundary( path, vert, boundary, nthbv )
+!debugp "   called  one_step_along_boundary"
         case ('in')
+!debugp "   case in"
           if ( path.head.edge_type == 'u' .or.  &
                path.head.edge_type == 'v'  ) then
+!debugp "     enteed if calling jump_to_ot..._uv"
+!debugp "     ", path.head.edge_type
             call jump_to_other_edge_from_edge_uv( path, vert, edge )
           else
+!debugp "     enteed if-else calling jump_to_ot..._ad"
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
           end if
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
       cruising_lane_prev = path.head.cruising_lane
+!debugp "   calling if (path..."
       if ( path.is_closed() ) then
         return
       end if
