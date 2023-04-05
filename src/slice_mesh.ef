@@ -366,6 +366,11 @@ contains
     class(slice_mesh__boundary_edge_t) <io> :: this
     integer <in> :: nth
 
+!debugp "// in slice_mesh__boundary_edge_erase"
+!debugp "// ", nth
+!debugp "// ", this.ei(nth)
+!debugp "// ", this.ej(nth)
+!debugp "// ", this.type(nth)
     this.quarter(nth) = SLICE_MESH__EDGE_MM
 
   end subroutine slice_mesh__boundary_edge_erase

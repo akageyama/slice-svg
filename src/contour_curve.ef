@@ -389,14 +389,16 @@ contains
 !debugp 'I am in jump_to_v_edge_pm_if_possible'
 !debugp 'I am:', vi, vj_lower
 !debugp 'I am:', edge.v_quarter(ei,ej)
-
+!debugp '>>> ', edge.v_quarter(ei,ej)
     if ( edge.v_quarter(ei,ej) == SLICE_MESH__EDGE_PM ) then
       jumped = .true.
+!debugp '>>>  jumped'
       u = vert.pos_u(vi)
       v = edge.v_cross_coord(ei,ej)
       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v )
       flag_lower = vert.flag(vi,vj_lower)
+!debugp '>>>  ', flag_lower
 
       if ( flag_lower == 'o' ) then
         call ut__fatal( "__MODULE__(__LINE__): " //  &
@@ -411,6 +413,7 @@ contains
         !  n - P - - - + - -
         !      .       .
         call path.replace_head_edge( 'v', 'in', ei, ej, 'W' ) 
+!debugp '>>>    erasing(1)...'
         call edge.erase( 'v', ei, ej )
       else ! vert_lower on the border.
         octa_direct_along_border = vert.flag_to_octa_direct( flag_lower )
@@ -424,10 +427,12 @@ contains
         !      n       .
         !      n       .
         !
+!debugp '>>>  ', octa_direct_along_border
         call path.replace_head_edge( vi,                       &
                                      vj_lower,                 &
                                      octa_direct_along_border, &
                                      'on' )
+!debugp '>>>    erasing(2)...'
         call edge.erase( 'v', ei, ej ) 
       end if   
     end if
@@ -560,9 +565,10 @@ contains
   end subroutine leave_from_boundary
 
 
-  subroutine one_step_along_boundary( path, vert, boundary, nth )
+  subroutine one_step_along_boundary( path, vert, edge, boundary, nth )
     type(contour_curve_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <io> :: edge
     type(slice_mesh__boundary_t) <io> :: boundary
     integer <io> :: nth ! this is nth-vert of the border
 
@@ -587,10 +593,20 @@ contains
             /                    /
            v6--[e5]--v5--[e4]--v4
     !!<
+
+!debugp "__FUNC__"
+    ei = boundary.edge.ei(nth)
+    ej = boundary.edge.ej(nth)
+    edge_type = boundary.edge.type(nth)
+!debugp ei, ej, edge_type
+
+    call ut__assert(        ei == path.head.ei .and.    &
+                            ej == path.head.ej .and.    &
+                     edge_type == path.head.edge_type,  &
+                     "__MODULE__(__LINE__): " //        &
+                     "edge id inconsistent." )
+
 !debugp nth
-!debugp path.head.ei, path.head.ej
-    ei = path.head.ei
-    ej = path.head.ej
     numbv = boundary.vert.num
 !    call ut__assert( boundary.vert.vi(nth) == vi .and.   &
 !                     boundary.vert.vj(nth) == vj,        &
@@ -598,6 +614,7 @@ contains
 
     quarter = boundary.edge.quarter(nth)
 !debugp "xx", quarter    
+
     if ( quarter == SLICE_MESH__EDGE_PP ) then
       !!>
                  .            
@@ -620,9 +637,12 @@ contains
       vj2 = boundary.vert.vj(nth_next)
       u2 = vert.pos_u(vi2)
       v2 = vert.pos_v(vj2)
-
       call path.register_new_vert( u2, v2 )
       call boundary.edge.erase( nth )
+!debugp "> I am erasing.."
+!debugp "> ", edge_type
+!debugp "> ", ei, ej
+      call edge.erase( edge_type, ei, ej ) 
       octa_direct = boundary.vert.octa_direct(nth_next)
       cruising_lane = 'on'
 !debugp "> call path.replace_head_edge"
@@ -653,6 +673,7 @@ contains
 
       call path.register_new_vert( u2, v2 )
       call boundary.edge.erase( nth )
+      call edge.erase( edge_type, ei, ej ) 
       octa_direct = boundary.vert.octa_direct(nth)
       vi = boundary.vert.vi(nth)
       vj = boundary.vert.vj(nth)
@@ -1229,10 +1250,11 @@ contains
     type(slice_mesh__boundary_t) <io> :: boundary
     type(slice_mesh__edge_t) <io> :: edge
 
-    integer :: nthbv ! of border verts
-    char(len=2) :: cruising_lane_prev
+    integer :: nthbe ! nth of border edge
+    integer :: nthbv ! nth of border vert
+    logical :: start_flag_of_cruising_on_border
 
-    cruising_lane_prev = '  ' ! char len=2 other than 'on'
+    start_flag_of_cruising_on_border = .true.
 !debugp "__FUNC__"
     do
 !debugp " in do-loop"
@@ -1241,15 +1263,20 @@ contains
       select case (path.head.cruising_lane)
         case ('on')
 !debugp "   case on"
-          if ( cruising_lane_prev /= 'on' ) then
+          if ( start_flag_of_cruising_on_border ) then
 !debugp "     **entred if"
             ! newly start tracing on the border.
-            nthbv = boundary.edge.get_nth( path.head.type,  &
-                                           path.head.ei,    &
+            nthbe = boundary.edge.get_nth( path.head.edge_type,  &
+                                           path.head.ei,         &
                                            path.head.ej )
+!debugp nthbe
+            nthbv = nthbe  ! same number
+              !    v1 - - - v2 - - - v3 - - - v4 - ...
+              !         e1       e2       e3  ...
+            start_flag_of_cruising_on_border = .false.
           end if
 !debugp "   calling one_step_along_boundary"
-          call one_step_along_boundary( path, vert, boundary, nthbv )
+          call one_step_along_boundary( path, vert, edge, boundary, nthbv )
 !debugp "   called  one_step_along_boundary"
         case ('in')
 !debugp "   case in"
@@ -1262,12 +1289,13 @@ contains
 !debugp "     enteed if-else calling jump_to_ot..._ad"
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
           end if
+          start_flag_of_cruising_on_border = .true.
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
-      cruising_lane_prev = path.head.cruising_lane
 !debugp "   calling if (path..."
       if ( path.is_closed() ) then
+!debugp "closed!"
         return
       end if
     end do

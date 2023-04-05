@@ -53,12 +53,12 @@ program main
     do i = 1, NU_SCALAR
       pos_u = umin + du_scalar*(i-1)
       pos_v = vmin + dv_scalar*(j-1)
-!      pressure(i,j) = exp(-3*(pos_u**2+pos_v**2)/(umax**2))-0.8
-!      pressure(i,j) = -exp(-3*(pos_u**2+pos_v**2)/(umax**2))+0.8
+      pressure(i,j) = exp(-3*(pos_u**2+pos_v**2)/(umax**2))-0.8
+      pressure(i,j) = -exp(-3*(pos_u**2+pos_v**2)/(umax**2))+0.8
 
-      pressure(i,j) = exp(-3*((pos_u-umax/2)**2+(pos_v+vmax/2)**2)/(umax**2))-0.8 &
-                    + exp(-3*((pos_u+umax/2)**2+(pos_v-vmax/2)**2)/(umax**2))-0.8 &
-                    - 0.4*sin(pos_u)*sin(pos_v)
+!?    pressure(i,j) = exp(-3*((pos_u-umax/2)**2+(pos_v+vmax/2)**2)/(umax**2))-0.8 &
+!?                  + exp(-3*((pos_u+umax/2)**2+(pos_v-vmax/2)**2)/(umax**2))-0.8 &
+!?                  - 0.4*sin(pos_u)*sin(pos_v)
 
 !      pressure(i,j) = exp(-3*(pos_u**2+pos_v**2)/(umax**2))  &
 !                    - exp(-20*(pos_u**2+pos_v**2)/(umax**2))
@@ -336,7 +336,8 @@ contains
     level_min = minval(slice_pressure.val_vert(:,:))
     level_max = maxval(slice_pressure.val_vert(:,:))
     dlevel = (level_max-level_min)/10
-    do l = 1, 10
+!    do l = 1, 10
+    do l = 6, 6
       level = level_min + dlevel*(real(l)-0.5)
       color = color__normalized_real_to_color( (level-level_min)/(level_max-level_min) )
       call slice_pressure.vis_contour( sketch, level, line_color=COLOR__CONST.black, fill_color=color )
