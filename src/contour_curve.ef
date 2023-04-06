@@ -458,8 +458,13 @@ contains
       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v ) 
       flag_upper = vert.flag(vi,vj_upper)
-
+!debugp "hello!"
+!debugp ei, ej
+!debugp edge.v_quarter(ei,ej)
+!debugp flag_upper
+!debugp edge.v_is_boundary(ei,ej)
       if ( edge.v_is_boundary(ei,ej) ) then
+!debugp "entered if"
         !             
         !   .       n 
         !   .       n 
@@ -471,6 +476,8 @@ contains
         !   .  *    .       
         !
         octa_direct_along_border = vert.flag_to_octa_direct( flag_upper )
+!debugp octa_direct_along_border
+!debugp vi, vj_upper
         call path.replace_head_edge( vi,                       &
                                      vj_upper,                 &
                                      octa_direct_along_border, &
@@ -736,6 +743,7 @@ contains
 !debugp "calling: jump_to_v_edge_mp_if_possible"
         call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                             jumped, ei+1, ej )
+!debugp jumped
                          !!>
                               p - - p
                               |    *|To
@@ -746,6 +754,7 @@ contains
 !debugp "calling: jump_to_u_edge_pm_if_possible"
         call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                             jumped, ei, ej+1 )
+!debugp jumped
                          !!>
                                 To
                               p -*- m

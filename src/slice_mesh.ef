@@ -524,36 +524,17 @@ contains
 
   subroutine get_next_octa_direct_and_vert( nu, nv,       &
                                             i, j,         &
-                                            flag,         &
-                                            octa_direct )
+                                            octa_direct,  &
+                                            flag )
     integer <in> :: nu, nv
     integer <io> :: i, j
-    character <in> :: flag       ! N/S/E/W/[0-7]/f/r/R/l/L
     integer <io> :: octa_direct  ! 0 (North), 1 (North-East),
                                  ! 2 (East) , 3 (South-East), 
                                  ! 4 (South), 5 (South-West), 
                                  ! 6 (West),  7 (North-West)
-    select case (flag)
-      case ('N', 'E', 'S', 'W',  &
-            '0', '1', '2', '3',  &
-            '4', '5', '6', '7')
-        octa_direct = slice_mesh__vert_flag_to_octa_direct( flag )
-        call ut__assert( octa_direct >= 0 .and.  &
-                         octa_direct <= 7,       &
-                         "__MODULE__(__LINE__): case error." )
-      case ('f')
-       ! do nothing. keep the current octa_direct
-      case ('r')
-        octa_direct = mod(octa_direct+1,8)
-      case ('R')
-        octa_direct = mod(octa_direct+2,8)
-      case ('l')
-        octa_direct = mod(octa_direct+7,8)
-      case ('L')
-        octa_direct = mod(octa_direct+6,8)
-      case default
-        call ut__fatal( "__MODULE__(__LINE__): case error." )
-    end select
+    character, dimension(nu,nv) <in> :: flag ! N/S/E/W/[0-7]/f/r/R/l/L
+
+    character :: flag_at_new_vert
 
     select case (octa_direct)
       case (0) ! North
@@ -576,6 +557,30 @@ contains
       case (7) ! North-West
         i -= 1
         j += 1
+      case default
+        call ut__fatal( "__MODULE__(__LINE__): case error." )
+    end select
+
+    flag_at_new_vert = flag(i,j)
+
+    select case (flag_at_new_vert)
+      case ('N', 'E', 'S', 'W',  &
+            '0', '1', '2', '3',  &
+            '4', '5', '6', '7')
+        octa_direct = slice_mesh__vert_flag_to_octa_direct( flag_at_new_vert )
+        call ut__assert( octa_direct >= 0 .and.  &
+                         octa_direct <= 7,       &
+                         "__MODULE__(__LINE__): case error." )
+      case ('f')
+       ! do nothing. keep the current octa_direct
+      case ('r')
+        octa_direct = mod(octa_direct+1,8)
+      case ('R')
+        octa_direct = mod(octa_direct+2,8)
+      case ('l')
+        octa_direct = mod(octa_direct+7,8)
+      case ('L')
+        octa_direct = mod(octa_direct+6,8)
       case default
         call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
@@ -708,11 +713,13 @@ contains
     call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
 !debugp counter, ei, ej, edge_type
     do counter = 2, num_of_boundary_vert + 1
+!debugp '>', counter
       ! the last "+1" is necesary to close the path
       call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
                                           vi, vj,           &
-                                          vert.flag(vi,vj), &
-                                          octa_direct )
+                                          octa_direct,      &
+                                          vert.flag )
+!debugp '>', vi, vj
       if ( vi == start_vi .and. vj == start_vj ) then
         ! have returned back to the start vert
         return
@@ -721,8 +728,10 @@ contains
       this.vert.vi(counter) = vi
       this.vert.vj(counter) = vj
 !debugp "calling get_edge_id", vi, vj
+!debugp "calling get_edge_id", octa_direct
       call get_edge_id( vi, vj, octa_direct, ei, ej, edge_type )
 !debugp "   called.", ei, ej
+!debugp "   called.", edge_type
       this.edge.ei(counter) = ei
       this.edge.ej(counter) = ej
       this.edge.type(counter) = edge_type
