@@ -293,6 +293,8 @@ module slice_mesh_m
     integer, dimension(:,:), allocatable :: v_quarter   ! {0,1,2,3}
     real, dimension(:,:), allocatable :: u_cross_coord
     real, dimension(:,:), allocatable :: v_cross_coord
+    logical, dimension(:,:), allocatable :: u_is_boundary
+    logical, dimension(:,:), allocatable :: v_is_boundary
   contains
     procedure :: initialize => slice_mesh__edge_initialize
     procedure :: finalize => slice_mesh__edge_finalize
@@ -346,7 +348,7 @@ contains
   subroutine slice_mesh__boundary_initialize( this, vert, edge )
     class(slice_mesh__boundary_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <in> :: edge
+    type(slice_mesh__edge_t) <io> :: edge
 
     call this.vert.initialize( vert.nu, vert.nv, vert.flag )
     call this.edge.initialize( this.vert.num )
@@ -671,10 +673,10 @@ contains
   end subroutine get_edge_id
 
 
-  subroutine slice_mesh__boundary_make_list( this, verT, edge )
+  subroutine slice_mesh__boundary_make_list( this, vert, edge )
     class(slice_mesh__boundary_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <in> :: edge
+    type(slice_mesh__edge_t) <io> :: edge
 
     integer :: vi, vj, start_vi, start_vj
     integer :: ei, ej
@@ -689,6 +691,10 @@ contains
                                             vert.flag,        &
                                             vi, vj,           &
                                             octa_direct )
+
+    edge.u_is_boundary(:,:) = .false. ! default
+    edge.v_is_boundary(:,:) = .false. ! default
+
     start_vi = vi
     start_vj = vj
     counter = 1
@@ -699,6 +705,7 @@ contains
     this.edge.ei(counter) = ei
     this.edge.ej(counter) = ej
     this.edge.type(counter) = edge_type
+    call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
 !debugp counter, ei, ej, edge_type
     do counter = 2, num_of_boundary_vert + 1
       ! the last "+1" is necesary to close the path
@@ -719,12 +726,27 @@ contains
       this.edge.ei(counter) = ei
       this.edge.ej(counter) = ej
       this.edge.type(counter) = edge_type
+      call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
 !debugp counter, ei, ej, edge_type
     end do
 
     call ut__fatal( "__MODULE__(__LINE__): Failed to close boundary." )
 
   contains
+
+    subroutine iSet_boundary_mark_on_mesh_edge( edge, type, ei, ej )
+      type(slice_mesh__edge_t) <io> :: edge
+      character <in> :: type
+      integer <in> :: ei, ej
+
+      if ( type == 'u' ) then
+        edge.u_is_boundary(ei,ej) = .true.
+      else if ( type == 'v' ) then
+        edge.v_is_boundary(ei,ej) = .true.
+      else
+        ! do nothing for 'a' / 'd' edges
+      end if
+    end subroutine iSet_boundary_mark_on_mesh_edge
 
     subroutine iFind_a_boundary_vert_with_direct( vert_nu, vert_nv, &
                                                   vert_flag,        &
@@ -1028,6 +1050,8 @@ contains
     allocate(this.v_quarter(v_nu,v_nv))
     allocate(this.u_cross_coord(u_nu,u_nv))
     allocate(this.v_cross_coord(v_nu,v_nv))
+    allocate(this.u_is_boundary(v_nu,v_nv))
+    allocate(this.v_is_boundary(v_nu,v_nv))
 
   end subroutine slice_mesh__edge_initialize
 

@@ -286,10 +286,19 @@ contains
       call path.register_new_vert( u, v )
       flag_left = vert.flag(vi_left,vj)
 !debugp 'q:', flag_left
-      if ( flag_left == 'o' ) then
-        call ut__fatal( "__MODULE__(__LINE__): " //  &
-                        "Go out of the border?" )
-      else if ( flag_left == 'i' ) then
+
+      if ( edge.u_is_boundary(ei,ej) ) then
+        !            
+        !    n  n  P * - - M - - 
+        !          .   *   .
+        !          .     * .
+        octa_direct_along_border = vert.flag_to_octa_direct( flag_left )
+        call path.replace_head_edge( vi_left,                  &
+                                     vj,                       &
+                                     octa_direct_along_border, &
+                                     'on' )
+        call edge.erase( 'u', ei, ej ) 
+      else
         !     . n     .     
         !     .  n    .       n: next path
         ! - - P - * - M - -
@@ -297,18 +306,7 @@ contains
         !     .     * .
         call path.replace_head_edge( 'u', 'in', ei, ej, 'N' ) 
         call edge.erase( 'u', ei, ej )
-      else ! vert_left on the border.
-        octa_direct_along_border = vert.flag_to_octa_direct( flag_left )
-        !            
-        !    n  n  P * - - M - - 
-        !          .   *   .
-        !          .     * .
-        call path.replace_head_edge( vi_left,                  &
-                                     vj,                       &
-                                     octa_direct_along_border, &
-                                     'on' )
-        call edge.erase( 'u', ei, ej ) 
-      end if   
+      end if
     end if
   end subroutine jump_to_u_edge_pm_if_possible
 
@@ -341,10 +339,20 @@ contains
       call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v )
       flag_right = vert.flag(vi_right,vj)
-      if ( flag_right == 'o' ) then
-        call ut__fatal( "__MODULE__(__LINE__): " //  &
-                        "Go out of the border?" )
-      else if ( flag_right == 'i' ) then
+
+      if ( edge.u_is_boundary(ei,ej) ) then
+        !
+        !        . *     .
+        !        .  *    .
+        !    - - M - * * P n n n
+        !
+        octa_direct_along_border = vert.flag_to_octa_direct( flag_right )
+        call path.replace_head_edge( vi_right,                 &
+                                     vj,                       &
+                                     octa_direct_along_border, &
+                                     'on' )
+        call edge.erase( 'u', ei, ej ) 
+      else
         !     . *     .
         !     .  *    .
         ! - - M - * - P - -
@@ -352,19 +360,8 @@ contains
         !     .       n
         call path.replace_head_edge( 'u', 'in', ei, ej, 'S' ) 
         call edge.erase( 'u', ei, ej )
-      else ! vert_right on the border.
-        octa_direct_along_border = vert.flag_to_octa_direct( flag_right )
-        !
-        !        . *     .
-        !        .  *    .
-        !    - - M - * * P n n n
-        !
-        call path.replace_head_edge( vi_right,                 &
-                                     vj,                       &
-                                     octa_direct_along_border, &
-                                     'on' )
-        call edge.erase( 'u', ei, ej ) 
-      end if   
+      end if
+
     end if
   end subroutine jump_to_u_edge_mp_if_possible  
 
@@ -400,23 +397,7 @@ contains
       flag_lower = vert.flag(vi,vj_lower)
 !debugp '>>>  ', flag_lower
 
-      if ( flag_lower == 'o' ) then
-        call ut__fatal( "__MODULE__(__LINE__): " //  &
-                        "Go out of the border?" )
-      else if ( flag_lower == 'i' ) then
-        !             
-        !      .   *   .
-        !  - - M - * - + - -
-        !      . *     .
-        !      *       .
-        !    n .       .
-        !  n - P - - - + - -
-        !      .       .
-        call path.replace_head_edge( 'v', 'in', ei, ej, 'W' ) 
-!debugp '>>>    erasing(1)...'
-        call edge.erase( 'v', ei, ej )
-      else ! vert_lower on the border.
-        octa_direct_along_border = vert.flag_to_octa_direct( flag_lower )
+      if ( edge.v_is_boundary(ei,ej) ) then
         !             
         !      .   *   .
         !      M - * - + - -
@@ -427,14 +408,24 @@ contains
         !      n       .
         !      n       .
         !
-!debugp '>>>  ', octa_direct_along_border
+        octa_direct_along_border = vert.flag_to_octa_direct( flag_lower )
         call path.replace_head_edge( vi,                       &
                                      vj_lower,                 &
                                      octa_direct_along_border, &
                                      'on' )
-!debugp '>>>    erasing(2)...'
         call edge.erase( 'v', ei, ej ) 
-      end if   
+      else
+        !             
+        !      .   *   .
+        !  - - M - * - + - -
+        !      . *     .
+        !      *       .
+        !    n .       .
+        !  n - P - - - + - -
+        !      .       .
+        call path.replace_head_edge( 'v', 'in', ei, ej, 'W' ) 
+        call edge.erase( 'v', ei, ej )
+      end if
     end if
   end subroutine jump_to_v_edge_pm_if_possible   
 
@@ -468,22 +459,7 @@ contains
       call path.register_new_vert( u, v ) 
       flag_upper = vert.flag(vi,vj_upper)
 
-      if ( flag_upper == 'o' ) then
-        call ut__fatal( "__MODULE__(__LINE__): " //  &
-                        "Go out of the border?" )
-      else if ( flag_upper == 'i' ) then
-        !             
-        !   .       .     n 
-        !   + - - - P - n -
-        !   .       . n     
-        !   .       *       
-        !   .     * .       
-        !   + - * - M - - -
-        !   .  *    .       
-        call path.replace_head_edge( 'v', 'in', ei, ej, 'E' ) 
-        call edge.erase( 'v', ei, ej )
-      else ! vert_upper on the border.
-        octa_direct_along_border = vert.flag_to_octa_direct( flag_upper )
+      if ( edge.v_is_boundary(ei,ej) ) then
         !             
         !   .       n 
         !   .       n 
@@ -494,12 +470,24 @@ contains
         !   + - * - M
         !   .  *    .       
         !
+        octa_direct_along_border = vert.flag_to_octa_direct( flag_upper )
         call path.replace_head_edge( vi,                       &
                                      vj_upper,                 &
                                      octa_direct_along_border, &
                                      'on' )
         call edge.erase( 'v', ei, ej ) 
-      end if   
+      else
+        !             
+        !   .       .     n 
+        !   + - - - P - n -
+        !   .       . n     
+        !   .       *       
+        !   .     * .       
+        !   + - * - M - - -
+        !   .  *    .       
+        call path.replace_head_edge( 'v', 'in', ei, ej, 'E' ) 
+        call edge.erase( 'v', ei, ej )
+      end if
     end if
       
   end subroutine jump_to_v_edge_mp_if_possible 
