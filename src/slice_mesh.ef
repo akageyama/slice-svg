@@ -368,11 +368,6 @@ contains
     class(slice_mesh__boundary_edge_t) <io> :: this
     integer <in> :: nth
 
-!debugp "// in slice_mesh__boundary_edge_erase"
-!debugp "// ", nth
-!debugp "// ", this.ei(nth)
-!debugp "// ", this.ej(nth)
-!debugp "// ", this.type(nth)
     this.quarter(nth) = SLICE_MESH__EDGE_MM
 
   end subroutine slice_mesh__boundary_edge_erase
@@ -711,15 +706,12 @@ contains
     this.edge.ej(counter) = ej
     this.edge.type(counter) = edge_type
     call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
-!debugp counter, ei, ej, edge_type
     do counter = 2, num_of_boundary_vert + 1
-!debugp '>', counter
       ! the last "+1" is necesary to close the path
       call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
                                           vi, vj,           &
                                           octa_direct,      &
                                           vert.flag )
-!debugp '>', vi, vj
       if ( vi == start_vi .and. vj == start_vj ) then
         ! have returned back to the start vert
         return
@@ -727,16 +719,11 @@ contains
       this.vert.octa_direct(counter) = octa_direct
       this.vert.vi(counter) = vi
       this.vert.vj(counter) = vj
-!debugp "calling get_edge_id", vi, vj
-!debugp "calling get_edge_id", octa_direct
       call get_edge_id( vi, vj, octa_direct, ei, ej, edge_type )
-!debugp "   called.", ei, ej
-!debugp "   called.", edge_type
       this.edge.ei(counter) = ei
       this.edge.ej(counter) = ej
       this.edge.type(counter) = edge_type
       call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
-!debugp counter, ei, ej, edge_type
     end do
 
     call ut__fatal( "__MODULE__(__LINE__): Failed to close boundary." )

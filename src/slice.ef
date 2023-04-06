@@ -15,7 +15,7 @@ module slice_m
   use color_m
   use ut_m
   use slice_mesh_m
-  use contour_curve_m
+  use contour_path_m
   use sketch_m
   implicit none
   private
@@ -66,7 +66,7 @@ contains
     type(color_t) <optin> :: fill_color
 
     integer :: nu, nv
-    type(contour_curve_t), save :: contour_curve
+    type(contour_path_t), save :: contour_path
     logical :: just_once = .true.
     char(len=10) :: status
     type(sketch__sim_pos_t), dimension(:), allocatable, save :: verts_sim
@@ -78,7 +78,7 @@ contains
     ==<just_once>==
       nu = this.mesh_vert.nu
       nv = this.mesh_vert.nv
-      call contour_curve.initialize( nu, nv )
+      call contour_path.initialize( nu, nv )
       allocate(verts_sim(nu*nv))
       allocate(path_directive(nu*nv))
     ==</just_once>==
@@ -90,21 +90,21 @@ contains
     call this.mesh_boundary.set_quarter( this.mesh_vert,  &
                                          this.val_vert,   &
                                          level )
-    call contour_curve.reset
-    call contour_curve.set_start_edge( this.mesh_vert,     &
-                                       this.mesh_edge,     &
-                                       this.mesh_boundary, &
-                                       status )
+    call contour_path.reset
+    call contour_path.set_start_edge( this.mesh_vert,     &
+                                      this.mesh_edge,     &
+                                      this.mesh_boundary, &
+                                      status )
     counter = 0
     do while ( status == 'have found' )
       !!  Tring to find the 1st contour for this level.
-      call contour_curve.trace_and_erase( this.mesh_vert,    &
-                                          this.mesh_edge,    &
-                                          this.mesh_boundary )
-      call  ut__assert( contour_curve.num >= 2,  &
+      call contour_path.trace_and_erase( this.mesh_vert,    &
+                                         this.mesh_edge,    &
+                                         this.mesh_boundary )
+      call  ut__assert( contour_path.num >= 2,  &
                         "__MODULE__(__LINE__): Path too short." )
         
-      do i = 1, contour_curve.num
+      do i = 1, contour_path.num
         counter += 1
         if ( i == 1 ) then
           SVG_directive = 'M' ! Move to 
@@ -114,8 +114,8 @@ contains
           SVG_directive = ' ' ! Line to (You can ommit this after 1st 'L'.)
         end if
         path_directive(counter) = SVG_directive 
-        u_sim = contour_curve.list_u(i)
-        v_sim = contour_curve.list_v(i)
+        u_sim = contour_path.list_u(i)
+        v_sim = contour_path.list_v(i)
         verts_sim(counter) = sketch__sim_pos_t(u_sim,v_sim)
       end do
 
@@ -126,11 +126,11 @@ contains
       verts_sim(counter) = sketch__sim_pos_t( dummy, dummy )
 
       !!  Generally, more contours exist for this level.
-      call contour_curve.reset
-      call contour_curve.set_start_edge( this.mesh_vert,     &
-                                         this.mesh_edge,     &
-                                         this.mesh_boundary, &
-                                         status )
+      call contour_path.reset
+      call contour_path.set_start_edge( this.mesh_vert,     &
+                                        this.mesh_edge,     &
+                                        this.mesh_boundary, &
+                                        status )
     end do
 
     if ( counter > 1 ) then
