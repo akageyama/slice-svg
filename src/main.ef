@@ -297,6 +297,7 @@ contains
     integer :: i, j
     real, dimension(NU_SCALAR) :: grid_pos_u
     real, dimension(NV_SCALAR) :: grid_pos_v
+    character, dimension(NU_SCALAR,NV_SCALAR) :: grid_flag
     
     magenta = COLOR__CONST.magenta
 
@@ -307,19 +308,34 @@ contains
       grid_pos_u(i) = umin + (umax-umin)/(NU_SCALAR-1)*(i-1)
     end do
     do j = 1, NV_SCALAR
-      grid_pos_u(j) = umin + (vmax-vmin)/(NV_SCALAR-1)*(j-1)
+      grid_pos_v(j) = vmin + (vmax-vmin)/(NV_SCALAR-1)*(j-1)
     end do
 
-    !!>
+    do j = 2, NV_SCALAR-1
+      do i = 2, NU_SCALAR-1
+        grid_flag(i,j) = 'i'
+      end do
+    end do
+    grid_flag(2:NU_SCALAR-1,        1) = 'E'
+    grid_flag(2:NU_SCALAR-1,NV_SCALAR) = 'W'
+    grid_flag(        1,2:NV_SCALAR-1) = 'S'
+    grid_flag(NU_SCALAR,2:NV_SCALAR-1) = 'N'
+    grid_flag(        1,        1) = 'E'
+    grid_flag(NU_SCALAR,        1) = 'N'
+    grid_flag(NU_SCALAR,NV_SCALAR) = 'W'
+    grid_flag(        1,NV_SCALAR) = 'S'
+
     call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
                                     grid_pos_u,  &
                                     grid_pos_v,  &
-                                    pressure )
-    !!<
+                                    pressure,    &
+                                    grid_flag )
+    !!>
     call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
                                     umin, umax,  &
                                     vmin, vmax,  &
                                     pressure )
+    !!<
     call sketch.initialize( ll, ur, &
                             screen_width_in_pixel=1200.0,  &
                             title='Pressure Field',  &

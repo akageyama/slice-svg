@@ -946,7 +946,6 @@ contains
     else
       call set_default_vert_flag( nu, nv, this.flag )      
     end if
-
   end subroutine slice_mesh__vert_init_with_grids
 
 

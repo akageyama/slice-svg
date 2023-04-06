@@ -177,12 +177,14 @@ contains
                                                   nu, nv,     &
                                                   grid_pos_u, &
                                                   grid_pos_v, &
-                                                  val )
+                                                  val,        &
+                                                  grid_flag )
     class(slice__scalar_t) <out> :: this
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
     real, dimension(nv) <in> :: grid_pos_v
     real, dimension(nu,nv) <optin> :: val
+    character, dimension(nu,nv) <optin> :: grid_flag
 
     allocate(this.val_vert(nu,nv))
 
@@ -191,10 +193,20 @@ contains
                      "__MODULE__(__LINE__): " //        &
                      "grid size inconsistent." )
 
-    call this.mesh_vert.initialize( nu, nv,     &
-                                    grid_pos_u, &
-                                    grid_pos_v )
+    if ( present(grid_flag) ) then
+      call this.mesh_vert.initialize( nu, nv,     &
+                                      grid_pos_u, &
+                                      grid_pos_v, &
+                                      grid_flag )
+    else
+      call this.mesh_vert.initialize( nu, nv,     &
+                                      grid_pos_u, &
+                                      grid_pos_v )
+    end if
+
     call this.mesh_edge.initialize( this.mesh_vert )
+    call this.mesh_boundary.initialize( this.mesh_vert,  &
+                                        this.mesh_edge )
 
     if ( present(val) ) then
       this.val_vert(:,:) = val(:,:)
