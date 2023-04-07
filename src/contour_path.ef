@@ -660,6 +660,11 @@ contains
                                 ei, ej,         &
                                 edge_type,      &
                                 path_go_toward )
+!debugp '//', vi, vj
+!debugp '//', octa_direct
+!debugp '//', ei, ej
+!debugp '//', edge_type
+!debugp '//', path_go_toward
       cruising_lane = 'in'
       call path.replace_head_edge( edge_type,      &
                                    cruising_lane,  &
