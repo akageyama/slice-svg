@@ -664,7 +664,7 @@ contains
         edge_type = 'u'     !    * * * *
       case (7) 
         ei = vi - 1         !      *   .
-        ej = vj + 1         !        * .
+        ej = vj             !        * .
         edge_type = 'd'     !    . . . *
       case default
         call ut__fatal( "__MODULE__(__LINE__): case error." )
