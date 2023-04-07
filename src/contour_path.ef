@@ -573,10 +573,16 @@ contains
            v6--[e5]--v5--[e4]--v4
     !!<
 
+!debugp 'xx:', nth
     ei = boundary.edge.ei(nth)
     ej = boundary.edge.ej(nth)
     edge_type = boundary.edge.type(nth)
+!debugp 'xx:', ei, ej
+!debugp 'xx:', edge_type
 
+!debugp 'bb:', path.head.ei
+!debugp 'bb:', path.head.ej
+!debugp 'bb:', path.head.edge_type
     call ut__assert(        ei == path.head.ei .and.    &
                             ej == path.head.ej .and.    &
                      edge_type == path.head.edge_type,  &
@@ -609,12 +615,19 @@ contains
       vj2 = boundary.vert.vj(nth_next)
       u2 = vert.pos_u(vi2)
       v2 = vert.pos_v(vj2)
+!debugp '::', 'calling path.register_new_vert'
+!debugp '::', vi2, vj2
       call path.register_new_vert( u2, v2 )
       call boundary.edge.erase( nth )
       call edge.erase( edge_type, ei, ej ) 
       octa_direct = boundary.vert.octa_direct(nth_next)
+!debugp '::', octa_direct
       cruising_lane = 'on'
       call path.replace_head_edge( vi2, vj2, octa_direct, cruising_lane )
+!debugp '::', path.head.ei
+!debugp '::', path.head.ej
+!debugp '::', path.head.edge_type
+!debugp '::', path.head.path_go_toward
       nth = nth_next
     else if ( quarter == SLICE_MESH__EDGE_PM ) then
       !!>
