@@ -298,7 +298,7 @@ contains
     real, dimension(NU_SCALAR) :: grid_pos_u
     real, dimension(NV_SCALAR) :: grid_pos_v
     character, dimension(NU_SCALAR,NV_SCALAR) :: grid_flag
-    
+
     magenta = COLOR__CONST.magenta
 
     ll = sketch__sim_pos_t(umin, vmin)
@@ -311,19 +311,74 @@ contains
       grid_pos_v(j) = vmin + (vmax-vmin)/(NV_SCALAR-1)*(j-1)
     end do
 
-    do j = 2, NV_SCALAR-1
-      do i = 2, NU_SCALAR-1
-        grid_flag(i,j) = 'i'
+    grid_flag(:,:) = 'o'
+
+!   do j = 2, NV_SCALAR-1
+!     do i = 2, NU_SCALAR-1
+!       grid_flag(i,j) = 'i'
+!     end do
+!   end do
+
+!! case 1: basic case
+!    grid_flag(2:NU_SCALAR-1,        1) = 'E'
+!    grid_flag(2:NU_SCALAR-1,NV_SCALAR) = 'W'
+!    grid_flag(        1,2:NV_SCALAR-1) = 'S'
+!    grid_flag(NU_SCALAR,2:NV_SCALAR-1) = 'N'
+!    grid_flag(        1,        1) = 'E'
+!    grid_flag(NU_SCALAR,        1) = 'N'
+!    grid_flag(NU_SCALAR,NV_SCALAR) = 'W'
+!    grid_flag(        1,NV_SCALAR) = 'S'
+
+!! case 2: The corners are diagonal.
+!    grid_flag(2:NU_SCALAR-1,        1) = 'E'
+!    grid_flag(2:NU_SCALAR-1,NV_SCALAR) = 'W'
+!    grid_flag(        1,2:NV_SCALAR-1) = 'S'
+!    grid_flag(NU_SCALAR,2:NV_SCALAR-1) = 'N'
+!    grid_flag(NU_SCALAR-1,          1) = 'l'
+!    grid_flag(NU_SCALAR  ,NV_SCALAR-1) = 'l'
+!    grid_flag(          2,NV_SCALAR  ) = 'l'
+!    grid_flag(          1,          2) = 'l'
+
+!! case 3: Only left-half
+!    grid_flag(:,:) = 'o'
+!    do j = 2, NV_SCALAR-1
+!      do i = 2, NU_SCALAR/2-1
+!        grid_flag(i,j) = 'i'
+!      end do
+!    end do
+!    grid_flag(2:NU_SCALAR/2-1,            1) = 'E'
+!    grid_flag(NU_SCALAR/2    ,2:NV_SCALAR-1) = 'N'
+!    grid_flag(2:NU_SCALAR/2-1,    NV_SCALAR) = 'W'
+!    grid_flag(              1,2:NV_SCALAR-1) = 'S'
+!!    grid_flag(NU_SCALAR/2-1  ,            1) = 'l'
+!!    grid_flag(NU_SCALAR/2    ,  NV_SCALAR-1) = 'l'
+!!    grid_flag(              2,  NV_SCALAR  ) = 'l'
+!!    grid_flag(              1,            2) = 'l'
+!    grid_flag(NU_SCALAR/2    ,            1) = 'N'
+!    grid_flag(NU_SCALAR/2    ,  NV_SCALAR  ) = 'W'
+!    grid_flag(              1,  NV_SCALAR  ) = 'S'
+!    grid_flag(              1,            1) = 'E'
+
+! case 4: triangle
+    grid_flag(:,:) = 'o'
+    do j = 2, 20
+      do i = 2, 20
+        if ( i + j < 20 ) then
+          grid_flag(i,j) = 'i'
+        else if ( i + j == 20 ) then
+          grid_flag(i,j) = '7'
+        end if
       end do
     end do
-    grid_flag(2:NU_SCALAR-1,        1) = 'E'
-    grid_flag(2:NU_SCALAR-1,NV_SCALAR) = 'W'
-    grid_flag(        1,2:NV_SCALAR-1) = 'S'
-    grid_flag(NU_SCALAR,2:NV_SCALAR-1) = 'N'
-    grid_flag(        1,        1) = 'E'
-    grid_flag(NU_SCALAR,        1) = 'N'
-    grid_flag(NU_SCALAR,NV_SCALAR) = 'W'
-    grid_flag(        1,NV_SCALAR) = 'S'
+    grid_flag(1:20-4,     1) = 'E'
+    grid_flag(  20-3,     1) = '1'
+    grid_flag(  20-2,     1) = 'o'
+    grid_flag(  20-1,     1) = 'o'
+    grid_flag(     2,  20-2) = '5'
+    grid_flag(     1,2:20-3) = 'S'
+    grid_flag(     1,  20-2) = 'o'
+    grid_flag(     1,  20-1) = 'o'
+    grid_flag(     1,     1) = 'E'
 
     call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
                                     grid_pos_u,  &

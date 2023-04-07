@@ -705,13 +705,18 @@ contains
     this.edge.ei(counter) = ei
     this.edge.ej(counter) = ej
     this.edge.type(counter) = edge_type
+!debugp '>', counter, vi, vj
+!debugp '>', ei, ej, edge_type
+!debugp '>', num_of_boundary_vert
     call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     do counter = 2, num_of_boundary_vert + 1
+!debugp '>', counter
       ! the last "+1" is necesary to close the path
       call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
                                           vi, vj,           &
                                           octa_direct,      &
                                           vert.flag )
+!debugp '>', vi, vj, octa_direct
       if ( vi == start_vi .and. vj == start_vj ) then
         ! have returned back to the start vert
         return
@@ -726,6 +731,7 @@ contains
       call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     end do
 
+stop
     call ut__fatal( "__MODULE__(__LINE__): Failed to close boundary." )
 
   contains
@@ -848,7 +854,7 @@ contains
     else if ( edge_type == 'v' ) then
       this.v_quarter(ei,ej) = SLICE_MESH__EDGE_MM
     else 
-      call ut__fatal( '__MODULE__(__LINE__): argument error.' )
+      ! do nothing for 'a' or 'd' edges.
     end if
   end subroutine slice_mesh_edge__erase_uv_edge
 
@@ -1088,13 +1094,12 @@ contains
   end subroutine slice_mesh__boundary_edge_finalize
 
 
-  subroutine set_uv_edge_quarter( vert_nu,    &
-                                  vert_nv,    &
+  subroutine set_uv_edge_quarter( vert,       &
                                   val_vert,   &
                                   level,      &
                                   edge )
-    integer <in> :: vert_nu, vert_nv
-    real, dimension(vert_nu,vert_nv) <in> :: val_vert
+    type(slice_mesh__vert_t) <in> :: vert
+    real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
     type(slice_mesh__edge_t) <io> :: edge
     !!>
@@ -1232,9 +1237,14 @@ contains
         vj = ej
         val_left  = val_vert(vi_left,  vj)  ! left vert
         val_right = val_vert(vi_right, vj)  ! right vert
-        edge.u_quarter(ei,ej) = quarter_of_edge_ends( val_left,   &
-                                                      val_right,  &
-                                                      level )
+        if ( vert.flag(vi_left, vj) == 'o' .or.  &
+             vert.flag(vi_right,vj) == 'o' ) then
+          edge.u_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+        else
+          edge.u_quarter(ei,ej) = quarter_of_edge_ends( val_left,   &
+                                                        val_right,  &
+                                                        level )
+        end if
       end do
     end do
 
@@ -1246,12 +1256,16 @@ contains
         vj_upper = ej + 1
         val_lower = val_vert(vi,vj_lower)  ! lower vert
         val_upper = val_vert(vi,vj_upper)  ! upper vert
-        edge.v_quarter(ei,ej) = quarter_of_edge_ends( val_lower,  &
-                                                      val_upper,  &
-                                                      level )
+        if ( vert.flag(vi,vj_lower) == 'o' .or.  &
+             vert.flag(vi,vj_upper) == 'o' ) then
+          edge.v_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+        else
+          edge.v_quarter(ei,ej) = quarter_of_edge_ends( val_lower,  &
+                                                        val_upper,  &
+                                                        level )
+        end if
       end do
     end do    
-
   end subroutine set_uv_edge_quarter
 
 
@@ -1268,8 +1282,7 @@ contains
     this.v_quarter(:,:) = -999  ! QUATER_MM, MP, PM, PP are
                                 ! all positive.
 
-    call set_uv_edge_quarter( vert.nu, vert.nv,   &
-                              val_vert, level, this )
+    call set_uv_edge_quarter( vert, val_vert, level, this )
     call set_uv_edge_cross_coord( vert, val_vert, level, this )
     call ut__assert( minval(this.u_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_u.quarter" )
