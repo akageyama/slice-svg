@@ -57,8 +57,9 @@ endif
 ifeq ($(this_host),mac)  # Mac
         EFPP = ../bin/efpp.py
         FC = gfortran
-        FFLAGS = -O -Wuninitialized -ffpe-trap=invalid,zero,overflow -fbacktrace 
+        FFLAGS = -O0 -Wuninitialized -ffpe-trap=invalid,zero,overflow -fbacktrace 
         FFLAGS += -fbounds-check
+        FFLAGS += -Wall
 endif
 ifeq ($(this_host),ofp)  # Oakforest PACS
         EFPP = ../bin/efpp.py
