@@ -144,9 +144,9 @@
                             East : 2            7       1  
                       South-East : 3                |            
                            South : 4           6  --+--  2
-                      South-West : 5                |	          
+                      South-West : 5                |
                             West : 6            5       3
-                      North-West : 7                4	  
+                      North-West : 7                4
 
         The above path is written as
 
@@ -291,15 +291,23 @@ module slice_mesh_m
     integer :: v_nu, v_nv
     integer, dimension(:,:), allocatable :: u_quarter   ! {0,1,2,3}
     integer, dimension(:,:), allocatable :: v_quarter   ! {0,1,2,3}
+    integer, dimension(:,:), allocatable :: a_quarter   ! {0,1,2,3}
+    integer, dimension(:,:), allocatable :: d_quarter   ! {0,1,2,3}
     real, dimension(:,:), allocatable :: u_cross_coord
     real, dimension(:,:), allocatable :: v_cross_coord
+    real, dimension(:,:), allocatable :: a_cross_coord_u
+    real, dimension(:,:), allocatable :: a_cross_coord_v
+    real, dimension(:,:), allocatable :: d_cross_coord_u
+    real, dimension(:,:), allocatable :: d_cross_coord_v
     logical, dimension(:,:), allocatable :: u_is_boundary
     logical, dimension(:,:), allocatable :: v_is_boundary
+    logical, dimension(:,:), allocatable :: a_is_boundary
+    logical, dimension(:,:), allocatable :: d_is_boundary
   contains
     procedure :: initialize => slice_mesh__edge_initialize
     procedure :: finalize => slice_mesh__edge_finalize
     procedure :: set_quarter => slice_mesh__edge_set_quarter
-    procedure :: erase => slice_mesh_edge__erase_uv_edge
+    procedure :: erase => slice_mesh_edge__erase
   end type slice_mesh__edge_t    
 
 
@@ -321,8 +329,8 @@ module slice_mesh_m
     integer, dimension(:), allocatable :: ei  ! edge position index
     integer, dimension(:), allocatable :: ej
     integer, dimension(:), allocatable :: quarter   ! {0,1,2,3}
-    real, dimension(:), allocatable :: u_cross_coord
-    real, dimension(:), allocatable :: v_cross_coord
+    real, dimension(:), allocatable :: cross_coord_u
+    real, dimension(:), allocatable :: cross_coord_v
   contains
     procedure :: initialize => slice_mesh__boundary_edge_initialize
     procedure :: finalize => slice_mesh__boundary_edge_finalize
@@ -577,6 +585,7 @@ contains
       case ('L')
         octa_direct = mod(octa_direct+6,8)
       case default
+!debugp flag_at_new_vert
         call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
 
@@ -694,6 +703,8 @@ contains
 
     edge.u_is_boundary(:,:) = .false. ! default
     edge.v_is_boundary(:,:) = .false. ! default
+    edge.a_is_boundary(:,:) = .false. ! default
+    edge.d_is_boundary(:,:) = .false. ! default
 
     start_vi = vi
     start_vj = vj
@@ -741,13 +752,19 @@ stop
       character <in> :: type
       integer <in> :: ei, ej
 
-      if ( type == 'u' ) then
-        edge.u_is_boundary(ei,ej) = .true.
-      else if ( type == 'v' ) then
-        edge.v_is_boundary(ei,ej) = .true.
-      else
-        ! do nothing for 'a' / 'd' edges
-      end if
+      select case ( type )
+        case ('u')
+          edge.u_is_boundary(ei,ej) = .true.
+        case ('v')
+          edge.v_is_boundary(ei,ej) = .true.
+        case ('a')
+          edge.a_is_boundary(ei,ej) = .true.
+        case ('d')
+          edge.d_is_boundary(ei,ej) = .true.
+        case default
+          call ut__fatal( "__MODULE__(__LINE__): " //  &
+                          "case error." )
+      end select
     end subroutine iSet_boundary_mark_on_mesh_edge
 
     subroutine iFind_a_boundary_vert_with_direct( vert_nu, vert_nv, &
@@ -844,19 +861,25 @@ stop
   end function quarter_of_edge_ends
 
 
-  subroutine slice_mesh_edge__erase_uv_edge( this, edge_type, ei, ej )
+  subroutine slice_mesh_edge__erase( this, edge_type, ei, ej )
     class(slice_mesh__edge_t) <io> :: this
     character <in> :: edge_type
     integer <in> :: ei, ej
     
-    if ( edge_type == 'u' ) then
-      this.u_quarter(ei,ej) = SLICE_MESH__EDGE_MM
-    else if ( edge_type == 'v' ) then
-      this.v_quarter(ei,ej) = SLICE_MESH__EDGE_MM
-    else 
-      ! do nothing for 'a' or 'd' edges.
-    end if
-  end subroutine slice_mesh_edge__erase_uv_edge
+    select case (edge_type)
+      case ('u')
+        this.u_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+      case ('v') 
+        this.v_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+      case ('a') 
+        this.a_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+      case ('d') 
+        this.d_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+      case default
+        call ut__fatal( "__MODULE__(__LINE__): " //  &
+                        "case error." )
+    end select
+  end subroutine slice_mesh_edge__erase
 
 
   subroutine slice_mesh__vert_init_with_grids( this,          &
@@ -1049,11 +1072,18 @@ stop
 
     allocate(this.u_quarter(u_nu,u_nv))
     allocate(this.v_quarter(v_nu,v_nv))
+    allocate(this.a_quarter(u_nu,v_nv))
+    allocate(this.d_quarter(u_nu,v_nv))
     allocate(this.u_cross_coord(u_nu,u_nv))
     allocate(this.v_cross_coord(v_nu,v_nv))
+    allocate(this.a_cross_coord_u(u_nu,v_nv))
+    allocate(this.a_cross_coord_v(u_nu,v_nv))
+    allocate(this.d_cross_coord_u(u_nu,v_nv))
+    allocate(this.d_cross_coord_v(u_nu,v_nv))
     allocate(this.u_is_boundary(v_nu,v_nv))
     allocate(this.v_is_boundary(v_nu,v_nv))
-
+    allocate(this.a_is_boundary(v_nu,v_nv))
+    allocate(this.d_is_boundary(v_nu,v_nv))
   end subroutine slice_mesh__edge_initialize
 
 
@@ -1062,8 +1092,14 @@ stop
 
     deallocate(this.u_quarter)
     deallocate(this.v_quarter)
+    deallocate(this.a_quarter)
+    deallocate(this.d_quarter)
     deallocate(this.u_cross_coord)
     deallocate(this.v_cross_coord)
+    deallocate(this.a_cross_coord_u)
+    deallocate(this.a_cross_coord_v)
+    deallocate(this.d_cross_coord_u)
+    deallocate(this.d_cross_coord_v)
   end subroutine slice_mesh__edge_finalize
 
 
@@ -1077,8 +1113,8 @@ stop
     allocate(           this.ei(this.num))
     allocate(           this.ej(this.num))
     allocate(      this.quarter(this.num))
-    allocate(this.u_cross_coord(this.num))
-    allocate(this.v_cross_coord(this.num))
+    allocate(this.cross_coord_u(this.num))
+    allocate(this.cross_coord_v(this.num))
   end subroutine slice_mesh__boundary_edge_initialize
 
 
@@ -1089,15 +1125,15 @@ stop
     deallocate(this.ei)
     deallocate(this.ej)
     deallocate(this.quarter)
-    deallocate(this.u_cross_coord)
-    deallocate(this.v_cross_coord)
+    deallocate(this.cross_coord_u)
+    deallocate(this.cross_coord_v)
   end subroutine slice_mesh__boundary_edge_finalize
 
 
-  subroutine set_uv_edge_quarter( vert,       &
-                                  val_vert,   &
-                                  level,      &
-                                  edge )
+  subroutine set_edge_quarter( vert,       &
+                               val_vert,   &
+                               level,      &
+                               edge )
     type(slice_mesh__vert_t) <in> :: vert
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
@@ -1224,10 +1260,14 @@ stop
     !!<
 
     integer :: ei, ej  ! edge indexes.
-    real :: val_left, val_right
-    real :: val_lower, val_upper
     integer :: vi, vi_left, vi_right
     integer :: vj, vj_lower, vj_upper
+    integer :: vi_ll, vj_ll, vi_ur, vj_ur
+    integer :: vi_ul, vj_ul, vi_lr, vj_lr
+    real :: val_left, val_right
+    real :: val_lower, val_upper
+    real :: val_ll, val_ur
+    real :: val_ul, val_lr
 
     ! edge_u
     do ej = 1, edge.u_nv  
@@ -1266,7 +1306,47 @@ stop
         end if
       end do
     end do    
-  end subroutine set_uv_edge_quarter
+
+    ! edge_a
+    do ej = 1, edge.v_nv  
+      do ei = 1, edge.u_nu
+        vi_ll = ei      ! lower-left
+        vj_ll = ej
+        vi_ur = ei + 1  ! upper-right
+        vj_ur = ej + 1
+        val_ll = val_vert(vi_ll,vj_ll)  ! lower-left vert
+        val_ur = val_vert(vi_ur,vj_ur)  ! upper-right vert
+        if ( vert.flag(vi_ll,vj_ll) == 'o' .or.  &
+             vert.flag(vi_ur,vj_ur) == 'o' ) then
+          edge.a_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+        else
+          edge.a_quarter(ei,ej) = quarter_of_edge_ends( val_ll,  &
+                                                        val_ur,  &
+                                                        level )
+        end if
+      end do
+    end do    
+
+    ! edge_d
+    do ej = 1, edge.v_nv  
+      do ei = 1, edge.u_nu
+        vi_ul = ei      ! upper-left
+        vj_ul = ej + 1
+        vi_lr = ei + 1  ! lower-right
+        vj_lr = ej    
+        val_ul = val_vert(vi_ul,vj_ul)  ! lower-left vert
+        val_lr = val_vert(vi_lr,vj_lr)  ! upper-right vert
+        if ( vert.flag(vi_ul,vj_ul) == 'o' .or.  &
+             vert.flag(vi_lr,vj_lr) == 'o' ) then
+          edge.d_quarter(ei,ej) = SLICE_MESH__EDGE_MM
+        else
+          edge.d_quarter(ei,ej) = quarter_of_edge_ends( val_ul,  &
+                                                        val_lr,  &
+                                                        level )
+        end if
+      end do
+    end do    
+  end subroutine set_edge_quarter
 
 
   subroutine slice_mesh__edge_set_quarter( this,       &
@@ -1282,8 +1362,8 @@ stop
     this.v_quarter(:,:) = -999  ! QUATER_MM, MP, PM, PP are
                                 ! all positive.
 
-    call set_uv_edge_quarter( vert, val_vert, level, this )
-    call set_uv_edge_cross_coord( vert, val_vert, level, this )
+    call set_edge_quarter( vert, val_vert, level, this )
+    call set_edge_cross_coord( vert, val_vert, level, this )
     call ut__assert( minval(this.u_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_u.quarter" )
     call ut__assert( minval(this.v_quarter) >= 0,  &
@@ -1291,26 +1371,43 @@ stop
   end subroutine slice_mesh__edge_set_quarter  
 
 
+  function quarter_pm_and_mp_swap( quarter ) result(ans)
+    integer <in> :: quarter
+    integer :: ans
+
+    select case (quarter)
+      case (SLICE_MESH__EDGE_PM)
+        ans = SLICE_MESH__EDGE_MP
+      case (SLICE_MESH__EDGE_MP ) 
+        ans = SLICE_MESH__EDGE_PM
+      case default
+        ! do nothing for PP and MM cases
+    end select
+  end function quarter_pm_and_mp_swap
+
+
   subroutine slice_mesh__boundary_set_quarter( this,       &
                                                vert,       &
+                                               edge,       &
                                                val_vert,   &
                                                level )
     class(slice_mesh__boundary_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__edge_t) <in> :: edge
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
 
-    integer :: index_e            ! edge index
-    integer :: index_v1, index_v2 ! vert index for both ends
-    integer :: vi, vj, ei, ej, vi2, vj2
-    real :: val1, u1, v1, diff1
-    real :: val2, u2, v2, diff2
+    integer :: index_e           ! edge index
+    integer :: index_v           ! vert index for both ends
+    integer :: vi, vj, ei, ej
+    real :: u, v, cross_u, cross_v
     integer :: quarter
-    real :: interpol_u, interpol_v
-    integer :: bvnum
+    logical :: pm_define_direct_reversed
+    integer :: quarter_along_path
+    integer :: octa_direct
 
-    this.edge.u_cross_coord(:) = NAN
-    this.edge.v_cross_coord(:) = NAN
+    this.edge.cross_coord_u(:) = NAN
+    this.edge.cross_coord_v(:) = NAN
       !!> 
            To catch errornous cases in which a contour
            path tries to cross a non PM or MP edge.
@@ -1319,57 +1416,154 @@ stop
     this.edge.quarter(:) = -999  ! Any negative (anomourous) number.
 
     !!>
-               v1--[e2]--v2--[e3]--v3
+              v7--[e6]--v6--[e5]--v5
               /                    /
             [e7]                 [e4]
             /                    /
-           v6--[e6]--v5--[e5]--v4
+           v1--[e2]--v2--[e3]--v3
     !!<
 
-    bvnum = this.vert.num ! boundary verts num (= edge num)
-    do index_e = 1, bvnum
-      index_v1 = index_e
-      index_v2 = index_v1 + 1
-      if ( index_v2 > bvnum ) index_v2 -= bvnum
+    do index_e = 1, this.vert.num ! boundary verts num (= edge num)
+      index_v = index_e
+!debugp '>', index_e
+      octa_direct = this.vert.octa_direct(index_v)
+      vi = this.vert.vi(index_v)
+      vj = this.vert.vj(index_v)
+      u = vert.pos_u(vi)
+      v = vert.pos_v(vj)
+!debugp '>', vi, vj
+!debugp '>', octa_direct
+      select case (octa_direct)
+        case (0)
+          ei = vi
+          ej = vj
+          pm_define_direct_reversed = .false.
+          quarter = edge.v_quarter(ei,ej)
+        case (1)
+          ei = vi
+          ej = vj
+          pm_define_direct_reversed = .false.
+          quarter = edge.a_quarter(ei,ej)
+        case (2)
+          ei = vi
+          ej = vj
+          pm_define_direct_reversed = .false.
+          quarter = edge.u_quarter(ei,ej)
+        case (3)
+          ei = vi
+          ej = vj - 1
+          pm_define_direct_reversed = .false.
+          quarter = edge.d_quarter(ei,ej)
+        case (4)
+          ei = vi
+          ej = vj - 1
+          pm_define_direct_reversed = .true.
+          quarter = edge.v_quarter(ei,ej)
+        case (5)
+          ei = vi - 1
+          ej = vj - 1
+          pm_define_direct_reversed = .true.
+          quarter = edge.a_quarter(ei,ej)
+        case (6)
+          ei = vi - 1
+          ej = vj
+          pm_define_direct_reversed = .true.
+          quarter = edge.u_quarter(ei,ej)
+!debugp 'im in case 6.'
+!debugp '  ', ei, ej, quarter
+        case (7)
+          ei = vi - 1
+          ej = vj
+          pm_define_direct_reversed = .true.
+          quarter = edge.d_quarter(ei,ej)
+        case default
+          call ut__fatal( "__MODULE__(__LINE__): " // &
+                          "case error." )
+      end select
 
-      vi = this.vert.vi(index_v1)
-      vj = this.vert.vj(index_v1)
-      val1 = val_vert(vi,vj)
-      u1 = vert.pos_u(vi)
-      v1 = vert.pos_v(vj)
+      call ut__assert( quarter >= 0,  &
+                       "__MODULE__(__LINE__): " //    &
+                       "Anomalous quarter value." )
 
-      vi2 = this.vert.vi(index_v2)
-      vj2 = this.vert.vj(index_v2)
-      val2 = val_vert(vi2,vj2)
-      u2 = vert.pos_u(vi2)
-      v2 = vert.pos_v(vj2)
+!debugp '>', pm_define_direct_reversed
+      if ( pm_define_direct_reversed ) then
+        quarter_along_path = quarter_pm_and_mp_swap( quarter )
+      else
+        quarter_along_path = quarter
+      end if
 
-      quarter = quarter_of_edge_ends( val1, val2, level )
-
-      this.edge.quarter(index_e) = quarter
-
-      if ( quarter == SLICE_MESH__EDGE_PM ) then
+      this.edge.quarter(index_e) = quarter_along_path
+!debugp quarter_along_path
+      if ( quarter_along_path == SLICE_MESH__EDGE_PM ) then
         ! Only PM case.
-        diff1 = val1 - level
-        diff2 = level - val2
-        call ut__assert( diff1 >= 0.0 .and.          &
-                         diff2 >  0.0,               &
-                         "__MODULE__(__LINE__): " // &
-                         "This is not a PM edge?" )
-        interpol_u = linear_interpol( u1, u2, diff1, diff2 )
-        interpol_v = linear_interpol( v1, v2, diff1, diff2 )
-        this.edge.u_cross_coord(index_e) = interpol_u
-        this.edge.v_cross_coord(index_e) = interpol_v
+        select case (octa_direct)
+          case (0)
+            cross_u = u
+            cross_v = edge.v_cross_coord(ei,ej)
+            call ut__assert( cross_v /= NAN,              &
+                             "__MODULE__(__LINE__): " //  &
+                             "not a PM edge?" )
+          case (1)
+            cross_u = edge.a_cross_coord_u(ei,ej)
+            cross_v = edge.a_cross_coord_v(ei,ej)
+            call ut__assert( cross_u /= NAN .and.         &
+                             cross_v /= NAN,              &
+                             "__MODULE__(__LINE__): " //  &
+                             "not a PM edge?" )
+          case (2)
+            cross_u = edge.u_cross_coord(ei,ej)
+            cross_v = v
+            call ut__assert( cross_u /= NAN,              &
+                             "__MODULE__(__LINE__): " //  &
+                             "not a PM edge?" )
+          case (3)
+            cross_u = edge.d_cross_coord_u(ei,ej)
+            cross_v = edge.d_cross_coord_v(ei,ej)
+            call ut__assert( cross_u /= NAN .and.         &
+                             cross_v /= NAN,              &
+                             "__MODULE__(__LINE__): " //  &
+                             "not a PM edge?" )
+          case (4)
+            cross_u = u
+            cross_v = edge.v_cross_coord(ei,ej)
+            call ut__assert( cross_v /= NAN,              &
+                             "__MODULE__(__LINE__): " //  &
+                             "not a PM edge?" )
+          case (5)
+            cross_u = edge.a_cross_coord_u(ei,ej)
+            cross_v = edge.a_cross_coord_v(ei,ej)
+            call ut__assert( cross_u /= NAN .and.         &
+                             cross_v /= NAN,              &
+                             "__MODULE__(__LINE__): " //  &
+                             "not a PM edge?" )
+          case (6)
+!debugp '>', ei, ej
+            cross_u = edge.u_cross_coord(ei,ej)
+            cross_v = v
+            call ut__assert( cross_u /= NAN,              &
+                             "__MODULE__(__LINE__): " //  &
+                             "not a PM edge?" )
+          case (7)
+            cross_u = edge.d_cross_coord_u(ei,ej)
+            cross_v = edge.d_cross_coord_v(ei,ej)
+            call ut__assert( cross_u /= NAN .and.         &
+                             cross_v /= NAN,              &
+                             "__MODULE__(__LINE__): " //  &
+                             "not a PM edge?" )
+          case default
+            call ut__fatal( "__MODULE__(__LINE__): " //   &
+                            "case error." )
+        end select
+
+        this.edge.cross_coord_u(index_e) = cross_u
+        this.edge.cross_coord_v(index_e) = cross_v
       end if        
     end do    
 
-    call ut__assert( minval(this.edge.quarter(:)) >= 0,  &
-                     "__MODULE__(__LINE__): " //    &
-                     "You missed some edge.quarter." )
   end subroutine slice_mesh__boundary_set_quarter  
 
 
-  subroutine set_uv_edge_cross_coord( vert, val_vert, level, edge )
+  subroutine set_edge_cross_coord( vert, val_vert, level, edge )
     type(slice_mesh__vert_t) <in> :: vert
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
@@ -1392,13 +1586,24 @@ stop
     integer :: vi, vi_left,  vi_right
     integer :: vj, vj_lower, vj_upper
 
+    integer :: vi_ll, vj_ll, vi_ur, vj_ur
+    integer :: vi_ul, vj_ul, vi_lr, vj_lr
+    real :: u_ll, v_ll, u_ur, v_ur
+    real :: u_ul, v_ul, u_lr, v_lr
+    real :: diff_ll, diff_ur
+    real :: diff_ul, diff_lr
 
     edge.u_cross_coord(:,:) = NAN 
     edge.v_cross_coord(:,:) = NAN 
+    edge.a_cross_coord_u(:,:) = NAN 
+    edge.a_cross_coord_v(:,:) = NAN 
+    edge.d_cross_coord_u(:,:) = NAN 
+    edge.d_cross_coord_v(:,:) = NAN 
       !!> 
            To catch errornous cases in which a contour
            path tries to cross a non PM or MP edge.
       !!<
+
     ! edge_u
     do ej = 1, edge.u_nv
       do ei = 1, edge.u_nu
@@ -1447,6 +1652,66 @@ stop
       end do
     end do    
 
-  end subroutine set_uv_edge_cross_coord
+    ! edge_a
+    do ej = 1, edge.v_nv
+      do ei = 1, edge.u_nu
+        vi_ll = ei       ! lower-left
+        vj_ll = ej
+        vi_ur = ei + 1   ! upper-right
+        vj_ur = ej + 1
+        quarter = edge.a_quarter(ei,ej)
+        if ( quarter == SLICE_MESH__EDGE_MP  .or.  &
+             quarter == SLICE_MESH__EDGE_PM ) then
+          u_ll = vert.pos_u(vi_ll)
+          v_ll = vert.pos_v(vj_ll)
+          u_ur = vert.pos_u(vi_ur)
+          v_ur = vert.pos_v(vj_ur)
+          diff_ll = val_vert(vi_ll,vj_ll) - level
+          diff_ur = level - val_vert(vi_ur,vj_ur)
+          call ut__assert( diff_ll * diff_ur >= 0.0,   &
+                           "__MODULE__(__LINE__): Not a PM/MP edge?" )
+          edge.a_cross_coord_u(ei,ej) = linear_interpol( u_ll,    &
+                                                         u_ur,    &
+                                                         diff_ll, &
+                                                         diff_ur )
+          edge.a_cross_coord_v(ei,ej) = linear_interpol( v_ll,    &
+                                                         v_ur,    &
+                                                         diff_ll, &
+                                                         diff_ur )
+        end if
+      end do
+    end do    
+
+    ! edge_d
+    do ej = 1, edge.v_nv
+      do ei = 1, edge.u_nu
+        vi_ul = ei       ! upper-left
+        vj_ul = ej + 1
+        vi_lr = ei + 1   ! loer-right
+        vj_lr = ej
+        quarter = edge.d_quarter(ei,ej)
+        if ( quarter == SLICE_MESH__EDGE_MP  .or.  &
+             quarter == SLICE_MESH__EDGE_PM ) then
+          u_ul = vert.pos_u(vi_ul)
+          v_ul = vert.pos_v(vj_ul)
+          u_lr = vert.pos_u(vi_lr)
+          v_lr = vert.pos_v(vj_lr)
+          diff_ul = val_vert(vi_ul,vj_ul) - level
+          diff_lr = level - val_vert(vi_lr,vj_lr)
+          call ut__assert( diff_ul * diff_lr >= 0.0,   &
+                           "__MODULE__(__LINE__): Not a PM/MP edge?" )
+          edge.d_cross_coord_u(ei,ej) = linear_interpol( u_ul,    &
+                                                         u_lr,    &
+                                                         diff_ul, &
+                                                         diff_lr )
+          edge.d_cross_coord_v(ei,ej) = linear_interpol( v_ul,    &
+                                                         v_lr,    &
+                                                         diff_ul, &
+                                                         diff_lr )
+        end if
+      end do
+    end do    
+
+  end subroutine set_edge_cross_coord
 
 end module slice_mesh_m
