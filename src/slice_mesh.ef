@@ -167,27 +167,6 @@
                      o o 3 i i i 1 o o   
                      o o o 2 2 1 o o o  
      
-     ## Turn letters
-
-        Instead of the direction, such N/E/S/W or octa_direct 0-7,
-        we can describe a closed path by consective turn directions.
-        Denoting 
-               'R' for the right (90-degree) turn,
-               'r' for the right (45-degree) turn,
-               'L' for the left (90-degree) turn,
-               'l' for the left (45-degree) turn,
-           and 'f' for no turn,
-
-        the above path can be written as
-
-                     . l f f f l . . .
-                     L . . . . . l . .
-                     . f . . . . f . .
-                     . . f . . . l . .  
-                     . . . 2 f l . . .  
-                     
-        In this turn-letter expression, we need at least one 
-        vert that is assigned the octa_direct integer or 'R/E/S/W'.
 !!<
 
     !!>
@@ -360,6 +339,7 @@ contains
 
     call this.vert.initialize( vert.nu, vert.nv, vert.flag )
     call this.edge.initialize( this.vert.num )
+!debugp '# calling make_list'
     call this.make_list( vert, edge )
   end subroutine slice_mesh__boundary_initialize
 
@@ -465,12 +445,7 @@ contains
                flag == '4' .or.  &
                flag == '5' .or.  &
                flag == '6' .or.  &
-               flag == '7' .or.  &
-               flag == 'f' .or.  &
-               flag == 'r' .or.  &
-               flag == 'R' .or.  &
-               flag == 'l' .or.  &
-               flag == 'L' ) then
+               flag == '7' ) then
             num += 1
           end if
         end do
@@ -574,18 +549,7 @@ contains
         call ut__assert( octa_direct >= 0 .and.  &
                          octa_direct <= 7,       &
                          "__MODULE__(__LINE__): case error." )
-      case ('f')
-       ! do nothing. keep the current octa_direct
-      case ('r')
-        octa_direct = mod(octa_direct+1,8)
-      case ('R')
-        octa_direct = mod(octa_direct+2,8)
-      case ('l')
-        octa_direct = mod(octa_direct+7,8)
-      case ('L')
-        octa_direct = mod(octa_direct+6,8)
       case default
-!debugp flag_at_new_vert
         call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
 
@@ -716,20 +680,20 @@ contains
     this.edge.ei(counter) = ei
     this.edge.ej(counter) = ej
     this.edge.type(counter) = edge_type
-!debugp '>', counter, vi, vj
-!debugp '>', ei, ej, edge_type
-!debugp '>', num_of_boundary_vert
     call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     do counter = 2, num_of_boundary_vert + 1
-!debugp '>', counter
       ! the last "+1" is necesary to close the path
       call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
                                           vi, vj,           &
                                           octa_direct,      &
                                           vert.flag )
-!debugp '>', vi, vj, octa_direct
       if ( vi == start_vi .and. vj == start_vj ) then
         ! have returned back to the start vert
+!debugp this.vert.vi(17)
+!debugp this.vert.vj(17)
+!debugp this.edge.ei(17)
+!debugp this.edge.ej(17)
+!debugp this.edge.type(17)
         return
       end if
       this.vert.octa_direct(counter) = octa_direct
@@ -742,7 +706,6 @@ contains
       call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     end do
 
-stop
     call ut__fatal( "__MODULE__(__LINE__): Failed to close boundary." )
 
   contains
@@ -1425,14 +1388,12 @@ stop
 
     do index_e = 1, this.vert.num ! boundary verts num (= edge num)
       index_v = index_e
-!debugp '>', index_e
       octa_direct = this.vert.octa_direct(index_v)
+!debugp index_e, octa_direct
       vi = this.vert.vi(index_v)
       vj = this.vert.vj(index_v)
       u = vert.pos_u(vi)
       v = vert.pos_v(vj)
-!debugp '>', vi, vj
-!debugp '>', octa_direct
       select case (octa_direct)
         case (0)
           ei = vi
@@ -1469,8 +1430,6 @@ stop
           ej = vj
           pm_define_direct_reversed = .true.
           quarter = edge.u_quarter(ei,ej)
-!debugp 'im in case 6.'
-!debugp '  ', ei, ej, quarter
         case (7)
           ei = vi - 1
           ej = vj
@@ -1485,7 +1444,6 @@ stop
                        "__MODULE__(__LINE__): " //    &
                        "Anomalous quarter value." )
 
-!debugp '>', pm_define_direct_reversed
       if ( pm_define_direct_reversed ) then
         quarter_along_path = quarter_pm_and_mp_swap( quarter )
       else
@@ -1493,7 +1451,6 @@ stop
       end if
 
       this.edge.quarter(index_e) = quarter_along_path
-!debugp quarter_along_path
       if ( quarter_along_path == SLICE_MESH__EDGE_PM ) then
         ! Only PM case.
         select case (octa_direct)
@@ -1537,7 +1494,6 @@ stop
                              "__MODULE__(__LINE__): " //  &
                              "not a PM edge?" )
           case (6)
-!debugp '>', ei, ej
             cross_u = edge.u_cross_coord(ei,ej)
             cross_v = v
             call ut__assert( cross_u /= NAN,              &

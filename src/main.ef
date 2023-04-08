@@ -295,6 +295,7 @@ contains
     integer :: l
 
     integer :: i, j
+    integer :: i2, j2
     real, dimension(NU_SCALAR) :: grid_pos_u
     real, dimension(NV_SCALAR) :: grid_pos_v
     character, dimension(NU_SCALAR,NV_SCALAR) :: grid_flag
@@ -343,24 +344,24 @@ contains
 !    grid_flag(          2,NV_SCALAR  ) = 'l'
 !    grid_flag(          1,          2) = 'l'
 
-! case 3: Only left-half
-    do j = 2, NV_SCALAR-1
-      do i = 2, NU_SCALAR/2-1
-        grid_flag(i,j) = 'i'
-      end do
-    end do
-    grid_flag(2:NU_SCALAR/2-2,            1) = 'E'
-    grid_flag(NU_SCALAR/2    ,2:NV_SCALAR-1) = 'N'
-    grid_flag(2:NU_SCALAR/2-2,    NV_SCALAR) = 'W'
-    grid_flag(              1,2:NV_SCALAR-1) = 'S'
-    grid_flag(NU_SCALAR/2-1  ,            1) = 'l'
-    grid_flag(NU_SCALAR/2    ,  NV_SCALAR-1) = 'l'
-    grid_flag(              2,  NV_SCALAR  ) = 'l'
-    grid_flag(              1,            2) = 'l'
-!    grid_flag(NU_SCALAR/2    ,            1) = 'N'
-!    grid_flag(NU_SCALAR/2    ,  NV_SCALAR  ) = 'W'
-!    grid_flag(              1,  NV_SCALAR  ) = 'S'
-!    grid_flag(              1,            1) = 'E'
+!! case 3: Only left-half
+!    do j = 2, NV_SCALAR-1
+!      do i = 2, NU_SCALAR/2-1
+!        grid_flag(i,j) = 'i'
+!      end do
+!    end do
+!    grid_flag(2:NU_SCALAR/2-2,            1) = 'E'
+!    grid_flag(NU_SCALAR/2    ,2:NV_SCALAR-2) = 'N'
+!    grid_flag(2:NU_SCALAR/2-1,    NV_SCALAR) = 'W'
+!    grid_flag(              1,2:NV_SCALAR-1) = 'S'
+!    grid_flag(NU_SCALAR/2-1  ,            1) = '1'
+!    grid_flag(NU_SCALAR/2    ,  NV_SCALAR-1) = '7'
+!    grid_flag(              2,  NV_SCALAR  ) = '5'
+!    grid_flag(              1,            2) = '3'
+!!    grid_flag(NU_SCALAR/2    ,            1) = 'N'
+!!    grid_flag(NU_SCALAR/2    ,  NV_SCALAR  ) = 'W'
+!!    grid_flag(              1,  NV_SCALAR  ) = 'S'
+!!    grid_flag(              1,            1) = 'E'
 
 !! case 4: triangle
 !    grid_flag(:,:) = 'o'
@@ -382,6 +383,33 @@ contains
 !    grid_flag(     1,  20-2) = 'o'
 !    grid_flag(     1,  20-1) = 'o'
 !    grid_flag(     1,     1) = 'E'
+
+! case 5: triangle
+    grid_flag(:,:) = 'o'
+    do j = 1, NV_SCALAR
+      j2 = j - 15
+      do i = 1, NU_SCALAR
+        i2 = i - 30
+        if ( abs(i2) + abs(j2) < 10 ) then
+          grid_flag(i,j) = 'i'
+        else if ( abs(i2) + abs(j2) <= 10 ) then
+          if ( +(i2) + (j2) == 10 )  then
+            grid_flag(i,j) = '7'
+          else if ( -(i2) + (j2) == 10 )  then
+            grid_flag(i,j) = '5'
+          else if ( -(i2) - (j2) == 10 )  then
+            grid_flag(i,j) = '3'
+          else if ( +(i2) - (j2) == 10 )  then
+            grid_flag(i,j) = '1'
+          end if
+        end if
+      end do
+    end do
+    grid_flag(30   ,15-10) = '1'
+    grid_flag(30+10,15   ) = '7'
+    grid_flag(30   ,15+10) = '5'
+    grid_flag(30-10,15   ) = '3'
+
 
     call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
                                     grid_pos_u,  &
