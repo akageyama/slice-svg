@@ -88,7 +88,6 @@ contains
                                      level )
 
     call this.mesh_boundary.set_quarter( this.mesh_vert,  &
-                                         this.mesh_edge,  &
                                          this.val_vert,   &
                                          level )
     call contour_path.reset

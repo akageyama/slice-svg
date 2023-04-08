@@ -1450,6 +1450,7 @@ contains
         quarter_along_path = quarter
       end if
 
+!debugp ei, ej, quarter_along_path
       this.edge.quarter(index_e) = quarter_along_path
       if ( quarter_along_path == SLICE_MESH__EDGE_PM ) then
         ! Only PM case.
@@ -1502,6 +1503,8 @@ contains
           case (7)
             cross_u = edge.d_cross_coord_u(ei,ej)
             cross_v = edge.d_cross_coord_v(ei,ej)
+!debugp ei, ej
+!debugp cross_u, cross_v
             call ut__assert( cross_u /= NAN .and.         &
                              cross_v /= NAN,              &
                              "__MODULE__(__LINE__): " //  &
@@ -1656,6 +1659,10 @@ contains
           diff_lr = level - val_vert(vi_lr,vj_lr)
           call ut__assert( diff_ul * diff_lr >= 0.0,   &
                            "__MODULE__(__LINE__): Not a PM/MP edge?" )
+!debugp 'X', ei, ej
+!debugp 'X', vi_ul, vj_ul
+!debugp 'X', vi_lr, vj_lr
+!debugp 'X', quarter
           edge.d_cross_coord_u(ei,ej) = linear_interpol( u_ul,    &
                                                          u_lr,    &
                                                          diff_ul, &
