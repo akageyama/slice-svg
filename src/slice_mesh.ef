@@ -1293,16 +1293,6 @@ contains
       end do
     end do    
 
-!debugp 'QQ i am in __FUNC__'
-!debugp 'QQ', vert.flag(39,14)
-!debugp 'QQ', vert.flag(40,14)
-!debugp 'QQ', vert.flag(41,14)
-!debugp 'QQ', vert.flag(39,15)
-!debugp 'QQ', vert.flag(40,15)
-!debugp 'QQ', vert.flag(41,15)
-!debugp 'QQ', vert.flag(39,16)
-!debugp 'QQ', vert.flag(40,16)
-!debugp 'QQ', vert.flag(41,16)
     ! edge_d
     do ej = 1, edge.v_nv  
       do ei = 1, edge.u_nu
@@ -1322,16 +1312,6 @@ contains
         end if
       end do
     end do    
-!debugp '$$ i am in __FUNC__'
-!debugp '$$', edge.d_quarter(38,14)
-!debugp '$$', edge.d_quarter(39,14)
-!debugp '$$', edge.d_quarter(40,14)
-!debugp '$$', edge.d_quarter(38,15)
-!debugp '$$', edge.d_quarter(39,15)
-!debugp '$$', edge.d_quarter(40,15)
-!debugp '$$', edge.d_quarter(38,16)
-!debugp '$$', edge.d_quarter(39,16)
-!debugp '$$', edge.d_quarter(40,16)
   end subroutine set_edge_quarter
 
 
@@ -1413,53 +1393,35 @@ contains
     do index_e = 1, this.vert.num ! boundary verts num (= edge num)
       index_v = index_e
       octa_direct = this.vert.octa_direct(index_v)
-!debugp '## i am in __FUNC__'
-!debugp '## ', index_e, index_v
-!debugp '## ', octa_direct
       vi = this.vert.vi(index_v)
       vj = this.vert.vj(index_v)
+      ei = this.edge.ei(index_e)
+      ej = this.edge.ej(index_e)
       u = vert.pos_u(vi)
       v = vert.pos_v(vj)
-!debugp '## ', vi, vj
       select case (octa_direct)
         case (0)
-          ei = vi
-          ej = vj
           pm_define_direct_reversed = .false.
           quarter = edge.v_quarter(ei,ej)
         case (1)
-          ei = vi
-          ej = vj
           pm_define_direct_reversed = .false.
           quarter = edge.a_quarter(ei,ej)
         case (2)
-          ei = vi
-          ej = vj
           pm_define_direct_reversed = .false.
           quarter = edge.u_quarter(ei,ej)
         case (3)
-          ei = vi
-          ej = vj - 1
           pm_define_direct_reversed = .false.
           quarter = edge.d_quarter(ei,ej)
         case (4)
-          ei = vi
-          ej = vj - 1
           pm_define_direct_reversed = .true.
           quarter = edge.v_quarter(ei,ej)
         case (5)
-          ei = vi - 1
-          ej = vj - 1
           pm_define_direct_reversed = .true.
           quarter = edge.a_quarter(ei,ej)
         case (6)
-          ei = vi - 1
-          ej = vj
           pm_define_direct_reversed = .true.
           quarter = edge.u_quarter(ei,ej)
         case (7)
-          ei = vi - 1
-          ej = vj
           pm_define_direct_reversed = .true.
           quarter = edge.d_quarter(ei,ej)
         case default
@@ -1477,10 +1439,8 @@ contains
         quarter_along_path = quarter
       end if
 
-!debugp '##', ei, ej, quarter_along_path
       this.edge.quarter(index_e) = quarter_along_path
       if ( quarter_along_path == SLICE_MESH__EDGE_PM ) then
-!debugp '##   if entered!'
         ! Only PM case.
         select case (octa_direct)
           case (0)
