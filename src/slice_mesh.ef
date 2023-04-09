@@ -244,6 +244,7 @@ module slice_mesh_m
     real, dimension(:), allocatable :: pos_v
     real :: u_min, u_max
     real :: v_min, v_max
+    integer, dimension(:,:), allocatable :: octa_direct 
     character, dimension(:,:), allocatable :: flag 
                        !        'i' : inside the boundary
                        !        'o' : outside the boundary
@@ -333,7 +334,7 @@ contains
 
   subroutine slice_mesh__boundary_initialize( this, vert, edge )
     class(slice_mesh__boundary_t) <io> :: this
-    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__vert_t) <io> :: vert
     type(slice_mesh__edge_t) <io> :: edge
 
     call this.vert.initialize( vert.nu, vert.nv, vert.flag )
@@ -491,7 +492,11 @@ contains
     ans = NIL  ! dummy 
     count_b_vert = 0
 
+!debugp '# i am in __FUNC__'
+!debugp '# ', i, j
     do odir = 0, 7
+!debugp '# ', odir
+!debugp '# ', octa_direct_came_from
       if ( odir == octa_direct_came_from ) cycle ! skip
 
       call shift_vert_position_in_octa_direct( odir,    &
@@ -501,6 +506,8 @@ contains
            j2 >= 1 .and. j2 <= vert_nv ) then
 
         if ( flag(i2,j2) == 'b' ) then
+!debugp '# flag(i2,j2)=b for '
+!debugp '# ', i2, j2
           ! found the next border 
           count_b_vert += 1
           ans = odir  ! return this value after check
@@ -509,11 +516,11 @@ contains
     end do
 
     if ( count_b_vert > 1 ) then
-      call fatal( "__MODULE__(__LINE__): " //  &
-                  "More then 1 next border verts?" )
+      call ut__fatal( "__MODULE__(__LINE__): " //  &
+                      "More then 1 next border verts?" )
     else if ( count_b_vert == 0 ) then
-      call fatal( "__MODULE__(__LINE__): " //  &
-                  "No vert with flag b." )
+      call ut__fatal( "__MODULE__(__LINE__): " //  &
+                      "No vert with flag b." )
     end if
 
     call ut__assert( ans /= NIL .and.                   &
@@ -685,7 +692,7 @@ contains
 
   subroutine slice_mesh__boundary_make_list( this, vert, edge )
     class(slice_mesh__boundary_t) <io> :: this
-    type(slice_mesh__vert_t) <in> :: vert
+    type(slice_mesh__vert_t) <io> :: vert
     type(slice_mesh__edge_t) <io> :: edge
 
     integer :: vi, vj, start_vi, start_vj
@@ -707,9 +714,12 @@ contains
     edge.a_is_boundary(:,:) = .false. ! default
     edge.d_is_boundary(:,:) = .false. ! default
 
+    vert.octa_direct(:,:) = -NIL ! default
+
     start_vi = vi
     start_vj = vj
     counter = 1
+    vert.octa_direct(vi,vj) = octa_direct
     this.vert.octa_direct(counter) = octa_direct
     this.vert.vi(counter) = vi
     this.vert.vj(counter) = vj
@@ -720,6 +730,9 @@ contains
     call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     do counter = 2, num_of_boundary_vert + 1
       ! the last "+1" is necesary to close the path
+!debugp '/ i am in __FUNC__'
+!debugp '/ calling get_next_octa_direct_and_vert'
+!debugp '/ with', vi, vj, octa_direct
       call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
                                           vi, vj,           &
                                           octa_direct,      &
@@ -728,6 +741,7 @@ contains
         ! have returned back to the start vert
         return
       end if
+      vert.octa_direct(vi,vj) = octa_direct
       this.vert.octa_direct(counter) = octa_direct
       this.vert.vi(counter) = vi
       this.vert.vj(counter) = vj
@@ -997,6 +1011,7 @@ contains
     allocate(this.pos_u(nu))
     allocate(this.pos_v(nv))
     allocate(this.flag(nu,nv))
+    allocate(this.octa_direct(nu,nv))
 
     this.pos_u(:) = grid_pos_u(:)
     this.pos_v(:) = grid_pos_v(:)
@@ -1015,6 +1030,7 @@ contains
     deallocate(this.pos_u)
     deallocate(this.pos_v)
     deallocate(this.flag)
+    deallocate(this.octa_direct)
   end subroutine slice_mesh__vert_finalize
 
 
@@ -1045,6 +1061,7 @@ contains
     allocate(this.pos_u(nu))
     allocate(this.pos_v(nv))
     allocate(this.flag(nu,nv))
+    allocate(this.octa_direct(nu,nv))
 
     du = ( u_max - u_min ) / (nu-1)
     dv = ( v_max - v_min ) / (nv-1)

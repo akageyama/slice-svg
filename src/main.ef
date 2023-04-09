@@ -280,6 +280,23 @@ contains
   end subroutine iSample_text_and_colors
 
 
+  subroutine print_flag( nu, nv, flag )
+    integer <in> :: nu, nv
+    character <in> :: flag(nu,nv)
+
+    integer <const> :: LINE_LEN = 80
+    char(len=LINE_LEN) :: string
+
+    integer :: i, j
+
+    do j = nv, 1, -1
+      do i = 1, min(nu, LINE_LEN)
+        string(i:i) = flag(i,j)
+      end do
+      print *, string
+    end do
+  end subroutine print_flag
+
 
   subroutine iSample_scalar( pressure )
     real, dimension(NU_SCALAR,NV_SCALAR) <in> :: pressure
@@ -394,22 +411,24 @@ contains
           grid_flag(i,j) = 'i'
         else if ( abs(i2) + abs(j2) <= 10 ) then
           if ( +(i2) + (j2) == 10 )  then
-            grid_flag(i,j) = '7'
+            grid_flag(i,j) = 'b'
           else if ( -(i2) + (j2) == 10 )  then
-            grid_flag(i,j) = '5'
+            grid_flag(i,j) = 'b'
           else if ( -(i2) - (j2) == 10 )  then
-            grid_flag(i,j) = '3'
+            grid_flag(i,j) = 'b'
           else if ( +(i2) - (j2) == 10 )  then
-            grid_flag(i,j) = '1'
+            grid_flag(i,j) = 'b'
           end if
         end if
       end do
     end do
-    grid_flag(30   ,15-10) = '1'
-    grid_flag(30+10,15   ) = '7'
-    grid_flag(30   ,15+10) = '5'
-    grid_flag(30-10,15   ) = '3'
+    grid_flag(30   ,15-10) = 'b'
+    grid_flag(30+10,15   ) = 'b'
+    grid_flag(30   ,15+10) = 'b'
+    grid_flag(30-10,15   ) = 'b'
 
+    call print_flag( NU_SCALAR, NV_SCALAR, &
+                     grid_flag )
 
     call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
                                     grid_pos_u,  &

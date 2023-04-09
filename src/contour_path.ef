@@ -266,7 +266,6 @@ contains
     !!<
     integer :: vi_left, vj
     real :: u, v
-    character :: flag_left
     integer :: octa_direct_along_border
 
     if ( jumped ) return  ! you have already jumped for this cell.
@@ -280,14 +279,17 @@ contains
       v = vert.pos_v(vj)
       call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v )
-      flag_left = vert.flag(vi_left,vj)
 
       if ( edge.u_is_boundary(ei,ej) ) then
         !            
         !    n  n  P * - - M - - 
         !          .   *   .
         !          .     * .
-        octa_direct_along_border = vert.flag_to_octa_direct( flag_left )
+        octa_direct_along_border = vert.octa_direct(vi_left,vj)
+        call ut__assert( octa_direct_along_border >= 0 .and. &
+                         octa_direct_along_border <= 7,      &
+                         "__MODULE__(__LINE__): " //         &
+                         "Not a border vert?" )
         call path.replace_head_edge( vi_left,                  &
                                      vj,                       &
                                      octa_direct_along_border, &
@@ -316,7 +318,6 @@ contains
 
     integer :: vi_right, vj
     real :: u, v
-    character :: flag_right
     integer :: octa_direct_along_border
 
     if ( jumped ) return  ! you have already jumped for this cell.
@@ -330,14 +331,17 @@ contains
       v = vert.pos_v(vj)
       call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v )
-      flag_right = vert.flag(vi_right,vj)
       if ( edge.u_is_boundary(ei,ej) ) then
         !
         !        . *     .
         !        .  *    .
         !    - - M - * * P n n n
         !
-        octa_direct_along_border = vert.flag_to_octa_direct( flag_right )
+        octa_direct_along_border = vert.octa_direct(vi_right,vj)
+        call ut__assert( octa_direct_along_border >= 0 .and. &
+                         octa_direct_along_border <= 7,      &
+                         "__MODULE__(__LINE__): " //         &
+                         "Not a border vert?" )
         call path.replace_head_edge( vi_right,                 &
                                      vj,                       &
                                      octa_direct_along_border, &
@@ -368,7 +372,6 @@ contains
 
     integer :: vi_ul, vj_ul ! upper-left
     real :: u, v
-    character :: flag_ul
     integer :: octa_direct_along_border
 
     if ( jumped ) return  ! you have already jumped for this cell.
@@ -401,8 +404,11 @@ contains
                        "__MODULE__(__LINE__): " //  &
                        "Invalid cross coord." )
       call path.register_new_vert( u, v )
-      flag_ul = vert.flag(vi_ul,vj_ul)
-      octa_direct_along_border = vert.flag_to_octa_direct( flag_ul )
+      octa_direct_along_border = vert.octa_direct(vi_ul,vj_ul)
+      call ut__assert( octa_direct_along_border >= 0 .and. &
+                       octa_direct_along_border <= 7,      &
+                       "__MODULE__(__LINE__): " //         &
+                       "Not a border vert?" )
       call path.replace_head_edge( vi_ul,                    &
                                    vj_ul,                    &
                                    octa_direct_along_border, &
@@ -423,7 +429,6 @@ contains
 
     integer :: vi_lr, vj_lr ! upper-left
     real :: u, v
-    character :: flag_lr
     integer :: octa_direct_along_border
 
     if ( jumped ) return  ! you have already jumped for this cell.
@@ -456,8 +461,11 @@ contains
                        "__MODULE__(__LINE__): " //  &
                        "Invalid cross coord." )
       call path.register_new_vert( u, v )
-      flag_lr = vert.flag(vi_lr,vj_lr)
-      octa_direct_along_border = vert.flag_to_octa_direct( flag_lr )
+      octa_direct_along_border = vert.octa_direct(vi_lr,vj_lr)
+        call ut__assert( octa_direct_along_border >= 0 .and. &
+                         octa_direct_along_border <= 7,      &
+                         "__MODULE__(__LINE__): " //         &
+                         "Not a border vert?" )
       call path.replace_head_edge( vi_lr,                    &
                                    vj_lr,                    &
                                    octa_direct_along_border, &
@@ -478,7 +486,6 @@ contains
 
     integer :: vi_ll, vj_ll  ! lower-left
     real :: u, v
-    character :: flag_ll
     integer :: octa_direct_along_border
 
     if ( jumped ) return  ! you have already jumped for this cell.
@@ -509,8 +516,11 @@ contains
                        "__MODULE__(__LINE__): " //  &
                        "Invalid cross coord." )
       call path.register_new_vert( u, v )
-      flag_ll = vert.flag(vi_ll,vj_ll)
-      octa_direct_along_border = vert.flag_to_octa_direct( flag_ll )
+      octa_direct_along_border = vert.octa_direct(vi_ll,vj_ll)
+        call ut__assert( octa_direct_along_border >= 0 .and. &
+                         octa_direct_along_border <= 7,      &
+                         "__MODULE__(__LINE__): " //         &
+                         "Not a border vert?" )
       call path.replace_head_edge( vi_ll,                    &
                                    vj_ll,                    &
                                    octa_direct_along_border, &
@@ -531,7 +541,6 @@ contains
 
     integer :: vi_ur, vj_ur  ! lower-left
     real :: u, v
-    character :: flag_ur
     integer :: octa_direct_along_border
 
     if ( jumped ) return  ! you have already jumped for this cell.
@@ -562,8 +571,11 @@ contains
                        "__MODULE__(__LINE__): " //  &
                        "Invalid cross coord." )
       call path.register_new_vert( u, v )
-      flag_ur = vert.flag(vi_ur,vj_ur)
-      octa_direct_along_border = vert.flag_to_octa_direct( flag_ur )
+      octa_direct_along_border = vert.octa_direct(vi_ur,vj_ur)
+        call ut__assert( octa_direct_along_border >= 0 .and. &
+                         octa_direct_along_border <= 7,      &
+                         "__MODULE__(__LINE__): " //         &
+                         "Not a border vert?" )
       call path.replace_head_edge( vi_ur,                    &
                                    vj_ur,                    &
                                    octa_direct_along_border, &
@@ -583,7 +595,6 @@ contains
 
     integer :: vi, vj_lower
     real :: u, v
-    character :: flag_lower
     integer :: octa_direct_along_border
 
     if ( jumped ) return  ! you have already jumped for this cell.
@@ -596,7 +607,6 @@ contains
       v = edge.v_cross_coord(ei,ej)
       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v )
-      flag_lower = vert.flag(vi,vj_lower)
 
       if ( edge.v_is_boundary(ei,ej) ) then
         !             
@@ -609,7 +619,11 @@ contains
         !      n       .
         !      n       .
         !
-        octa_direct_along_border = vert.flag_to_octa_direct( flag_lower )
+        octa_direct_along_border = vert.octa_direct(vi,vj_lower)
+        call ut__assert( octa_direct_along_border >= 0 .and. &
+                         octa_direct_along_border <= 7,      &
+                         "__MODULE__(__LINE__): " //         &
+                         "Not a border vert?" )
         call path.replace_head_edge( vi,                       &
                                      vj_lower,                 &
                                      octa_direct_along_border, &
@@ -641,7 +655,6 @@ contains
 
     integer :: vi, vj_upper
     real :: u, v
-    character :: flag_upper
     integer :: octa_direct_along_border
 
     if ( jumped ) return  ! you have already jumped for this cell.
@@ -655,7 +668,6 @@ contains
       v = edge.v_cross_coord(ei,ej)
       call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v ) 
-      flag_upper = vert.flag(vi,vj_upper)
       if ( edge.v_is_boundary(ei,ej) ) then
         !             
         !   .       n 
@@ -667,7 +679,11 @@ contains
         !   + - * - M
         !   .  *    .       
         !
-        octa_direct_along_border = vert.flag_to_octa_direct( flag_upper )
+        octa_direct_along_border = vert.octa_direct(vi,vj_upper)
+        call ut__assert( octa_direct_along_border >= 0 .and. &
+                         octa_direct_along_border <= 7,      &
+                         "__MODULE__(__LINE__): " //         &
+                         "Not a border vert?" )
         call path.replace_head_edge( vi,                       &
                                      vj_upper,                 &
                                      octa_direct_along_border, &

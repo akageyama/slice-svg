@@ -44,6 +44,8 @@ FFLAGS :=
 
 this_host := $(shell hostname | cut -c1-3)
 
+this_host = mac
+
 ifeq ($(this_host),alf)  # Alfven
         EFPP = ../bin/efpp.py2
         FC = mpinfort
