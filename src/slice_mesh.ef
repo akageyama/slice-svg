@@ -262,6 +262,7 @@ module slice_mesh_m
     generic :: initialize => slice_mesh__vert_init_with_grids,  &
                              slice_mesh__vert_init_without_grids
     procedure :: finalize => slice_mesh__vert_finalize
+    procedure :: debug_print_flag => slice_mesh_vert__debug_print_flag
   end type slice_mesh__vert_t  
 
 
@@ -330,6 +331,28 @@ module slice_mesh_m
 
 
 contains
+
+
+  subroutine slice_mesh_vert__debug_print_flag( this )
+    class(slice_mesh__vert_t) <in> :: this
+
+    integer <const> :: PRINT_LINE_LEN = 120
+    char(len=PRINT_LINE_LEN) :: string
+
+    integer :: i, j
+    integer :: num_rows_print, num_columns_print
+
+    num_rows_print = min(this.nv,PRINT_LINE_LEN)
+    num_columns_print = min(this.nu,PRINT_LINE_LEN)
+
+
+    do j = num_rows_print, 1, -1
+      do i = 1, num_columns_print
+        string(i:i) = this.flag(i,j)
+      end do
+      print *, string(1:num_columns_print)
+    end do
+  end subroutine slice_mesh_vert__debug_print_flag
 
 
   subroutine slice_mesh__boundary_initialize( this, vert, edge )
@@ -493,8 +516,6 @@ contains
     ans = NIL  ! dummy 
     count_b_vert = 0
 
-!debugp '# i am in __FUNC__'
-!debugp '# ', i, j
     do odir = 0, 7
 !debugp '# ', odir
 !debugp '# ', octa_direct_came_from
