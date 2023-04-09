@@ -476,8 +476,9 @@ contains
              b     4     3
     !!<
     integer :: octa_direct_came_from
-    integer :: odir, i2, j2
+    integer :: odir
     integer :: count_b_vert
+    integer :: icheck, jcheck
 
     octa_direct_came_from = mod( octa_direct+4, 8 )
       ! 0 --> 4
@@ -499,15 +500,15 @@ contains
 !debugp '# ', octa_direct_came_from
       if ( odir == octa_direct_came_from ) cycle ! skip
 
-      call shift_vert_position_in_octa_direct( odir,    &
-                                               i, j,    &
-                                               i2, j2 )
-      if ( i2 >= 1 .and. i2 <= vert_nu .and.  &
-           j2 >= 1 .and. j2 <= vert_nv ) then
+      icheck = i
+      jcheck = j
+      call shift_vert_position_in_octa_direct( odir, icheck, jcheck )
+      if ( icheck >= 1 .and. icheck <= vert_nu .and.  &
+           jcheck >= 1 .and. jcheck <= vert_nv ) then
 
-        if ( flag(i2,j2) == 'b' ) then
-!debugp '# flag(i2,j2)=b for '
-!debugp '# ', i2, j2
+        if ( flag(icheck,jcheck) == 'b' ) then
+!debugp '# flag(i,j)=b for '
+!debugp '# ', i, j
           ! found the next border 
           count_b_vert += 1
           ans = odir  ! return this value after check
@@ -531,36 +532,31 @@ contains
 
 
   subroutine shift_vert_position_in_octa_direct( octa_direct,     &
-                                                 i, j,            &
-                                                 i_shift, j_shift )
+                                                 i, j )
     integer <in> :: octa_direct
-    integer <in> :: i, j
-    integer <out> :: i_shift, j_shift
-
-    i_shift = i
-    j_shift = j
+    integer <io> :: i, j
 
     select case (octa_direct)
       case (0) ! North
-        j_shift += 1
+        j += 1
       case (1) ! North-East
-        i_shift += 1
-        j_shift += 1
+        i += 1
+        j += 1
       case (2) ! East
-        i_shift += 1
+        i += 1
       case (3) ! South-East
-        i_shift += 1
-        j_shift -= 1
+        i += 1
+        j -= 1
       case (4) ! South
-        j_shift -= 1
+        j -= 1
       case (5) ! South-West
-        i_shift -= 1
-        j_shift -= 1
+        i -= 1
+        j -= 1
       case (6) ! West
-        i_shift -= 1
+        i -= 1
       case (7) ! North-West
-        i_shift -= 1
-        j_shift += 1
+        i -= 1
+        j += 1
       case default
         call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
@@ -577,34 +573,34 @@ contains
                                  ! 2 (East) , 3 (South-East), 
                                  ! 4 (South), 5 (South-West), 
                                  ! 6 (West),  7 (North-West)
-    character, dimension(nu,nv) <in> :: flag ! N/S/E/W/[0-7]/f/r/R/l/L
+    character, dimension(nu,nv) <in> :: flag
 
-    integer :: octa_direct_next
     integer :: i_next, j_next
+    integer :: octa_direct_in_previous_jump
 
     call ut__assert( flag(i,j) == 'b',            &
                      "__MODULE__(__LINE__): " //  &
                      "This vert is not a border. Inconsistent..." )
-
-    octa_direct_next = find_direct_for_next_border_vert( nu,           &
-                                                         nv,           &
-                                                         flag,         &
-                                                         i,            &
-                                                         j,            &
-                                                         octa_direct )
-
-    call shift_vert_position_in_octa_direct( octa_direct_next, &
-                                             i, j,             &
-                                             i_next, j_next )
-
-    i = i_next
-    j = j_next
-    octa_direct = octa_direct_next
-
+!debugp '%% i am in __FUNC__'
+!debugp '%% calling shift_vert_position_in_octa_direct'
+!debugp '%% with', i, j, octa_direct
+    call shift_vert_position_in_octa_direct( octa_direct, i, j )
     call ut__assert( i >= 1 .and. i <= nu,  &
                      "__MODULE__(__LINE__): i-range error." )
     call ut__assert( j >= 1 .and. j <= nv,  &
                      "__MODULE__(__LINE__): j-range error." )
+!debugp '%% new vert is', i, j
+!debugp '%% calling find_direct_for_next_border_vert'
+    octa_direct_in_previous_jump = octa_direct
+    octa_direct  &
+      = find_direct_for_next_border_vert( nu,           &
+                                          nv,           &
+                                          flag,         &
+                                          i,            &
+                                          j,            &
+                                          octa_direct_in_previous_jump )
+!debugp '%% got ', octa_direct
+
   end subroutine get_next_octa_direct_and_vert
 
 
@@ -716,6 +712,8 @@ contains
 
     vert.octa_direct(:,:) = -NIL ! default
 
+!debugp 'xx i am in __FUNC__'
+!debugp 'xx ', vi, vj, octa_direct
     start_vi = vi
     start_vj = vj
     counter = 1

@@ -293,7 +293,7 @@ contains
       do i = 1, min(nu, LINE_LEN)
         string(i:i) = flag(i,j)
       end do
-      print *, string
+      print *, trim(string)
     end do
   end subroutine print_flag
 
