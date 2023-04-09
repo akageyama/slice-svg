@@ -783,12 +783,11 @@ contains
     ej = boundary.edge.ej(nth)
     edge_type = boundary.edge.type(nth)
 
-!debugp ei, ej, edge_type
-!debugp nth
-!debugp edge.d_quarter(33,21)
-!debugp boundary.edge.quarter(17)
-!debugp boundary.vert.vi(17)
-!debugp boundary.vert.vj(17)
+!debugp 'zz i am in __FUNC__'
+!debugp 'zz ', nth
+!debugp 'zz ', boundary.vert.vi(nth)
+!debugp 'zz ', boundary.vert.vj(nth)
+!debugp 'zz ', ei, ej, edge_type
     call ut__assert(        ei == path.head.ei .and.    &
                             ej == path.head.ej .and.    &
                      edge_type == path.head.edge_type,  &

@@ -680,6 +680,10 @@ contains
     this.edge.ei(counter) = ei
     this.edge.ej(counter) = ej
     this.edge.type(counter) = edge_type
+!debugp '//', counter, vi, vj
+!debugp '//', octa_direct
+!debugp '//', ei,ej
+!debugp '//', edge_type
     call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     do counter = 2, num_of_boundary_vert + 1
       ! the last "+1" is necesary to close the path
@@ -689,11 +693,6 @@ contains
                                           vert.flag )
       if ( vi == start_vi .and. vj == start_vj ) then
         ! have returned back to the start vert
-!debugp this.vert.vi(17)
-!debugp this.vert.vj(17)
-!debugp this.edge.ei(17)
-!debugp this.edge.ej(17)
-!debugp this.edge.type(17)
         return
       end if
       this.vert.octa_direct(counter) = octa_direct
@@ -703,6 +702,10 @@ contains
       this.edge.ei(counter) = ei
       this.edge.ej(counter) = ej
       this.edge.type(counter) = edge_type
+!debugp '//', counter, vi, vj
+!debugp '//', octa_direct
+!debugp '//', ei,ej
+!debugp '//', edge_type
       call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     end do
 
@@ -1290,6 +1293,16 @@ contains
       end do
     end do    
 
+!debugp 'QQ i am in __FUNC__'
+!debugp 'QQ', vert.flag(39,14)
+!debugp 'QQ', vert.flag(40,14)
+!debugp 'QQ', vert.flag(41,14)
+!debugp 'QQ', vert.flag(39,15)
+!debugp 'QQ', vert.flag(40,15)
+!debugp 'QQ', vert.flag(41,15)
+!debugp 'QQ', vert.flag(39,16)
+!debugp 'QQ', vert.flag(40,16)
+!debugp 'QQ', vert.flag(41,16)
     ! edge_d
     do ej = 1, edge.v_nv  
       do ei = 1, edge.u_nu
@@ -1309,6 +1322,16 @@ contains
         end if
       end do
     end do    
+!debugp '$$ i am in __FUNC__'
+!debugp '$$', edge.d_quarter(38,14)
+!debugp '$$', edge.d_quarter(39,14)
+!debugp '$$', edge.d_quarter(40,14)
+!debugp '$$', edge.d_quarter(38,15)
+!debugp '$$', edge.d_quarter(39,15)
+!debugp '$$', edge.d_quarter(40,15)
+!debugp '$$', edge.d_quarter(38,16)
+!debugp '$$', edge.d_quarter(39,16)
+!debugp '$$', edge.d_quarter(40,16)
   end subroutine set_edge_quarter
 
 
@@ -1344,6 +1367,7 @@ contains
       case (SLICE_MESH__EDGE_MP ) 
         ans = SLICE_MESH__EDGE_PM
       case default
+        ans = quarter
         ! do nothing for PP and MM cases
     end select
   end function quarter_pm_and_mp_swap
@@ -1389,11 +1413,14 @@ contains
     do index_e = 1, this.vert.num ! boundary verts num (= edge num)
       index_v = index_e
       octa_direct = this.vert.octa_direct(index_v)
-!debugp index_e, octa_direct
+!debugp '## i am in __FUNC__'
+!debugp '## ', index_e, index_v
+!debugp '## ', octa_direct
       vi = this.vert.vi(index_v)
       vj = this.vert.vj(index_v)
       u = vert.pos_u(vi)
       v = vert.pos_v(vj)
+!debugp '## ', vi, vj
       select case (octa_direct)
         case (0)
           ei = vi
@@ -1450,9 +1477,10 @@ contains
         quarter_along_path = quarter
       end if
 
-!debugp ei, ej, quarter_along_path
+!debugp '##', ei, ej, quarter_along_path
       this.edge.quarter(index_e) = quarter_along_path
       if ( quarter_along_path == SLICE_MESH__EDGE_PM ) then
+!debugp '##   if entered!'
         ! Only PM case.
         select case (octa_direct)
           case (0)
@@ -1503,8 +1531,6 @@ contains
           case (7)
             cross_u = edge.d_cross_coord_u(ei,ej)
             cross_v = edge.d_cross_coord_v(ei,ej)
-!debugp ei, ej
-!debugp cross_u, cross_v
             call ut__assert( cross_u /= NAN .and.         &
                              cross_v /= NAN,              &
                              "__MODULE__(__LINE__): " //  &

@@ -59,6 +59,7 @@ ifeq ($(this_host),mac)  # Mac
         FC = gfortran
         FFLAGS = -O0 -Wuninitialized -ffpe-trap=invalid,zero,overflow -fbacktrace 
         FFLAGS += -fbounds-check
+        FFLAGS += -fcheck=array-temps,bounds,do,mem,pointer,recursion
         FFLAGS += -Wall
 endif
 ifeq ($(this_host),ofp)  # Oakforest PACS
@@ -108,7 +109,7 @@ svglist := sample_line.svg \
 # default target
 
 fig: runme
-	#./runme 
+	# ./runme 
 	./runme && open sample_scalar.svg
 	# open $(svglist)
 
