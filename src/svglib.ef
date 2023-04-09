@@ -539,7 +539,7 @@ contains
     char(len=*) <optin> :: text_anchor
     real <optin> :: stroke_width
 
-    integer :: n, nopt   ! number of options
+    integer :: nopt   ! number of options
     integer <const> :: MAX_NOP = 10  ! max
     char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
     char(len=SVGLIB__BSL*MAX_NOP) :: str_all

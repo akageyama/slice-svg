@@ -757,11 +757,10 @@ contains
     type(slice_mesh__boundary_t) <io> :: boundary
     integer <io> :: nth ! this is nth-vert of the border
 
-    real :: u, v       ! coordinates of path tip that is to be registered.
     integer :: vi, vj  ! vertex indeces i and j
     integer :: vi2, vj2, nth_next
     integer :: ei, ej  ! edge indeces i and j
-    integer :: numbv, quarter, octa_direct2
+    integer :: numbv, quarter
     real :: u2, v2
     integer :: octa_direct
     character :: path_go_toward
@@ -783,11 +782,6 @@ contains
     ej = boundary.edge.ej(nth)
     edge_type = boundary.edge.type(nth)
 
-!debugp 'zz i am in __FUNC__'
-!debugp 'zz ', nth
-!debugp 'zz ', boundary.vert.vi(nth)
-!debugp 'zz ', boundary.vert.vj(nth)
-!debugp 'zz ', ei, ej, edge_type
     call ut__assert(        ei == path.head.ei .and.    &
                             ej == path.head.ej .and.    &
                      edge_type == path.head.edge_type,  &
@@ -797,7 +791,6 @@ contains
     numbv = boundary.vert.num
 
     quarter = boundary.edge.quarter(nth)
-!debugp quarter
 
     if ( quarter == SLICE_MESH__EDGE_PP ) then
       !!>
@@ -819,16 +812,12 @@ contains
       if ( nth_next > numbv ) nth_next -= numbv ! cyclic.
       vi2 = boundary.vert.vi(nth_next)
       vj2 = boundary.vert.vj(nth_next)
-!debugp boundary.vert.vi(nth)
-!debugp boundary.vert.vj(nth)
-!debugp vi2, vj2
       u2 = vert.pos_u(vi2)
       v2 = vert.pos_v(vj2)
       call path.register_new_vert( u2, v2 )
       call boundary.edge.erase( nth )
       call edge.erase( edge_type, ei, ej ) 
       octa_direct = boundary.vert.octa_direct(nth_next)
-!debugp octa_direct
       cruising_lane = 'on'
       call path.replace_head_edge( vi2, vj2, octa_direct, cruising_lane )
       nth = nth_next
@@ -1438,7 +1427,6 @@ contains
     integer :: quarter
     integer :: vert_index1, vert_index2
     integer :: edge_index, ei, ej
-    integer :: i, j
     integer :: octa_direct
     real :: u1, v1, u2, v2
     char(len=2) :: cruising_lane
@@ -1617,9 +1605,7 @@ contains
     do
       select case (path.head.cruising_lane)
         case ('on')
-!debugp 'case on'
           if ( start_flag_of_cruising_on_border ) then
-!debugp 'enter if'
             ! newly start tracing on the border.
             nthbe = boundary.edge.get_nth( path.head.edge_type,  &
                                            path.head.ei,         &
@@ -1629,15 +1615,12 @@ contains
               !         e1       e2       e3  ...
             start_flag_of_cruising_on_border = .false.
           end if
-!debugp 'calling one_step_along_boundary'
           call one_step_along_boundary( path, vert, edge, boundary, nthbv )
         case ('in')
           if ( path.head.edge_type == 'u' .or.  &
                path.head.edge_type == 'v'  ) then
-!debugp 'calling jump_to_other_edge_from_edge_uv'
             call jump_to_other_edge_from_edge_uv( path, vert, edge )
           else
-!debugp 'calling jump_to_other_edge_from_edge_ad'
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
           end if
           start_flag_of_cruising_on_border = .true.
@@ -1645,7 +1628,6 @@ contains
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
       if ( path.is_closed() ) then
-!debugp 'path is closed'
         return
       end if
     end do

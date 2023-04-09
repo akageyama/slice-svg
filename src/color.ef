@@ -33,8 +33,8 @@ module color_m
     type(color_t) :: yellow  = color_t(1.0, 1.0, 0.0)
     type(color_t) :: cyan    = color_t(0.0, 1.0, 1.0)
   contains
-    procedure :: gray => color_const__gray
-    procedure, pass :: test_print => color__const__test_print
+    procedure, nopass :: gray => color_const__gray
+    procedure, nopass :: test_print => color__const__test_print
   end type color__const_t
 
   type(color__const_t), protected :: COLOR__CONST
@@ -112,8 +112,6 @@ contains
     real <in> :: value
     type(color_t) :: col
 
-    char(len=7) :: code ! '#FFFFFF' for white
-
     type(color__hsv_t) :: hsv
 
     call ut__assert( value >= 0.0 .and. value <= 1.0,  &
@@ -122,14 +120,11 @@ contains
     hsv.hue = 0.3 + 0.5 * value
     hsv.sat = 0.7
     hsv.val = 0.6
-
     col = hsv.to_rgb()
-
   end function color__normalized_real_to_color
 
 
-  subroutine color__const__test_print( this )
-    class(color__const_t) <in> :: this
+  subroutine color__const__test_print
 
     type(color_t) :: gray_0p5, gray_0p8
 
@@ -166,8 +161,7 @@ contains
   end subroutine color__const__test_print
 
 
-  function color_const__gray( this, whiteness ) result(gray)
-    class(color__const_t) <in> :: this
+  function color_const__gray( whiteness ) result(gray)
     real <in> :: whiteness
     type(color_t) :: gray
 

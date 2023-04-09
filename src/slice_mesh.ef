@@ -339,7 +339,6 @@ contains
 
     call this.vert.initialize( vert.nu, vert.nv, vert.flag )
     call this.edge.initialize( this.vert.num )
-!debugp '# calling make_list'
     call this.make_list( vert, edge )
   end subroutine slice_mesh__boundary_initialize
 
@@ -368,6 +367,8 @@ contains
 
     integer :: i, j, n
 
+    nth = -NIL ! To supress uninit warning.
+
     do n = 1, this.num
       i = this.vi(n)
       j = this.vj(n)
@@ -392,6 +393,8 @@ contains
 
     integer :: i, j, n
     character :: t
+
+    nth = -NIL ! To supress uninit warning.
 
     do n = 1, this.num
       i = this.ei(n)
@@ -680,10 +683,6 @@ contains
     this.edge.ei(counter) = ei
     this.edge.ej(counter) = ej
     this.edge.type(counter) = edge_type
-!debugp '//', counter, vi, vj
-!debugp '//', octa_direct
-!debugp '//', ei,ej
-!debugp '//', edge_type
     call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     do counter = 2, num_of_boundary_vert + 1
       ! the last "+1" is necesary to close the path
@@ -702,10 +701,6 @@ contains
       this.edge.ei(counter) = ei
       this.edge.ej(counter) = ej
       this.edge.type(counter) = edge_type
-!debugp '//', counter, vi, vj
-!debugp '//', octa_direct
-!debugp '//', ei,ej
-!debugp '//', edge_type
       call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     end do
 
@@ -910,7 +905,6 @@ contains
     !!<
     real :: u_min, u_max
     real :: v_min, v_max
-    integer :: max_num_boundary_verts
 
     u_min = grid_pos_u(1)
     u_max = grid_pos_u(nu)
@@ -963,7 +957,6 @@ contains
 
     real :: du, dv
     integer :: i, j
-    integer :: max_num_boundary_verts
 
     call ut__assert( (nu > 1) .and.         &
                      (nv > 1) .and.         &
@@ -1355,14 +1348,10 @@ contains
 
   subroutine slice_mesh__boundary_set_quarter( this,       &
                                                vert,       &
-                                               edge,       &
-                                               val_vert,   &
-                                               level )
+                                               edge )
     class(slice_mesh__boundary_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <in> :: edge
-    real, dimension(vert.nu,vert.nv) <in> :: val_vert
-    real <in> :: level
 
     integer :: index_e           ! edge index
     integer :: index_v           ! vert index for both ends
@@ -1645,10 +1634,6 @@ contains
           diff_lr = level - val_vert(vi_lr,vj_lr)
           call ut__assert( diff_ul * diff_lr >= 0.0,   &
                            "__MODULE__(__LINE__): Not a PM/MP edge?" )
-!debugp 'X', ei, ej
-!debugp 'X', vi_ul, vj_ul
-!debugp 'X', vi_lr, vj_lr
-!debugp 'X', quarter
           edge.d_cross_coord_u(ei,ej) = linear_interpol( u_ul,    &
                                                          u_lr,    &
                                                          diff_ul, &
