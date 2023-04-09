@@ -35,6 +35,7 @@ module slice_m
     procedure :: set_val => slice__scalar_set_val
     procedure :: vis_contour => slice__scalar_vis_contour
     procedure :: debug_print_flag => slice__scalar_debug_print_flag
+    procedure :: grid_flag_check => slice__scalar_grid_flag_check
   end type slice__scalar_t
 
   type, public :: slice__vector_t
@@ -52,11 +53,19 @@ module slice_m
 
 contains
 
+
   subroutine slice__scalar_debug_print_flag( this )
     class(slice__scalar_t) <in> :: this
 
     call this.mesh_vert.debug_print_flag
   end subroutine slice__scalar_debug_print_flag
+
+
+  subroutine slice__scalar_grid_flag_check( this )
+    class(slice__scalar_t) <in> :: this
+
+    call this.mesh_vert.grid_flag_check
+  end subroutine slice__scalar_grid_flag_check
 
 
   subroutine slice__scalar_vis_contour( this,            &

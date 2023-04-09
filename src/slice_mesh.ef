@@ -263,6 +263,7 @@ module slice_mesh_m
                              slice_mesh__vert_init_without_grids
     procedure :: finalize => slice_mesh__vert_finalize
     procedure :: debug_print_flag => slice_mesh_vert__debug_print_flag
+    procedure :: grid_flag_check => slice_mesh_vert__grid_flag_check
   end type slice_mesh__vert_t  
 
 
@@ -353,6 +354,57 @@ contains
       print *, string(1:num_columns_print)
     end do
   end subroutine slice_mesh_vert__debug_print_flag
+
+
+  subroutine slice_mesh_vert__grid_flag_check( this )
+    class(slice_mesh__vert_t) <in> :: this
+
+    call iCheck_flag_char( this.nu, this.nv, this.flag )
+
+  contains
+
+    subroutine iCheck_flag_char( nu, nv, flag )
+      integer <in> :: nu, nv
+      character, dimension(nu,nv) <in> :: flag
+
+      integer :: num_i ! inside the boundary
+      integer :: num_o ! outside the boundary
+      integer :: num_b ! on the boundary
+      integer :: i, j
+
+      num_i = 0
+      num_o = 0
+      num_b = 0
+
+      do j = 1, nv
+        do i = 1, nu
+          select case (flag(i,j))
+            case ('i')
+              num_i += 1
+            case ('b')
+              num_b += 1
+            case ('o')
+              num_o += 1
+            case default
+              call ut__fatal( "__MODULE__(__LINE__) " //  &
+                              "Grid flag char is not 'i'/'b'/'o'." )
+          end select
+        end do
+      end do
+
+      call ut__assert( num_b > 0,                   &
+                       "__MODULE__(__LINE__) " //   &
+                       "No boundary point." )
+      call ut__assert( num_i > 0,  &
+                       "__MODULE__(__LINE__) " //   &
+                       "No inner grid point. ")
+      call ut__assert( num_i+num_b+num_o == nu*nv,  &
+                       "__MODULE__(__LINE__) " //   &
+                       "Something is very wrong." )
+
+    end subroutine iCheck_flag_char
+
+  end subroutine slice_mesh_vert__grid_flag_check
 
 
   subroutine slice_mesh__boundary_initialize( this, vert, edge )
@@ -517,8 +569,6 @@ contains
     count_b_vert = 0
 
     do odir = 0, 7
-!debugp '# ', odir
-!debugp '# ', octa_direct_came_from
       if ( odir == octa_direct_came_from ) cycle ! skip
 
       icheck = i
@@ -528,8 +578,6 @@ contains
            jcheck >= 1 .and. jcheck <= vert_nv ) then
 
         if ( flag(icheck,jcheck) == 'b' ) then
-!debugp '# flag(i,j)=b for '
-!debugp '# ', i, j
           ! found the next border 
           count_b_vert += 1
           ans = odir  ! return this value after check
@@ -596,22 +644,16 @@ contains
                                  ! 6 (West),  7 (North-West)
     character, dimension(nu,nv) <in> :: flag
 
-    integer :: i_next, j_next
     integer :: octa_direct_in_previous_jump
 
     call ut__assert( flag(i,j) == 'b',            &
                      "__MODULE__(__LINE__): " //  &
                      "This vert is not a border. Inconsistent..." )
-!debugp '%% i am in __FUNC__'
-!debugp '%% calling shift_vert_position_in_octa_direct'
-!debugp '%% with', i, j, octa_direct
     call shift_vert_position_in_octa_direct( octa_direct, i, j )
     call ut__assert( i >= 1 .and. i <= nu,  &
                      "__MODULE__(__LINE__): i-range error." )
     call ut__assert( j >= 1 .and. j <= nv,  &
                      "__MODULE__(__LINE__): j-range error." )
-!debugp '%% new vert is', i, j
-!debugp '%% calling find_direct_for_next_border_vert'
     octa_direct_in_previous_jump = octa_direct
     octa_direct  &
       = find_direct_for_next_border_vert( nu,           &
@@ -620,8 +662,6 @@ contains
                                           i,            &
                                           j,            &
                                           octa_direct_in_previous_jump )
-!debugp '%% got ', octa_direct
-
   end subroutine get_next_octa_direct_and_vert
 
 
@@ -733,8 +773,6 @@ contains
 
     vert.octa_direct(:,:) = -NIL ! default
 
-!debugp 'xx i am in __FUNC__'
-!debugp 'xx ', vi, vj, octa_direct
     start_vi = vi
     start_vj = vj
     counter = 1
@@ -749,9 +787,6 @@ contains
     call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     do counter = 2, num_of_boundary_vert + 1
       ! the last "+1" is necesary to close the path
-!debugp '/ i am in __FUNC__'
-!debugp '/ calling get_next_octa_direct_and_vert'
-!debugp '/ with', vi, vj, octa_direct
       call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
                                           vi, vj,           &
                                           octa_direct,      &
