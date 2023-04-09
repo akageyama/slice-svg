@@ -248,14 +248,7 @@ module slice_mesh_m
     character, dimension(:,:), allocatable :: flag 
                        !        'i' : inside the boundary
                        !        'o' : outside the boundary
-                       ! 'N' or '0' : boundary of path direct North
-                       !        '1' : boundary of path direct Nourth-East
-                       ! 'E' or '2' : boundary of path direct East
-                       !        '3' : boundary of path direct South-Wast
-                       ! 'S' or '4' : boundary of path direct South
-                       !        '5' : boundary of path direct South-West
-                       ! 'W' or '6' : boundary of path direct West
-                       !        '7' : boundary of path direct Nourth-West
+                       !        'b' : on the boundary
   contains
     procedure, private :: slice_mesh__vert_init_with_grids
     procedure, private :: slice_mesh__vert_init_without_grids
@@ -391,6 +384,12 @@ contains
           end select
         end do
       end do
+
+      call ut__message( 'slice mesh vert nu = ', nu )
+      call ut__message( '                nv = ', nv )
+      call ut__message( '     boundary vert = ', num_b )
+      call ut__message( '   inside boundary = ', num_i )
+      call ut__message( '  outside boundary = ', num_o )
 
       call ut__assert( num_b > 0,                   &
                        "__MODULE__(__LINE__) " //   &
@@ -552,10 +551,10 @@ contains
     !!<
     integer :: octa_direct_came_from
     integer :: odir
-    integer :: count_b_vert
     integer :: icheck, jcheck
+    integer :: look_around_from_right
 
-    octa_direct_came_from = mod( octa_direct+4, 8 )
+    octa_direct_came_from = mod(octa_direct+4,8)
       ! 0 --> 4
       ! 1 --> 5
       ! 2 --> 6
@@ -566,11 +565,10 @@ contains
       ! 7 --> 3
 
     ans = NIL  ! dummy 
-    count_b_vert = 0
 
-    do odir = 0, 7
-      if ( odir == octa_direct_came_from ) cycle ! skip
-
+    do look_around_from_right = 1, 7
+      odir = mod(8+octa_direct_came_from-look_around_from_right,8)
+        ! plus 8 is necessary to avoid taking mod of a negative integer.
       icheck = i
       jcheck = j
       call shift_vert_position_in_octa_direct( odir, icheck, jcheck )
@@ -579,24 +577,15 @@ contains
 
         if ( flag(icheck,jcheck) == 'b' ) then
           ! found the next border 
-          count_b_vert += 1
           ans = odir  ! return this value after check
+          return
         end if
       end if
     end do
 
-    if ( count_b_vert > 1 ) then
-      call ut__fatal( "__MODULE__(__LINE__): " //  &
-                      "More then 1 next border verts?" )
-    else if ( count_b_vert == 0 ) then
-      call ut__fatal( "__MODULE__(__LINE__): " //  &
-                      "No vert with flag b." )
-    end if
+    call ut__fatal( "__MODULE__(__LINE__): " //           &
+                    "Failed to find new octa_direct." )
 
-    call ut__assert( ans /= NIL .and.                   &
-                     ans /= octa_direct_came_from,      &
-                     "__MODULE__(__LINE__): " //           &
-                     "Failed to find new octa_direct." )
   end function find_direct_for_next_border_vert
 
 
@@ -649,12 +638,16 @@ contains
     call ut__assert( flag(i,j) == 'b',            &
                      "__MODULE__(__LINE__): " //  &
                      "This vert is not a border. Inconsistent..." )
+
     call shift_vert_position_in_octa_direct( octa_direct, i, j )
+
     call ut__assert( i >= 1 .and. i <= nu,  &
                      "__MODULE__(__LINE__): i-range error." )
     call ut__assert( j >= 1 .and. j <= nv,  &
                      "__MODULE__(__LINE__): j-range error." )
+
     octa_direct_in_previous_jump = octa_direct
+
     octa_direct  &
       = find_direct_for_next_border_vert( nu,           &
                                           nv,           &
@@ -1075,6 +1068,9 @@ contains
     else
       call set_default_vert_flag( nu, nv, this.flag )      
     end if
+
+    call this.grid_flag_check
+    call this.debug_print_flag
   end subroutine slice_mesh__vert_init_with_grids
 
 
@@ -1129,6 +1125,9 @@ contains
     end do
 
     call set_default_vert_flag( nu, nv, this.flag )      
+
+    call this.grid_flag_check
+    call this.debug_print_flag
 
   end subroutine slice_mesh__vert_init_without_grids
 
