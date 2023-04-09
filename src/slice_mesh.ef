@@ -260,7 +260,6 @@ module slice_mesh_m
     procedure, private :: slice_mesh__vert_init_without_grids
     generic :: initialize => slice_mesh__vert_init_with_grids,  &
                              slice_mesh__vert_init_without_grids
-    procedure, nopass :: flag_to_octa_direct => slice_mesh__vert_flag_to_octa_direct
     procedure :: finalize => slice_mesh__vert_finalize
   end type slice_mesh__vert_t  
 
@@ -431,24 +430,11 @@ contains
       integer :: num
 
       integer :: i, j
-      character :: flag
 
       num = 0
       do j = 1, nv
         do i = 1, nu
-          flag = vert_flag(i,j)
-          if ( flag == 'N' .or.  &
-               flag == 'E' .or.  &
-               flag == 'S' .or.  &
-               flag == 'W' .or.  &
-               flag == '0' .or.  &
-               flag == '1' .or.  &
-               flag == '2' .or.  &
-               flag == '3' .or.  &
-               flag == '4' .or.  &
-               flag == '5' .or.  &
-               flag == '6' .or.  &
-               flag == '7' ) then
+          if ( vert_flag(i,j) == 'b' ) then
             num += 1
           end if
         end do
@@ -467,40 +453,111 @@ contains
   end subroutine slice_mesh__boundary_vert_finalize
 
 
-  function slice_mesh__vert_flag_to_octa_direct( flag ) result(octa_direct)
-    character <in> :: flag
-    integer :: octa_direct
+  function find_direct_for_next_border_vert( vert_nu,      &
+                                             vert_nv,      &
+                                             flag,         &
+                                             i,            &
+                                             j,            &
+                                             octa_direct ) &
+                                     result(ans)
+    integer <in> :: vert_nu, vert_nv
+    character, dimension(vert_nu,vert_nv) <in> :: flag
+    integer <in> :: i, j
+    integer <in> :: octa_direct
+    integer :: ans
+    !!>
+             7     0     1
+                   .
+                   .
+             6     b     2
+                 . 
+               . 
+             b     4     3
+    !!<
+    integer :: octa_direct_came_from
+    integer :: odir, i2, j2
+    integer :: count_b_vert
 
-    select case (flag)
-      case ('N')
-        octa_direct = 0
-      case ('E')
-        octa_direct = 2
-      case ('S')
-        octa_direct = 4
-      case ('W')
-        octa_direct = 6
-      case ('0')
-        octa_direct = 0
-      case ('1')
-        octa_direct = 1
-      case ('2')
-        octa_direct = 2
-      case ('3')
-        octa_direct = 3
-      case ('4')
-        octa_direct = 4
-      case ('5')
-        octa_direct = 5
-      case ('6')
-        octa_direct = 6
-      case ('7')
-        octa_direct = 7 
+    octa_direct_came_from = mod( octa_direct+4, 8 )
+      ! 0 --> 4
+      ! 1 --> 5
+      ! 2 --> 6
+      ! 3 --> 7
+      ! 4 --> 0
+      ! 5 --> 1
+      ! 5 --> 2
+      ! 7 --> 3
+
+    ans = NIL  ! dummy 
+    count_b_vert = 0
+
+    do odir = 0, 7
+      if ( odir == octa_direct_came_from ) cycle ! skip
+
+      call shift_vert_position_in_octa_direct( odir,    &
+                                               i, j,    &
+                                               i2, j2 )
+      if ( i2 >= 1 .and. i2 <= vert_nu .and.  &
+           j2 >= 1 .and. j2 <= vert_nv ) then
+
+        if ( flag(i2,j2) == 'b' ) then
+          ! found the next border 
+          count_b_vert += 1
+          ans = odir  ! return this value after check
+        end if
+      end if
+    end do
+
+    if ( count_b_vert > 1 ) then
+      call fatal( "__MODULE__(__LINE__): " //  &
+                  "More then 1 next border verts?" )
+    else if ( count_b_vert == 0 ) then
+      call fatal( "__MODULE__(__LINE__): " //  &
+                  "No vert with flag b." )
+    end if
+
+    call ut__assert( ans /= NIL .and.                   &
+                     ans /= octa_direct_came_from,      &
+                     "__MODULE__(__LINE__): " //           &
+                     "Failed to find new octa_direct." )
+  end function find_direct_for_next_border_vert
+
+
+  subroutine shift_vert_position_in_octa_direct( octa_direct,     &
+                                                 i, j,            &
+                                                 i_shift, j_shift )
+    integer <in> :: octa_direct
+    integer <in> :: i, j
+    integer <out> :: i_shift, j_shift
+
+    i_shift = i
+    j_shift = j
+
+    select case (octa_direct)
+      case (0) ! North
+        j_shift += 1
+      case (1) ! North-East
+        i_shift += 1
+        j_shift += 1
+      case (2) ! East
+        i_shift += 1
+      case (3) ! South-East
+        i_shift += 1
+        j_shift -= 1
+      case (4) ! South
+        j_shift -= 1
+      case (5) ! South-West
+        i_shift -= 1
+        j_shift -= 1
+      case (6) ! West
+        i_shift -= 1
+      case (7) ! North-West
+        i_shift -= 1
+        j_shift += 1
       case default
-        octa_direct = -1 ! any negative number
+        call ut__fatal( "__MODULE__(__LINE__): case error." )
     end select
-
-  end function slice_mesh__vert_flag_to_octa_direct
+  end subroutine shift_vert_position_in_octa_direct
 
 
   subroutine get_next_octa_direct_and_vert( nu, nv,       &
@@ -515,46 +572,27 @@ contains
                                  ! 6 (West),  7 (North-West)
     character, dimension(nu,nv) <in> :: flag ! N/S/E/W/[0-7]/f/r/R/l/L
 
-    character :: flag_at_new_vert
+    integer :: octa_direct_next
+    integer :: i_next, j_next
 
-    select case (octa_direct)
-      case (0) ! North
-        j += 1
-      case (1) ! North-East
-        i += 1
-        j += 1
-      case (2) ! East
-        i += 1
-      case (3) ! South-East
-        i += 1
-        j -= 1
-      case (4) ! South
-        j -= 1
-      case (5) ! South-West
-        i -= 1
-        j -= 1
-      case (6) ! West
-        i -= 1
-      case (7) ! North-West
-        i -= 1
-        j += 1
-      case default
-        call ut__fatal( "__MODULE__(__LINE__): case error." )
-    end select
+    call ut__assert( flag(i,j) == 'b',            &
+                     "__MODULE__(__LINE__): " //  &
+                     "This vert is not a border. Inconsistent..." )
 
-    flag_at_new_vert = flag(i,j)
+    octa_direct_next = find_direct_for_next_border_vert( nu,           &
+                                                         nv,           &
+                                                         flag,         &
+                                                         i,            &
+                                                         j,            &
+                                                         octa_direct )
 
-    select case (flag_at_new_vert)
-      case ('N', 'E', 'S', 'W',  &
-            '0', '1', '2', '3',  &
-            '4', '5', '6', '7')
-        octa_direct = slice_mesh__vert_flag_to_octa_direct( flag_at_new_vert )
-        call ut__assert( octa_direct >= 0 .and.  &
-                         octa_direct <= 7,       &
-                         "__MODULE__(__LINE__): case error." )
-      case default
-        call ut__fatal( "__MODULE__(__LINE__): case error." )
-    end select
+    call shift_vert_position_in_octa_direct( octa_direct_next, &
+                                             i, j,             &
+                                             i_next, j_next )
+
+    i = i_next
+    j = j_next
+    octa_direct = octa_direct_next
 
     call ut__assert( i >= 1 .and. i <= nu,  &
                      "__MODULE__(__LINE__): i-range error." )
@@ -567,21 +605,17 @@ contains
     integer <in> :: nu, nv
     character, dimension(nu,nv) <out> :: vert_flag
     !!>
-                  L W W W W W W W L 
-                  S i i i i i i i N
-                  S i i i i i i i N
-                  S i i i i i i i N
-                  L E E E E E E E L
+                  b b b b b b b b b 
+                  b i i i i i i i b
+                  b i i i i i i i b
+                  b i i i i i i i b
+                  b b b b b b b b b
     !!<
     vert_flag(2:nu-1,2:nv-1) = 'i'
-    vert_flag(     1,     1) = 'L'
-    vert_flag(2:nu-1,     1) = 'E'
-    vert_flag(    nu,     1) = 'L'
-    vert_flag(    nu,2:nv-1) = 'N'
-    vert_flag(    nu,    nv) = 'L'
-    vert_flag(2:nu-1,    nv) = 'W'
-    vert_flag(     1,    nv) = 'L'
-    vert_flag(     1,2:nv-1) = 'S'
+    vert_flag(1:nu  ,     1) = 'b'
+    vert_flag(1:nu  ,    nv) = 'b'
+    vert_flag(     1,2:nv-1) = 'b'
+    vert_flag(    nu,2:nv-1) = 'b'
   end subroutine set_default_vert_flag
 
 
@@ -663,10 +697,10 @@ contains
 
     num_of_boundary_vert = this.vert.num
 
-    call iFind_a_boundary_vert_with_direct( vert.nu, vert.nv, &
-                                            vert.flag,        &
-                                            vi, vj,           &
-                                            octa_direct )
+    call iFind_border_vert_and_its_direct( vert.nu, vert.nv, &
+                                           vert.flag,        &
+                                           vi, vj,           &
+                                           octa_direct )
 
     edge.u_is_boundary(:,:) = .false. ! default
     edge.v_is_boundary(:,:) = .false. ! default
@@ -728,35 +762,82 @@ contains
       end select
     end subroutine iSet_boundary_mark_on_mesh_edge
 
-    subroutine iFind_a_boundary_vert_with_direct( vert_nu, vert_nv, &
-                                                  vert_flag,        &
-                                                  start_i, start_j, &
-                                                  head_octa_direct )
+
+    subroutine iFind_border_vert_and_its_direct( vert_nu, vert_nv, &
+                                                 vert_flag,        &
+                                                 start_i, start_j, &
+                                                 head_octa_direct )
       integer <in> :: vert_nu, vert_nv
       character, dimension(vert_nu,vert_nv) <in> :: vert_flag
       integer <out> :: start_i, start_j
       integer <out> :: head_octa_direct
 
       integer :: i, j
-      character :: flag
-      integer :: octa_direct
+      character :: flag_me    ! of the 'b' vert
+      character :: flag_w     ! of the west neigbhor vert
+      character :: flag_sw    ! south-west
+      character :: flag_s     ! south
 
-      do j = 1, vert_nv
-        do i = 1, vert_nu
-          flag = vert_flag(i,j)
-          octa_direct = slice_mesh__vert_flag_to_octa_direct( flag )
-          if ( octa_direct > 0 ) then
-            start_i = i
-            start_j = j
-            head_octa_direct = octa_direct
-            return
+      !!>
+                .  .  .  .
+
+                .  .  i  b
+                  w__/
+                .  .  ?  ?
+                sw __/    \__ s
+                .  .  .  .
+
+           There are three cases
+
+             case 1
+                      i b
+                      i b
+             case 2
+                      i b
+                      b o
+             case 3
+                      i b
+                      b b
+      !!<
+
+      do j = 2, vert_nv-1  ! up to the top wall - 1
+        do i = 2, vert_nu  ! up to the right wall
+          flag_me = vert_flag(i  ,j  )
+          flag_w  = vert_flag(i-1,j  )
+          flag_sw = vert_flag(i-1,j-1)
+          flag_s  = vert_flag(i  ,j-1)
+          if ( flag_w  == 'i' .and.  &
+               flag_me == 'b' ) then
+            if ( flag_sw == 'i' .and.  &
+                 flag_s  == 'b' ) then
+              ! case 1
+              start_i = i
+              start_j = j - 1
+              head_octa_direct = 0
+              return
+            else if ( flag_sw == 'b' .and.  &
+                      flag_s  == 'o' ) then
+              ! case 2
+              start_i = i - 1
+              start_j = j - 1
+              head_octa_direct = 1
+              return
+            else if ( flag_sw == 'b' .and.  &
+                      flag_s  == 'b' ) then
+              ! case 3
+              start_i = i - 1
+              start_j = j - 1
+              head_octa_direct = 2
+              return
+            end if
           end if
         end do
       end do
 
       call ut__fatal( "__MODULE__(__LINE__): " //  &
-                      "Failed to find a start vert on the boundary." )
-    end subroutine iFind_a_boundary_vert_with_direct
+                      "Failed to find a start vert." )
+    end subroutine iFind_border_vert_and_its_direct
+
 
   end subroutine slice_mesh__boundary_make_list
 
@@ -855,14 +936,7 @@ contains
     character, dimension(nu,nv) <optin> :: vert_flag
                        ! 'i' : inside the boundary
                        ! 'o' : outside the boundary
-                       ! 'N' or '0' : boundary of path direct North
-                       !        '1' : boundary of path direct Nourth-East
-                       ! 'E' or '2' : boundary of path direct East
-                       !        '3' : boundary of path direct South-Wast
-                       ! 'S' or '4' : boundary of path direct South
-                       !        '5' : boundary of path direct South-West
-                       ! 'W' or '6' : boundary of path direct West
-                       !        '7' : boundary of path direct Nourth-West
+                       ! 'b' : boundary
     !!>
         case 1  境界上の値がカドの点も含めて設定されている場合
 
@@ -874,19 +948,16 @@ contains
 
         case 2  境界上のカドの点には値が設定されていない場合
 
-            カドの点はo (outer)点とする。全ての境界格子点を一周、反時計回りに
-            回る。次の格子点が水平あるいは垂直方向にある場合は、b (boundary) 点とする。
-            次の境界格子点が斜め方向にある場合は、それをd (diagonal) 点とする。
-            シミュレーション領域の内部は i (inner) 点とする。
+
                         <--- 
-                  o d b b b b b b o
-              |   b i i i i i i i d  ^
+                  o b b b b b b b o
+              |   b i i i i i i i b  ^
               |   b i i i i i i i b  |
-              v   d i i i i i i i b  |
-                  o b b b b b b d o 
+              v   b i i i i i i i b  |
+                  o b b b b b b b o 
                         --->
 
-        case 3a  境界が長方形でなく、d点が存在しない場合
+        case 3a  境界が長方形でないが、カドは直角の場合
         
                   o o o b b b b b o
                   b b b b i i i b o
@@ -895,12 +966,12 @@ contains
                   o o o b b b b b o
         
 
-        case 3b  境界が長方形でなく、d点が存在する場合
+        case 3b  直角ではないカドがある場合
 
-                  o o o o d o o o o
-                  o o o d i d o o o
-                  o o d i i i d o o
-                  o d i i i i b o o
+                  o o o o b o o o o
+                  o o o b i b o o o
+                  o o b i i i b o o
+                  o b i i i i b o o
                   o o b b b b b o o
     !!<
     real :: u_min, u_max
