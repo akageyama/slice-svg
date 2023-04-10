@@ -313,16 +313,16 @@ contains
 
     grid_flag(:,:) = 'o'
 
-!! case 1: basic case
-!    do j = 2, NV_SCALAR-1
-!      do i = 2, NU_SCALAR-1
-!        grid_flag(i,j) = 'i'
-!      end do
-!    end do
-!    grid_flag(1:NU_SCALAR,        1) = 'b'
-!    grid_flag(1:NU_SCALAR,NV_SCALAR) = 'b'
-!    grid_flag(        1,1:NV_SCALAR) = 'b'
-!    grid_flag(NU_SCALAR,1:NV_SCALAR) = 'b'
+! case 1: basic case
+    do j = 2, NV_SCALAR-1
+      do i = 2, NU_SCALAR-1
+        grid_flag(i,j) = 'i'
+      end do
+    end do
+    grid_flag(1:NU_SCALAR,        1) = 'b'
+    grid_flag(1:NU_SCALAR,NV_SCALAR) = 'b'
+    grid_flag(        1,1:NV_SCALAR) = 'b'
+    grid_flag(NU_SCALAR,1:NV_SCALAR) = 'b'
 
 !! case 2: The corners are diagonal.
 !    do j = 2, NV_SCALAR-1
@@ -358,20 +358,20 @@ contains
 !!    grid_flag(              1,  NV_SCALAR  ) = 'S'
 !!    grid_flag(              1,            1) = 'E'
 
-! case 4: triangle
-    grid_flag(:,:) = 'o'
-    do j = 2, 20
-      do i = 2, 20
-        if ( i + j < 20 ) then
-          grid_flag(i,j) = 'i'
-        else if ( i + j == 20 ) then
-          grid_flag(i,j) = 'b'
-        end if
-      end do
-    end do
-    grid_flag(2:20-2,     1) = 'b'
-    grid_flag(     2,  20-2) = 'b'
-    grid_flag(     1,1:20-2) = 'b'
+!! case 4: triangle
+!    grid_flag(:,:) = 'o'
+!    do j = 2, 20
+!      do i = 2, 20
+!        if ( i + j < 20 ) then
+!          grid_flag(i,j) = 'i'
+!        else if ( i + j == 20 ) then
+!          grid_flag(i,j) = 'b'
+!        end if
+!      end do
+!    end do
+!    grid_flag(2:20-2,     1) = 'b'
+!    grid_flag(     2,  20-2) = 'b'
+!    grid_flag(     1,1:20-2) = 'b'
 
 !! case 5: diamond
 !    grid_flag(:,:) = 'o'
@@ -399,18 +399,18 @@ contains
 !    grid_flag(30   ,15+10) = 'b'
 !    grid_flag(30-10,15   ) = 'b'
 
+    !!>
     call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
                                     grid_pos_u,  &
                                     grid_pos_v,  &
                                     pressure,    &
                                     grid_flag )
 
-    !!>
+    !!<
     call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
                                     umin, umax,  &
                                     vmin, vmax,  &
                                     pressure )
-    !!<
     call sketch.initialize( ll, ur, &
                             screen_width_in_pixel=1200.0,  &
                             title='Pressure Field',  &

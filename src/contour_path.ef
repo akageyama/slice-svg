@@ -798,6 +798,7 @@ contains
     ej = boundary.edge.ej(nth)
     edge_type = boundary.edge.type(nth)
 
+
     call ut__assert(        ei == path.head.ei .and.    &
                             ej == path.head.ej .and.    &
                      edge_type == path.head.edge_type,  &
@@ -1399,11 +1400,13 @@ contains
 
   subroutine find_start_edge_on_boundaries( path,     &
                                             vert,     &
+                                            edge,     &
                                             boundary, &
                                             status )
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__boundary_t) <in> :: boundary
+    type(slice_mesh__edge_t) <io> :: edge
+    type(slice_mesh__boundary_t) <io> :: boundary
     char(len=10) <io> :: status ! 'no contour' or 'have found'
 
 
@@ -1478,11 +1481,11 @@ contains
           call ut__assert( u2 /= NAN .and. v2 /= NAN,  &
                            "__MODULE__(__LINE__): Invalid cross coord." )
           cruising_lane = 'in'
-          call leave_from_boundary( boundary.vert.vi(vert_index1),  &
-                                    boundary.vert.vj(vert_index1),  &
-                                    octa_direct,                    &
-                                    ei, ej,                         &
-                                    edge_type,                      &
+          call leave_from_boundary( boundary.vert.vi(vert_index1),          &
+                                    boundary.vert.vj(vert_index1),          &
+                                    boundary.vert.octa_direct(vert_index1), &
+                                    ei, ej,                                 &
+                                    edge_type,                              &
                                     path_go_toward )
         end if
 
@@ -1507,7 +1510,7 @@ contains
                                      status )  
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <in> :: edge
+    type(slice_mesh__edge_t) <io> :: edge
     char(len=10) <io> :: status ! 'no contour' or 'have found'
 
     !!>
@@ -1570,6 +1573,7 @@ contains
           call path.register_new_vert( u, v )
           call path.replace_head_edge( 'u', 'in', ei, ej, 'N' )
           path.start = path.head
+          call edge.erase( 'u', ei, ej ) 
           return
         end if
       end do
@@ -1585,13 +1589,14 @@ contains
                                            status )
     class(contour_path_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: vert
-    type(slice_mesh__edge_t) <in> :: edge
-    type(slice_mesh__boundary_t) <in> :: boundary
+    type(slice_mesh__edge_t) <io> :: edge
+    type(slice_mesh__boundary_t) <io> :: boundary
     char(len=10) <out> :: status ! 'no contour' or 'have found'
 
     status = 'no contour'  ! default 
     call find_start_edge_on_boundaries( this,     &
                                         vert,     &
+                                        edge,     &
                                         boundary, &
                                         status )
     if ( status == 'have found' ) return
@@ -1616,6 +1621,7 @@ contains
     integer :: nthbe ! nth of border edge
     integer :: nthbv ! nth of border vert
     logical :: start_flag_of_cruising_on_border
+    integer :: nthbe_start_path
 
     start_flag_of_cruising_on_border = .true.
     do
@@ -1626,12 +1632,20 @@ contains
             nthbe = boundary.edge.get_nth( path.head.edge_type,  &
                                            path.head.ei,         &
                                            path.head.ej )
+            nthbe_start_path = nthbe
             nthbv = nthbe  ! same number
               !    v1 - - - v2 - - - v3 - - - v4 - ...
               !         e1       e2       e3  ...
             start_flag_of_cruising_on_border = .false.
           end if
           call one_step_along_boundary( path, vert, edge, boundary, nthbv )
+          if ( path.is_closed() ) then
+            call boundary.edge.erase( nthbe_start_path )
+            call edge.erase( path.start.edge_type,  &
+                             path.start.ei,         &
+                             path.start.ej ) 
+            return
+          end if
         case ('in')
           if ( path.head.edge_type == 'u' .or.  &
                path.head.edge_type == 'v'  ) then
@@ -1640,12 +1654,15 @@ contains
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
           end if
           start_flag_of_cruising_on_border = .true.
+          if ( path.is_closed() ) then
+            call edge.erase( path.start.edge_type,  &
+                             path.start.ei,         &
+                             path.start.ej ) 
+            return
+          end if
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
-      if ( path.is_closed() ) then
-        return
-      end if
     end do
 
   end subroutine contour_path__trace_and_erase

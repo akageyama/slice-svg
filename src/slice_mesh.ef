@@ -1180,10 +1180,10 @@ contains
     allocate(this.a_cross_coord_v(u_nu,v_nv))
     allocate(this.d_cross_coord_u(u_nu,v_nv))
     allocate(this.d_cross_coord_v(u_nu,v_nv))
-    allocate(this.u_is_boundary(v_nu,v_nv))
+    allocate(this.u_is_boundary(u_nu,u_nv))
     allocate(this.v_is_boundary(v_nu,v_nv))
-    allocate(this.a_is_boundary(v_nu,v_nv))
-    allocate(this.d_is_boundary(v_nu,v_nv))
+    allocate(this.a_is_boundary(u_nu,v_nv))
+    allocate(this.d_is_boundary(u_nu,v_nv))
   end subroutine slice_mesh__edge_initialize
 
 
