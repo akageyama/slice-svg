@@ -902,6 +902,7 @@ contains
 
     ei = path.head.ei
     ej = path.head.ej
+!debugp ei, ej
     select case (path.head.path_go_toward)
       !!>
                         edge.u(ei,ej+1)
