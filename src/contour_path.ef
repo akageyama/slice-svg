@@ -1625,14 +1625,6 @@ contains
     logical :: start_flag_of_cruising_on_border
     integer :: nthbe_start_path
 
-!debug s
-integer :: i, j
-do j = 30, 1, -1
-do i = 1, 60
-print *, i,j, edge.u_quarter(i,j), edge.v_quarter(i,j)
-end do
-end do
-!debug e
     start_flag_of_cruising_on_border = .true.
     do
       select case (path.head.cruising_lane)
