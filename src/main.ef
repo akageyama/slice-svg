@@ -53,12 +53,12 @@ program main
     do i = 1, NU_SCALAR
       pos_u = umin + du_scalar*(i-1)
       pos_v = vmin + dv_scalar*(j-1)
-      pressure(i,j) = exp(-3*(pos_u**2+pos_v**2)/(umax**2))-0.8
+!     pressure(i,j) = exp(-3*(pos_u**2+pos_v**2)/(umax**2))-0.8
 !     pressure(i,j) = -exp(-3*(pos_u**2+pos_v**2)/(umax**2))+0.8
 
-!     pressure(i,j) = exp(-3*((pos_u-umax/2)**2+(pos_v+vmax/2)**2)/(umax**2))-0.8 &
-!                   + exp(-3*((pos_u+umax/2)**2+(pos_v-vmax/2)**2)/(umax**2))-0.8 &
-!                   - 0.4*sin(pos_u)*sin(pos_v)
+      pressure(i,j) = exp(-3*((pos_u-umax/2)**2+(pos_v+vmax/2)**2)/(umax**2))-0.8 &
+                    + exp(-3*((pos_u+umax/2)**2+(pos_v-vmax/2)**2)/(umax**2))-0.8 &
+                    - 0.4*sin(pos_u)*sin(pos_v)
 
 !      pressure(i,j) = exp(-3*(pos_u**2+pos_v**2)/(umax**2))  &
 !                    - exp(-20*(pos_u**2+pos_v**2)/(umax**2))
@@ -330,14 +330,16 @@ contains
 !        grid_flag(i,j) = 'i'
 !      end do
 !    end do
-!    grid_flag(2:NU_SCALAR-1,        1) = 'E'
-!    grid_flag(2:NU_SCALAR-1,NV_SCALAR) = 'W'
-!    grid_flag(        1,2:NV_SCALAR-1) = 'S'
-!    grid_flag(NU_SCALAR,2:NV_SCALAR-1) = 'N'
-!    grid_flag(NU_SCALAR-1,          1) = 'l'
-!    grid_flag(NU_SCALAR  ,NV_SCALAR-1) = 'l'
-!    grid_flag(          2,NV_SCALAR  ) = 'l'
-!    grid_flag(          1,          2) = 'l'
+!    grid_flag(2:NU_SCALAR-1,        1) = 'b'
+!    grid_flag(2:NU_SCALAR-1,NV_SCALAR) = 'b'
+!
+!    grid_flag(        1,2:NV_SCALAR-1) = 'b'
+!    grid_flag(NU_SCALAR,2:NV_SCALAR-1) = 'b'
+!
+!    grid_flag(          1,        1) = 'o'
+!    grid_flag(NU_SCALAR  ,        1) = 'o'
+!    grid_flag(NU_SCALAR  ,NV_SCALAR) = 'o'
+!    grid_flag(          1,NV_SCALAR) = 'o'
 
 !! case 3: Only left-half
 !    do j = 2, NV_SCALAR-1
@@ -373,44 +375,43 @@ contains
 !    grid_flag(     2,  20-2) = 'b'
 !    grid_flag(     1,1:20-2) = 'b'
 
-!! case 5: diamond
-!    grid_flag(:,:) = 'o'
-!    do j = 1, NV_SCALAR
-!      j2 = j - 15
-!      do i = 1, NU_SCALAR
-!        i2 = i - 30
-!        if ( abs(i2) + abs(j2) < 10 ) then
-!          grid_flag(i,j) = 'i'
-!        else if ( abs(i2) + abs(j2) <= 10 ) then
-!          if ( +(i2) + (j2) == 10 )  then
-!            grid_flag(i,j) = 'b'
-!          else if ( -(i2) + (j2) == 10 )  then
-!            grid_flag(i,j) = 'b'
-!          else if ( -(i2) - (j2) == 10 )  then
-!            grid_flag(i,j) = 'b'
-!          else if ( +(i2) - (j2) == 10 )  then
-!            grid_flag(i,j) = 'b'
-!          end if
-!        end if
-!      end do
-!    end do
-!    grid_flag(30   ,15-10) = 'b'
-!    grid_flag(30+10,15   ) = 'b'
-!    grid_flag(30   ,15+10) = 'b'
-!    grid_flag(30-10,15   ) = 'b'
+! case 5: diamond
+    grid_flag(:,:) = 'o'
+    do j = 1, NV_SCALAR
+      j2 = j - 15
+      do i = 1, NU_SCALAR
+        i2 = i - 30
+        if ( abs(i2) + abs(j2) < 10 ) then
+          grid_flag(i,j) = 'i'
+        else if ( abs(i2) + abs(j2) <= 10 ) then
+          if ( +(i2) + (j2) == 10 )  then
+            grid_flag(i,j) = 'b'
+          else if ( -(i2) + (j2) == 10 )  then
+            grid_flag(i,j) = 'b'
+          else if ( -(i2) - (j2) == 10 )  then
+            grid_flag(i,j) = 'b'
+          else if ( +(i2) - (j2) == 10 )  then
+            grid_flag(i,j) = 'b'
+          end if
+        end if
+      end do
+    end do
+    grid_flag(30   ,15-10) = 'b'
+    grid_flag(30+10,15   ) = 'b'
+    grid_flag(30   ,15+10) = 'b'
+    grid_flag(30-10,15   ) = 'b'
 
-    !!>
     call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
                                     grid_pos_u,  &
                                     grid_pos_v,  &
                                     pressure,    &
                                     grid_flag )
-
-    !!<
+    !!>
     call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
                                     umin, umax,  &
                                     vmin, vmax,  &
                                     pressure )
+    !!<
     call sketch.initialize( ll, ur, &
                             screen_width_in_pixel=1200.0,  &
                             title='Pressure Field',  &
@@ -427,8 +428,7 @@ contains
     level_min = minval(slice_pressure.val_vert(:,:))
     level_max = maxval(slice_pressure.val_vert(:,:))
     dlevel = (level_max-level_min)/10
-!   do l = 1, 10
-    do l = 8, 8
+    do l = 1, 10
       level = level_min + dlevel*(real(l)-0.5)
       color = color__normalized_real_to_color( (level-level_min)/(level_max-level_min) )
       call slice_pressure.vis_contour( sketch, level, line_color=COLOR__CONST.black, fill_color=color )
