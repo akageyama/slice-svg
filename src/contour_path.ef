@@ -662,6 +662,8 @@ contains
     vi = ei
     vj_upper = ej + 1
 
+!debugp '% i am in __FUNC__'
+!debugp '%', ei, ej
     if ( edge.v_quarter(ei,ej) == SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = vert.pos_u(vi)
@@ -699,6 +701,9 @@ contains
         !   + - * - M - - -
         !   .  *    .       
         call path.replace_head_edge( 'v', 'in', ei, ej, 'E' ) 
+!debugp '% i am in __FUNC__'
+!debugp '% calling edge.erase'
+!debugp '% with', ei, ej
         call edge.erase( 'v', ei, ej )
       end if
     end if
@@ -902,7 +907,9 @@ contains
 
     ei = path.head.ei
     ej = path.head.ej
-!debugp ei, ej
+
+!debugp '[b] i am in __FUNC__'
+!debugp '[b]', path.head.path_go_toward
     select case (path.head.path_go_toward)
       !!>
                         edge.u(ei,ej+1)
@@ -922,6 +929,7 @@ contains
                         edge.u(ei,ej)
       !!<
       case ('N')
+!debugp '[b] case N'
         call ut__assert( path.head.edge_type == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
 
@@ -1002,6 +1010,7 @@ contains
                            !!<
         end if
       case ('W')
+!debugp '[b] case W'
         call ut__assert( path.head.edge_type == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
 
@@ -1080,6 +1089,7 @@ contains
                          !!<
         end if
       case ('S')
+!debugp '[b] case S'
         call ut__assert( path.head.edge_type == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
 
@@ -1162,10 +1172,12 @@ contains
                          !!<
         end if
       case ('E')
+!debugp '[b] case E'
         call ut__assert( path.head.edge_type == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
 
         if ( edge.d_is_boundary(ei,ej) ) then
+!debugp '[b] if1'
           call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei, ej )
                          !!>
@@ -1189,6 +1201,7 @@ contains
                                 
                          !!<
         else if ( edge.a_is_boundary(ei,ej) ) then
+!debugp '[b] if2'
           call jump_to_a_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei, ej )
                          !!>
@@ -1211,8 +1224,21 @@ contains
                               m - - - - o
                          !!<
         else  
+!debugp '[b] if3'
+!debugp '[b] calling jump_to_u_edge_mp_if_possible'
+!debugp '[b]', path.head.ei
+!debugp '[b]', path.head.ej
+!debugp '[b]', path.head.edge_type
+
+!debugp '[b]', edge.u_quarter(32,6)
+!debugp '[b]', edge.v_quarter(33,6)
+!debugp '[b]', edge.u_quarter(32,7)
+
+!debugp '[b] calling jump_to_u_edge_mp_if_possible'
+!debugp '[b] with', ei, ej
           call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei, ej )
+!debugp '[b]', jumped
                          !!>
                                 p - - p
                            From *     |
@@ -1220,16 +1246,22 @@ contains
                                 m * - p
                                   To
                          !!<
+!debugp '[b] calling jump_to_v_edge_mp_if_possible'
+!debugp '[b] with', ei+1, ej
           call jump_to_v_edge_mp_if_possible ( path, vert, edge,  &
                                               jumped, ei+1, ej )
+!debugp '[b]', jumped
                          !!>
                                 p - - p
                            From * * * * To
                                 |     |
                                 m - - m
                          !!<
+!debugp '[b] calling jump_to_u_edge_pm_if_possible'
+!debugp '[b] with', ei, ej+1
           call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                               jumped, ei, ej+1 )
+!debugp '[b]', jumped
                          !!>
                                   To
                                 p * - m
@@ -1505,10 +1537,10 @@ contains
   end subroutine find_start_edge_on_boundaries
 
 
-  subroutine set_start_edge_in_bulk( path,    &
-                                     vert,    &
-                                     edge,    &
-                                     status )  
+  subroutine find_start_edge_in_bulk( path,    &
+                                      vert,    &
+                                      edge,    &
+                                      status )  
     type(contour_path_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
@@ -1574,13 +1606,12 @@ contains
           call path.register_new_vert( u, v )
           call path.replace_head_edge( 'u', 'in', ei, ej, 'N' )
           path.start = path.head
-          call edge.erase( 'u', ei, ej ) 
           return
         end if
       end do
     end do
 
-  end subroutine set_start_edge_in_bulk
+  end subroutine find_start_edge_in_bulk
 
 
   subroutine contour_path__set_start_edge( this,     &
@@ -1602,10 +1633,10 @@ contains
                                         status )
     if ( status == 'have found' ) return
 
-    call set_start_edge_in_bulk( this,    &
-                                 vert,    &
-                                 edge,    &
-                                 status )
+    call find_start_edge_in_bulk( this,    &
+                                  vert,    &
+                                  edge,    &
+                                  status )
 
   end subroutine contour_path__set_start_edge
 
@@ -1624,11 +1655,23 @@ contains
     logical :: start_flag_of_cruising_on_border
     integer :: nthbe_start_path
 
+!debug s
+integer :: i, j
+do j = 30, 1, -1
+do i = 1, 60
+print *, i,j, edge.u_quarter(i,j), edge.v_quarter(i,j)
+end do
+end do
+!debug e
     start_flag_of_cruising_on_border = .true.
+!debugp '[a] i am __FUNC__'
     do
+!debugp '[a] begin of do-loop'
       select case (path.head.cruising_lane)
         case ('on')
+!debugp '[a] case on'
           if ( start_flag_of_cruising_on_border ) then
+!debugp '[a] if enter'
             ! newly start tracing on the border.
             nthbe = boundary.edge.get_nth( path.head.edge_type,  &
                                            path.head.ei,         &
@@ -1637,10 +1680,14 @@ contains
             nthbv = nthbe  ! same number
               !    v1 - - - v2 - - - v3 - - - v4 - ...
               !         e1       e2       e3  ...
+!debugp '[a]', nthbv
             start_flag_of_cruising_on_border = .false.
           end if
+!debugp '[a] calling one_step_along_boundary'
           call one_step_along_boundary( path, vert, edge, boundary, nthbv )
+!debugp '[a] called  one_step_along_boundary'
           if ( path.is_closed() ) then
+!debugp '[a] path is closed.'
             call boundary.edge.erase( nthbe_start_path )
             call edge.erase( path.start.edge_type,  &
                              path.start.ei,         &
@@ -1648,14 +1695,20 @@ contains
             return
           end if
         case ('in')
+!debugp '[a] case in'
           if ( path.head.edge_type == 'u' .or.  &
                path.head.edge_type == 'v'  ) then
+!debugp '[a] calling jump_to_other_edge_from_edge_uv'
             call jump_to_other_edge_from_edge_uv( path, vert, edge )
+!debugp '[a] called  jump_to_other_edge_from_edge_uv'
           else
+!debugp '[a] calling jump_to_other_edge_from_edge_ad'
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
+!debugp '[a] called  jump_to_other_edge_from_edge_ad'
           end if
           start_flag_of_cruising_on_border = .true.
           if ( path.is_closed() ) then
+!debugp '[a] path closed.'
             call edge.erase( path.start.edge_type,  &
                              path.start.ei,         &
                              path.start.ej ) 
@@ -1664,6 +1717,7 @@ contains
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
+!debugp '[a] end of do-loop'
     end do
 
   end subroutine contour_path__trace_and_erase

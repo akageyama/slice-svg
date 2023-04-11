@@ -111,8 +111,8 @@ svglist := sample_line.svg \
 # default target
 
 fig: runme
-	./runme 
-	# ./runme && open sample_scalar.svg
+	# ./runme 
+	./runme && open sample_scalar.svg
 	# open $(svglist)
 
 runme: $(objlist)
