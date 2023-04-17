@@ -6,8 +6,8 @@ program main
   use slice_m
   implicit none
 
-  type(sketch__sim_pos_t) :: cross_section_lower_left
-  type(sketch__sim_pos_t) :: cross_section_upper_right
+! type(sketch__sim_pos_t) :: cross_section_lower_left
+! type(sketch__sim_pos_t) :: cross_section_upper_right
 
   integer <const> :: NU_VECTOR = 60,   NV_VECTOR = 30
   ! integer <const> :: NU_VECTOR = 240,   NV_VECTOR = 120
@@ -38,10 +38,10 @@ program main
   real :: vmin = -PI
   real :: vmax = +PI
 
-  cross_section_lower_left.u = umin
-  cross_section_lower_left.v = vmin
-  cross_section_upper_right.u = umax
-  cross_section_upper_right.v = vmax
+! cross_section_lower_left.u = umin
+! cross_section_lower_left.v = vmin
+! cross_section_upper_right.u = umax
+! cross_section_upper_right.v = vmax
 
   call iSample_text_and_colors
   call iSample_lines
