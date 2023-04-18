@@ -1,4 +1,4 @@
-module contour_path_m
+module slice_isoline_m
   use ut_m
   use const_base_m
   use slice_mesh_m
@@ -123,44 +123,44 @@ module contour_path_m
                  start edge   
   !!< 
 
-  type, public :: contour_path__element_t
+  type, public :: slice_isoline__element_t
     character :: edge_type       ! 'u' or 'v' or 'a' or 'd'
     char(len=2) :: cruising_lane ! 'in' (bulk) or 'on' (border)
     integer :: ei, ej  ! edge id
     character :: path_go_toward  ! along the edge (for on border lane)
                                  ! perp to the edge (for bulk lane)
-  end type contour_path__element_t
+  end type slice_isoline__element_t
 
-  type, public :: contour_path_t
+  type, public :: slice_isoline_t
     integer :: vert_nu, vert_nv
     integer :: num ! total number of vertex points of the path
-    type(contour_path__element_t) :: start
-    type(contour_path__element_t) :: head
+    type(slice_isoline__element_t) :: start
+    type(slice_isoline__element_t) :: head
     real, dimension(:), allocatable :: list_u, list_v
   contains
-    procedure :: initialize => contour_path__initialize
-    procedure :: trace_and_erase => contour_path__trace_and_erase
+    procedure :: initialize => slice_isoline__initialize
+    procedure :: trace_and_erase => slice_isoline__trace_and_erase
     procedure :: set_start_edge  &
-                 => contour_path__set_start_edge
-    procedure :: reset => contour_path__reset
-    procedure :: is_closed => contour_path__is_closed
+                 => slice_isoline__set_start_edge
+    procedure :: reset => slice_isoline__reset
+    procedure :: is_closed => slice_isoline__is_closed
     procedure :: register_new_vert  &
-                          => contour_path__register_new_vert
-    procedure, private :: contour_path__replace_head_by_vert
-    procedure, private :: contour_path__replace_head_direct
-    generic :: replace_head_edge => contour_path__replace_head_by_vert, &
-                                    contour_path__replace_head_direct
-  end type contour_path_t
+                          => slice_isoline__register_new_vert
+    procedure, private :: slice_isoline__replace_head_by_vert
+    procedure, private :: slice_isoline__replace_head_direct
+    generic :: replace_head_edge => slice_isoline__replace_head_by_vert, &
+                                    slice_isoline__replace_head_direct
+  end type slice_isoline_t
 
 
 contains
 
 
-  subroutine contour_path__replace_head_by_vert( this,         &
-                                                 vi, vj,       &
-                                                 octa_direct,  &
-                                                 cruising_lane )
-    class(contour_path_t) <io> :: this
+  subroutine slice_isoline__replace_head_by_vert( this,         &
+                                                  vi, vj,       &
+                                                  octa_direct,  &
+                                                  cruising_lane )
+    class(slice_isoline_t) <io> :: this
     integer <in> :: vi, vj
     integer <in> :: octa_direct
     char(len=2) <in> :: cruising_lane
@@ -168,42 +168,42 @@ contains
     if ( cruising_lane == 'on' ) then
       select case ( octa_direct )
         case (0)
-          this.head = contour_path__element_t( 'v', 'on',   vi,   vj, 'N' )
+          this.head = slice_isoline__element_t( 'v', 'on',   vi,   vj, 'N' )
         case (1)    
-          this.head = contour_path__element_t( 'a', 'on',   vi,   vj, 'N' )
+          this.head = slice_isoline__element_t( 'a', 'on',   vi,   vj, 'N' )
         case (2)    
-          this.head = contour_path__element_t( 'u', 'on',   vi,   vj, 'E' )
+          this.head = slice_isoline__element_t( 'u', 'on',   vi,   vj, 'E' )
         case (3)  
-          this.head = contour_path__element_t( 'd', 'on',   vi, vj-1, 'S' )
+          this.head = slice_isoline__element_t( 'd', 'on',   vi, vj-1, 'S' )
         case (4)  
-          this.head = contour_path__element_t( 'v', 'on',   vi, vj-1, 'S' )
+          this.head = slice_isoline__element_t( 'v', 'on',   vi, vj-1, 'S' )
         case (5)
-          this.head = contour_path__element_t( 'a', 'on', vi-1, vj-1, 'S' )
+          this.head = slice_isoline__element_t( 'a', 'on', vi-1, vj-1, 'S' )
         case (6)
-          this.head = contour_path__element_t( 'u', 'on', vi-1,   vj, 'W' )
+          this.head = slice_isoline__element_t( 'u', 'on', vi-1,   vj, 'W' )
         case (7)  
-          this.head = contour_path__element_t( 'd', 'on', vi-1,   vj, 'N' )
+          this.head = slice_isoline__element_t( 'd', 'on', vi-1,   vj, 'N' )
         case default
           call ut__fatal( '__MODULE__(__LINE__): case error.' )
       end select
     else if ( cruising_lane == 'in' ) then
       select case ( octa_direct )
         case (0)
-          this.head = contour_path__element_t( 'v', 'in',   vi,   vj, 'W' )
+          this.head = slice_isoline__element_t( 'v', 'in',   vi,   vj, 'W' )
         case (1)    
-          this.head = contour_path__element_t( 'a', 'in',   vi,   vj, 'N' )
+          this.head = slice_isoline__element_t( 'a', 'in',   vi,   vj, 'N' )
         case (2)    
-          this.head = contour_path__element_t( 'u', 'in',   vi,   vj, 'N' )
+          this.head = slice_isoline__element_t( 'u', 'in',   vi,   vj, 'N' )
         case (3)  
-          this.head = contour_path__element_t( 'd', 'in',   vi, vj-1, 'N' )
+          this.head = slice_isoline__element_t( 'd', 'in',   vi, vj-1, 'N' )
         case (4)  
-          this.head = contour_path__element_t( 'v', 'in',   vi, vj-1, 'E' )
+          this.head = slice_isoline__element_t( 'v', 'in',   vi, vj-1, 'E' )
         case (5)
-          this.head = contour_path__element_t( 'a', 'in', vi-1, vj-1, 'S' )
+          this.head = slice_isoline__element_t( 'a', 'in', vi-1, vj-1, 'S' )
         case (6)
-          this.head = contour_path__element_t( 'u', 'in', vi-1,   vj, 'S' )
+          this.head = slice_isoline__element_t( 'u', 'in', vi-1,   vj, 'S' )
         case (7)  
-          this.head = contour_path__element_t( 'd', 'in', vi-1,   vj, 'S' )
+          this.head = slice_isoline__element_t( 'd', 'in', vi-1,   vj, 'S' )
         case default
           call ut__fatal( '__MODULE__(__LINE__): case error.' )
       end select
@@ -211,30 +211,30 @@ contains
       call ut__fatal( '__MODULE__(__LINE__): cruising_lane error.' )
     end if
 
-  end subroutine contour_path__replace_head_by_vert
+  end subroutine slice_isoline__replace_head_by_vert
 
 
-  subroutine contour_path__replace_head_direct( this,                  &
+  subroutine slice_isoline__replace_head_direct( this,                  &
                                                  edge_type,             &
                                                  cruising_lane,         &
                                                  ei, ej,                &
                                                  cross_this_edge_toward )
-    class(contour_path_t) <io> :: this
+    class(slice_isoline_t) <io> :: this
     character <in> :: edge_type
     char(len=2) <in> :: cruising_lane
     integer <in> :: ei, ej
     character <in> :: cross_this_edge_toward
 
-    this.head = contour_path__element_t( edge_type,               &
-                                         cruising_lane,           &
-                                         ei,                      &
-                                         ej,                      &
-                                         cross_this_edge_toward )
-  end subroutine contour_path__replace_head_direct
+    this.head = slice_isoline__element_t( edge_type,               &
+                                          cruising_lane,           &
+                                          ei,                      &
+                                          ej,                      &
+                                          cross_this_edge_toward )
+  end subroutine slice_isoline__replace_head_direct
 
 
-  subroutine contour_path__register_new_vert( this, u, v )
-    class(contour_path_t) <io> :: this
+  subroutine slice_isoline__register_new_vert( this, u, v )
+    class(slice_isoline_t) <io> :: this
     real <in> :: u, v
 
     integer :: n
@@ -245,12 +245,12 @@ contains
     this.list_u(n) = u
     this.list_v(n) = v
     this.num = n
-  end subroutine contour_path__register_new_vert
+  end subroutine slice_isoline__register_new_vert
 
 
   subroutine jump_to_u_edge_pm_if_possible( path, vert, edge, jumped,  &
                                             ei, ej )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
@@ -310,7 +310,7 @@ contains
 
   subroutine jump_to_u_edge_mp_if_possible( path, vert, edge, jumped,  &
                                             ei, ej )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
@@ -364,7 +364,7 @@ contains
   subroutine jump_to_d_edge_pm_if_possible( path, vert,    &
                                             edge, jumped,  &
                                             ei, ej )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
@@ -421,7 +421,7 @@ contains
   subroutine jump_to_d_edge_mp_if_possible( path, vert,    &
                                             edge, jumped,  &
                                             ei, ej )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
@@ -478,7 +478,7 @@ contains
   subroutine jump_to_a_edge_pm_if_possible( path, vert,    &
                                             edge, jumped,  &
                                             ei, ej )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
@@ -533,7 +533,7 @@ contains
   subroutine jump_to_a_edge_mp_if_possible( path, vert,    &
                                             edge, jumped,  &
                                             ei, ej )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
@@ -587,7 +587,7 @@ contains
 
   subroutine jump_to_v_edge_pm_if_possible( path, vert, edge, jumped,  &
                                             ei, ej )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
@@ -647,7 +647,7 @@ contains
 
   subroutine jump_to_v_edge_mp_if_possible( path, vert, edge, jumped,  &
                                             ei, ej )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     logical <io> :: jumped
@@ -767,7 +767,7 @@ contains
 
 
   subroutine one_step_along_boundary( path, vert, edge, boundary, nth )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     type(slice_mesh__boundary_t) <io> :: boundary
@@ -885,7 +885,7 @@ contains
   subroutine jump_to_other_edge_from_edge_uv( path,  &
                                               vert,  &
                                               edge )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
 
@@ -1253,7 +1253,7 @@ contains
   subroutine jump_to_other_edge_from_edge_ad( path,  &
                                               vert,  &
                                               edge )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
 
@@ -1362,8 +1362,8 @@ contains
   end subroutine jump_to_other_edge_from_edge_ad
 
 
-  function contour_path__is_closed( this ) result(ans)
-    class(contour_path_t) <in> :: this
+  function slice_isoline__is_closed( this ) result(ans)
+    class(slice_isoline_t) <in> :: this
     logical :: ans
 
     logical :: con1, con2, con3
@@ -1372,19 +1372,19 @@ contains
     con2 = ( this.head.ei == this.start.ei )
     con3 = ( this.head.ej == this.start.ej )
     ans = ( con1 .and. con2 .and. con3 )
-  end function contour_path__is_closed  
+  end function slice_isoline__is_closed  
 
 
-  subroutine contour_path__reset( this )
-    class(contour_path_t) <io> :: this
+  subroutine slice_isoline__reset( this )
+    class(slice_isoline_t) <io> :: this
     this.num = 0
     this.list_u(:) = 0.0
     this.list_v(:) = 0.0
-  end subroutine contour_path__reset
+  end subroutine slice_isoline__reset
 
 
-  subroutine contour_path__initialize( this, vert_nu, vert_nv )
-    class(contour_path_t) <out> :: this
+  subroutine slice_isoline__initialize( this, vert_nu, vert_nv )
+    class(slice_isoline_t) <out> :: this
     integer <in> :: vert_nu, vert_nv
 
     integer :: max_path_element_num
@@ -1398,7 +1398,7 @@ contains
     this.vert_nu = vert_nu
     this.vert_nv = vert_nv
     call this.reset
-  end subroutine contour_path__initialize
+  end subroutine slice_isoline__initialize
 
 
   subroutine find_start_edge_on_boundaries( path,     &
@@ -1406,7 +1406,7 @@ contains
                                             edge,     &
                                             boundary, &
                                             status )
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     type(slice_mesh__boundary_t) <io> :: boundary
@@ -1456,7 +1456,7 @@ contains
     character :: edge_type
 
     call ut__assert( path.num == 0,  &
-                    '__MODULE__(__LINE__): You forgot to reset contour_path.' )
+                    '__MODULE__(__LINE__): You forgot to reset slice_isoline.' )
 
     do edge_index = 1, boundary.edge.num
       quarter = boundary.edge.quarter(edge_index)
@@ -1511,7 +1511,7 @@ contains
                                       vert,    &
                                       edge,    &
                                       status )  
-    type(contour_path_t) <io> :: path
+    type(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     char(len=10) <io> :: status ! 'no contour' or 'have found'
@@ -1546,7 +1546,7 @@ contains
 
     call ut__assert( path.num == 0,                     &
                     '__MODULE__(__LINE__): ' //         &
-                    'Forgot to reset contour_path.' )
+                    'Forgot to reset slice_isoline.' )
 
     !!>
         The rectangular edges of v_edge(1,:), u_edge(:,1), etc. 
@@ -1584,12 +1584,12 @@ contains
   end subroutine find_start_edge_in_bulk
 
 
-  subroutine contour_path__set_start_edge( this,     &
-                                           vert,     &
-                                           edge,     &
-                                           boundary, &
-                                           status )
-    class(contour_path_t) <io> :: this
+  subroutine slice_isoline__set_start_edge( this,     &
+                                            vert,     &
+                                            edge,     &
+                                            boundary, &
+                                            status )
+    class(slice_isoline_t) <io> :: this
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__edge_t) <io> :: edge
     type(slice_mesh__boundary_t) <io> :: boundary
@@ -1608,14 +1608,14 @@ contains
                                   edge,    &
                                   status )
 
-  end subroutine contour_path__set_start_edge
+  end subroutine slice_isoline__set_start_edge
 
 
-  subroutine contour_path__trace_and_erase( path,      &
-                                            vert,      &
-                                            edge,      &
-                                            boundary )
-    class(contour_path_t) <io> :: path
+  subroutine slice_isoline__trace_and_erase( path,      &
+                                             vert,      &
+                                             edge,      &
+                                             boundary )
+    class(slice_isoline_t) <io> :: path
     type(slice_mesh__vert_t) <in> :: vert
     type(slice_mesh__boundary_t) <io> :: boundary
     type(slice_mesh__edge_t) <io> :: edge
@@ -1667,6 +1667,6 @@ contains
       end select
     end do
 
-  end subroutine contour_path__trace_and_erase
+  end subroutine slice_isoline__trace_and_erase
 
-end module contour_path_m
+end module slice_isoline_m
