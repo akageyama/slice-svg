@@ -12,6 +12,13 @@ f90list := $(addsuffix .F90, $(filebase)) # => example.F90
 modlist := $(addsuffix .mod, $(filebase)) # => example.mod
 objlist := $(addsuffix .o, $(filebase)) # => example.o
 
+vv_eflist := $(shell ls vv_*.ef)
+vv_filebase := $(basename $(notdir $(vv_eflist)))
+vv_f90list := $(addsuffix .F90, $(vv_filebase))
+vv_modlist := $(addsuffix .mod, $(vv_filebase))
+vv_objlist := $(addsuffix .o, $(vv_filebase))
+vv_targetlib := libvv
+
 # ES3_HOME = /S/home00/G4013/y0394
 
 .SECONDARY: $(f90list)  # to avoid deleting F90 files.
@@ -109,6 +116,9 @@ svglist := sample_line.svg \
            sample_vector.svg
 
 # default target
+#
+$(vv_targetlib): $(vv_objlist)
+	ar r $(vv_targetlib) $(vv_objlist)
 
 fig: runme
 	# ./runme 
