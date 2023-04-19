@@ -1,5 +1,5 @@
 !!>
-    slice: Visualize 2-dimensional cross sections 
+    vv_slice: Visualize 2-dimensional cross sections 
     of 3- (or more) dimensional simulation data.
 
     Draw contour lines for scalar fields.
@@ -11,65 +11,65 @@
     such as meters.
 
 !!< 
-module slice_m
+module vv_slice_m
   use color_m
   use ut_m
-  use slice_mesh_m
-  use slice_isoline_m
-  use sketch_m
+  use vv_slice_mesh_m
+  use vv_slice_isoline_m
+  use vv_sketch_m
   implicit none
   private
 
-  type, public :: slice__scalar_t
-    type(slice_mesh__vert_t) :: mesh_vert
-    type(slice_mesh__edge_t) :: mesh_edge
-    type(slice_mesh__boundary_t) :: mesh_boundary
+  type, public :: vv_slice__scalar_t
+    type(vv_slice_mesh__vert_t) :: mesh_vert
+    type(vv_slice_mesh__edge_t) :: mesh_edge
+    type(vv_slice_mesh__boundary_t) :: mesh_boundary
     real, dimension(:,:), allocatable :: val_vert
     real :: val_vert_max, val_vert_min
   contains
-    procedure, private :: slice__scalar_initialize_with_uvmax
-    procedure, private :: slice__scalar_initialize_with_grids
-    generic :: initialize => slice__scalar_initialize_with_uvmax,  &
-                             slice__scalar_initialize_with_grids
-    procedure :: finalize => slice__scalar_finalize
-    procedure :: set_val => slice__scalar_set_val
-    procedure :: vis_contour => slice__scalar_vis_contour
-  end type slice__scalar_t
+    procedure, private :: vv_slice__scalar_initialize_with_uvmax
+    procedure, private :: vv_slice__scalar_initialize_with_grids
+    generic :: initialize => vv_slice__scalar_initialize_with_uvmax,  &
+                             vv_slice__scalar_initialize_with_grids
+    procedure :: finalize => vv_slice__scalar_finalize
+    procedure :: set_val => vv_slice__scalar_set_val
+    procedure :: vis_contour => vv_slice__scalar_vis_contour
+  end type vv_slice__scalar_t
 
-  type, public :: slice__vector_t
-    type(slice_mesh__vert_t) :: mesh_vert
+  type, public :: vv_slice__vector_t
+    type(vv_slice_mesh__vert_t) :: mesh_vert
     real, dimension(:,:), allocatable :: vect_u
     real, dimension(:,:), allocatable :: vect_v
     real :: amp_max, amp_min
   contains
-    procedure :: initialize => slice__vector_initialize
-    procedure :: finalize => slice__vector_finalize    
-    procedure :: set_val => slice__vector_set_val
-    procedure :: vis_arrows => slice__vector_vis_arrows
-  end type slice__vector_t
+    procedure :: initialize => vv_slice__vector_initialize
+    procedure :: finalize => vv_slice__vector_finalize    
+    procedure :: set_val => vv_slice__vector_set_val
+    procedure :: vis_arrows => vv_slice__vector_vis_arrows
+  end type vv_slice__vector_t
 
 
 contains
 
 
-  subroutine slice__scalar_vis_contour( this,            &
-                                        sketch,          &
-                                        level,           &
-                                        width_in_pixels, &
-                                        line_color,      &
-                                        fill_color )
-    class(slice__scalar_t) <io> :: this
-    type(sketch_t) <io> :: sketch
+  subroutine vv_slice__scalar_vis_contour( this,            &
+                                           vv_sketch,       &
+                                           level,           &
+                                           width_in_pixels, &
+                                           line_color,      &
+                                           fill_color )
+    class(vv_slice__scalar_t) <io> :: this
+    type(vv_sketch_t) <io> :: vv_sketch
     real <in> :: level
     real <optin> :: width_in_pixels
     type(color_t) <optin> :: line_color
     type(color_t) <optin> :: fill_color
 
     integer :: nu, nv
-    type(slice_isoline_t), save :: slice_isoline
+    type(vv_slice_isoline_t), save :: vv_slice_isoline
     logical :: just_once = .true.
     char(len=10) :: status
-    type(sketch__sim_pos_t), dimension(:), allocatable, save :: verts_sim
+    type(vv_sketch__sim_pos_t), dimension(:), allocatable, save :: verts_sim
     character, dimension(:), allocatable, save :: path_directive
     character :: SVG_directive
     integer :: i, counter
@@ -78,7 +78,7 @@ contains
     ==<just_once>==
       nu = this.mesh_vert.nu
       nv = this.mesh_vert.nv
-      call slice_isoline.initialize( nu, nv )
+      call vv_slice_isoline.initialize( nu, nv )
       allocate(verts_sim(nu*nv))
       allocate(path_directive(nu*nv))
     ==</just_once>==
@@ -89,21 +89,21 @@ contains
 
     call this.mesh_boundary.set_quarter( this.mesh_vert,  &
                                          this.mesh_edge )
-    call slice_isoline.reset
-    call slice_isoline.set_start_edge( this.mesh_vert,     &
-                                      this.mesh_edge,     &
-                                      this.mesh_boundary, &
-                                      status )
+    call vv_slice_isoline.reset
+    call vv_slice_isoline.set_start_edge( this.mesh_vert,     &
+                                          this.mesh_edge,     &
+                                          this.mesh_boundary, &
+                                         status )
     counter = 0
     do while ( status == 'have found' )
       !!  Tring to find the 1st contour for this level.
-      call slice_isoline.trace_and_erase( this.mesh_vert,    &
-                                         this.mesh_edge,    &
-                                         this.mesh_boundary )
-      call  ut__assert( slice_isoline.num >= 2,  &
+      call vv_slice_isoline.trace_and_erase( this.mesh_vert,    &
+                                             this.mesh_edge,    &
+                                             this.mesh_boundary )
+      call  ut__assert( vv_slice_isoline.num >= 2,  &
                         "__MODULE__(__LINE__): Path too short." )
         
-      do i = 1, slice_isoline.num
+      do i = 1, vv_slice_isoline.num
         counter += 1
         if ( i == 1 ) then
           SVG_directive = 'M' ! Move to 
@@ -113,42 +113,42 @@ contains
           SVG_directive = ' ' ! Line to (You can ommit this after 1st 'L'.)
         end if
         path_directive(counter) = SVG_directive 
-        u_sim = slice_isoline.list_u(i)
-        v_sim = slice_isoline.list_v(i)
-        verts_sim(counter) = sketch__sim_pos_t(u_sim,v_sim)
+        u_sim = vv_slice_isoline.list_u(i)
+        v_sim = vv_slice_isoline.list_v(i)
+        verts_sim(counter) = vv_sketch__sim_pos_t(u_sim,v_sim)
       end do
 
       ! To close the path
       counter += 1
       path_directive(counter) = 'Z' ! Close the sub-path.
       dummy = 0.0  ! any number
-      verts_sim(counter) = sketch__sim_pos_t( dummy, dummy )
+      verts_sim(counter) = vv_sketch__sim_pos_t( dummy, dummy )
 
       !!  Generally, more contours exist for this level.
-      call slice_isoline.reset
-      call slice_isoline.set_start_edge( this.mesh_vert,     &
-                                        this.mesh_edge,     &
-                                        this.mesh_boundary, &
-                                        status )
+      call vv_slice_isoline.reset
+      call vv_slice_isoline.set_start_edge( this.mesh_vert,     &
+                                            this.mesh_edge,     &
+                                            this.mesh_boundary, &
+                                            status )
     end do
 
     if ( counter > 1 ) then
-      call sketch.path( counter,             &
-                        path_directive,      &
-                        verts_sim,           &
-                        width_in_pixels,     &
-                        line_color,          &
-                        fill_color )      
+      call vv_sketch.path( counter,             &
+                           path_directive,      &
+                           verts_sim,           &
+                           width_in_pixels,     &
+                           line_color,          &
+                           fill_color )      
     end if
 
-  end subroutine slice__scalar_vis_contour
+  end subroutine vv_slice__scalar_vis_contour
 
 
-  subroutine slice__scalar_initialize_with_uvmax( this, nu, nv,  &
-                                                  u_min, u_max,  &
-                                                  v_min, v_max,  &
-                                                  val )
-    class(slice__scalar_t) <out> :: this
+  subroutine vv_slice__scalar_initialize_with_uvmax( this, nu, nv,  &
+                                                     u_min, u_max,  &
+                                                     v_min, v_max,  &
+                                                     val )
+    class(vv_slice__scalar_t) <out> :: this
     integer <in> :: nu, nv
     real <in> :: u_min, u_max
     real <in> :: v_min, v_max
@@ -169,16 +169,16 @@ contains
       this.val_vert(:,:) = 0.0
     end if
 
-  end subroutine slice__scalar_initialize_with_uvmax
+  end subroutine vv_slice__scalar_initialize_with_uvmax
 
 
-  subroutine slice__scalar_initialize_with_grids( this,       &
-                                                  nu, nv,     &
-                                                  grid_pos_u, &
-                                                  grid_pos_v, &
-                                                  val,        &
-                                                  grid_flag )
-    class(slice__scalar_t) <out> :: this
+  subroutine vv_slice__scalar_initialize_with_grids( this,       &
+                                                     nu, nv,     &
+                                                     grid_pos_u, &
+                                                     grid_pos_v, &
+                                                     val,        &
+                                                     grid_flag )
+    class(vv_slice__scalar_t) <out> :: this
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
     real, dimension(nv) <in> :: grid_pos_v
@@ -213,42 +213,41 @@ contains
       this.val_vert(:,:) = 0.0
     end if
 
-  end subroutine slice__scalar_initialize_with_grids
+  end subroutine vv_slice__scalar_initialize_with_grids
 
 
-
-  subroutine slice__scalar_set_val( this, nu, nv, val )
-    class(slice__scalar_t) <io> :: this
+  subroutine vv_slice__scalar_set_val( this, nu, nv, val )
+    class(vv_slice__scalar_t) <io> :: this
     integer <in> :: nu, nv
     real, dimension(nu,nv) <in> :: val
 
     this.val_vert(:,:) = val(:,:)
     this.val_vert_max = maxval(val)
     this.val_vert_min = minval(val)
-  end subroutine slice__scalar_set_val
+  end subroutine vv_slice__scalar_set_val
 
 
-  subroutine slice__scalar_finalize( this )
-    class(slice__scalar_t) <io> :: this
+  subroutine vv_slice__scalar_finalize( this )
+    class(vv_slice__scalar_t) <io> :: this
 
     deallocate(this.val_vert)
     call this.mesh_vert.finalize
     call this.mesh_edge.finalize
     call this.mesh_boundary.finalize
-  end subroutine slice__scalar_finalize
+  end subroutine vv_slice__scalar_finalize
 
 
 
-  subroutine slice__vector_initialize( this,        &
-                                       vert_nu,     &
-                                       vert_nv,     &
-                                       vert_u_min,  &
-                                       vert_u_max,  &
-                                       vert_v_min,  &
-                                       vert_v_max,  &
-                                       vect_u,      &
-                                       vect_v )
-    class(slice__vector_t) <out> :: this
+  subroutine vv_slice__vector_initialize( this,        &
+                                          vert_nu,     &
+                                          vert_nv,     &
+                                          vert_u_min,  &
+                                          vert_u_max,  &
+                                          vert_v_min,  &
+                                          vert_v_max,  &
+                                          vect_u,      &
+                                          vect_v )
+    class(vv_slice__vector_t) <out> :: this
     integer <in> :: vert_nu, vert_nv
     real <in> :: vert_u_min, vert_u_max
     real <in> :: vert_v_min, vert_v_max
@@ -281,30 +280,30 @@ contains
 
     this.amp_max = maxval(amp_vect)
     this.amp_min = minval(amp_vect)
-  end subroutine slice__vector_initialize
+  end subroutine vv_slice__vector_initialize
 
   
-  subroutine slice__vector_finalize( this )
-    class(slice__vector_t) <io> :: this
+  subroutine vv_slice__vector_finalize( this )
+    class(vv_slice__vector_t) <io> :: this
 
     deallocate(this.vect_u)
     deallocate(this.vect_v)
     call this.mesh_vert.finalize
-  end subroutine slice__vector_finalize
+  end subroutine vv_slice__vector_finalize
 
 
-  subroutine slice__vector_set_val( this, vect_u, vect_v )
-    class(slice__vector_t) <io> :: this
+  subroutine vv_slice__vector_set_val( this, vect_u, vect_v )
+    class(vv_slice__vector_t) <io> :: this
     real, dimension(this.mesh_vert.nu,this.mesh_vert.nv) <in> :: vect_u, vect_v
 
     this.vect_u(:,:) = vect_u(:,:)
     this.vect_v(:,:) = vect_v(:,:)
-  end subroutine slice__vector_set_val
+  end subroutine vv_slice__vector_set_val
 
 
-  subroutine slice__vector_vis_arrows( this, sketch )
-    class(slice__vector_t) <io> :: this
-    type(sketch_t) <io> :: sketch
+  subroutine vv_slice__vector_vis_arrows( this, vv_sketch )
+    class(vv_slice__vector_t) <io> :: this
+    type(vv_sketch_t) <io> :: vv_sketch
     !!>
         o--o--o--o--o--o--o--o--o <== Original (=finest) grid
         |  |  |  |  |  |  |  |  |
@@ -331,25 +330,25 @@ contains
       stride = 2**skip
       write(tag_for_group,"(a,i1)") "arrow-skip", skip
         ! "arrow-skip4, arrow-skip3, ...
-      call sketch.group_push( id=trim(tag_for_group),  &
-                              visibility="visible" )
+      call vv_sketch.group_push( id=trim(tag_for_group),  &
+                                 visibility="visible" )
         do j = 1, this.mesh_vert.nv, stride
           do i = 1, this.mesh_vert.nu, stride
             if ( .not. pass_to_sketch_flag(i,j) ) then
               u = this.mesh_vert.pos_u(i)
               v = this.mesh_vert.pos_v(j)
-              call sketch.arrow( u, v, &
-                                 this.vect_u(i,j), &
-                                 this.vect_v(i,j) )
+              call vv_sketch.arrow( u, v, &
+                                    this.vect_u(i,j), &
+                                    this.vect_v(i,j) )
               pass_to_sketch_flag(i,j) = .true.
             end if
           end do
         end do
-      call sketch.group_pop()
+      call vv_sketch.group_pop()
     end do
 
     deallocate(pass_to_sketch_flag)
-  end subroutine slice__vector_vis_arrows
+  end subroutine vv_slice__vector_vis_arrows
 
-end module slice_m
+end module vv_slice_m
 

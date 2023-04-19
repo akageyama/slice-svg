@@ -1,37 +1,37 @@
-module svglib_m
+module vv_svglib_m
   use color_m
   use ut_m
   use const_base_m
   use fileut_m
   implicit none
   private
-  public :: svglib__text_line
-  public :: SVGLIB__BSL
-  public :: SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
+  public :: vv_svglib__text_line
+  public :: VV_SVGLIB__BSL
+  public :: VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
 
-  real <const> :: SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT = 40.0
+  real <const> :: VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT = 40.0
 
-  type, public :: svglib_t
+  type, public :: vv_svglib_t
     char(len=300) :: file_name
     real :: width, height
     integer :: file_unit
     integer :: indent_level
   contains
-    procedure :: group_push => svglib__group_push
-    procedure :: group_pop => svglib__group_pop
-    procedure :: open => svglib__open
-    procedure :: close => svglib__close
-    procedure :: line => svglib__line
-    procedure :: arrow => svglib__arrow
-    procedure :: arrow_template => svglib__arrow_template
-    procedure :: text => svglib__text
-    procedure :: polygon => svglib__polygon
-    procedure :: path => svglib__path
-  end type svglib_t
+    procedure :: group_push => vv_svglib__group_push
+    procedure :: group_pop => vv_svglib__group_pop
+    procedure :: open => vv_svglib__open
+    procedure :: close => vv_svglib__close
+    procedure :: line => vv_svglib__line
+    procedure :: arrow => vv_svglib__arrow
+    procedure :: arrow_template => vv_svglib__arrow_template
+    procedure :: text => vv_svglib__text
+    procedure :: polygon => vv_svglib__polygon
+    procedure :: path => vv_svglib__path
+  end type vv_svglib_t
 
 
 
-  interface svglib__text_line
+  interface vv_svglib__text_line
      module procedure text_line_str_i,                  &
                       text_line_str_str,                &
                       text_line_str_r,                  &
@@ -39,13 +39,13 @@ module svglib_m
                       text_line_s1_r1_s2_r2,            &
                       text_line_str_r1_r2_r3_r4,        &
                       text_line_s1_r1_s2_r2_s3_r3_s4_r4
-  end interface svglib__text_line
+  end interface vv_svglib__text_line
 
   character <const> :: QUOTE = '"'
   character <const> :: SPACE = ' '
   character <const> :: COMMA = ','
-  integer <const> :: SVGLIB__BSL = 100  ! Basic text string length
-                                        ! e.g., '<line = "... >'
+  integer <const> :: VV_SVGLIB__BSL = 100  ! Basic text string length
+                                           ! e.g., '<line = "... >'
 
 contains
 
@@ -73,7 +73,7 @@ contains
   function text_line_str_r( string, r ) result(line)
     char(len=*) <in> :: string
     real <in> :: r  ! real value
-    char(len=SVGLIB__BSL) :: line
+    char(len=VV_SVGLIB__BSL) :: line
 
     write(line, "(a)") trim(string)//QUOTE//trim(r2s(r))//QUOTE
   end function text_line_str_r
@@ -81,7 +81,7 @@ contains
 
   function text_line_r1_comma_r2( r1, r2 ) result(line)
     real <in> :: r1, r2  ! real value
-    char(len=SVGLIB__BSL) :: line
+    char(len=VV_SVGLIB__BSL) :: line
 
     write(line, "(a)") trim(r2s(r1)) // COMMA // SPACE // trim(r2s(r2))
   end function text_line_r1_comma_r2
@@ -90,7 +90,7 @@ contains
   function text_line_str_str( string, str ) result(line)
     char(len=*) <in> :: string
     char(len=*) <in> :: str
-    char(len=SVGLIB__BSL) :: line
+    char(len=VV_SVGLIB__BSL) :: line
 
     write(line, "(a)") trim(string)//QUOTE//trim(str)//QUOTE
   end function text_line_str_str
@@ -99,7 +99,7 @@ contains
                                   s2, r2) result(line)
     char(len=*) <in> :: s1, s2
     real <in> :: r1, r2
-    char(len=SVGLIB__BSL) :: line
+    char(len=VV_SVGLIB__BSL) :: line
 
     write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
               //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE
@@ -112,7 +112,7 @@ contains
                                               s4, r4 ) result(line)
     char(len=*) <in> :: s1, s2, s3, s4
     real <in> :: r1, r2, r3, r4
-    char(len=SVGLIB__BSL) :: line
+    char(len=VV_SVGLIB__BSL) :: line
 
     write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
               //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE   &
@@ -125,7 +125,7 @@ contains
   function text_line_str_r1_r2_r3_r4( string, r1, r2, r3, r4 ) result(line)
     char(len=*) <in> :: string
     real <in> :: r1, r2, r3, r4
-    char(len=SVGLIB__BSL) :: line
+    char(len=VV_SVGLIB__BSL) :: line
 
     write(line, "(a)") trim(string)//QUOTE//trim(r2s(r1))   &
                                    //SPACE//trim(r2s(r2))   &
@@ -138,7 +138,7 @@ contains
   function text_line_str_i( string, val ) result(line)
     char(len=*) <in> :: string
     integer <in> :: val
-    char(len=SVGLIB__BSL) :: line
+    char(len=VV_SVGLIB__BSL) :: line
 
     write(line, "(a,a,i0,a)") trim(string), QUOTE, val, QUOTE
   end function text_line_str_i
@@ -170,7 +170,7 @@ contains
 
 
   subroutine indent_pop( this )
-    type(svglib_t) <io> :: this
+    type(vv_svglib_t) <io> :: this
 
     if ( this.indent_level > 0 ) then
       this.indent_level -= 1
@@ -181,14 +181,14 @@ contains
 
 
   subroutine indent_push( this )
-    type(svglib_t) <io> :: this
+    type(vv_svglib_t) <io> :: this
 
     this.indent_level += 1
   end subroutine indent_push
 
 
   subroutine write_footer( this )
-    type(svglib_t) <in> :: this
+    type(vv_svglib_t) <in> :: this
 
     call write_out( this, ' ' )
     call write_out( this, '</svg>' )
@@ -197,20 +197,20 @@ contains
 
 
   subroutine write_header( this, width, height )
-    type(svglib_t) <in> :: this
+    type(vv_svglib_t) <in> :: this
     real <in> :: width,  height
 
     char(len=*) <const> :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
     char(len=*) <const> :: STR_XMLNS2 = 'xmlns:xlink="http://www.w3.org/1999/xlink"'
-    char(len=SVGLIB__BSL) :: str_width,   &
-                             str_height,  &
-                             str_viewbox
+    char(len=VV_SVGLIB__BSL) :: str_width,   &
+                                str_height,  &
+                                str_viewbox
 
-    str_width   = svglib__text_line( 'width=',  width )
-    str_height  = svglib__text_line( 'height=', height )
-    str_viewbox = svglib__text_line( 'viewBox=', 0.0, 0.0, width, height )
+    str_width   = vv_svglib__text_line( 'width=',  width )
+    str_height  = vv_svglib__text_line( 'height=', height )
+    str_viewbox = vv_svglib__text_line( 'viewBox=', 0.0, 0.0, width, height )
 
-    call write_decorated_comment( this, 'SVG Generated by SVGLIB on '  &
+    call write_decorated_comment( this, 'SVG Generated by VV_SVGLIB on '  &
                                          // get_date_and_time() )
     call write_out( this, '<svg ' // STR_XMLNS          &
                          // SPACE // STR_XMLNS2         &
@@ -223,14 +223,14 @@ contains
 
 
   subroutine write_a_comment( this, message )
-    type(svglib_t) <in> :: this
+    type(vv_svglib_t) <in> :: this
     char(len=*) <in> :: message
     call write_out( this, '<!-- ' // trim(adjustl(message)) // ' -->' )
   end subroutine write_a_comment  
 
 
   subroutine write_decorated_comment( this, message )
-    type(svglib_t) <in> :: this
+    type(vv_svglib_t) <in> :: this
     char(len=*) <in> :: message
     !!>
         e.g., 
@@ -238,7 +238,7 @@ contains
                 <!-- Comment text -->
                 <!-- ============ -->       
     !!<
-    char(len=SVGLIB__BSL) :: str_deco
+    char(len=VV_SVGLIB__BSL) :: str_deco
     str_deco = repeat('=', len_trim(adjustl(message)))
     call write_a_comment( this, str_deco )
     call write_a_comment( this, message )
@@ -270,7 +270,7 @@ contains
       
 
   subroutine write_out( this, line )
-    type(svglib_t) <in> :: this
+    type(vv_svglib_t) <in> :: this
     char(len=*) <in> :: line
 
     integer <const> :: NUM_SPACES_PER_INDENT = 2
@@ -283,17 +283,17 @@ contains
   end subroutine write_out
 
 
-  subroutine svglib__arrow_template( this )
-    class(svglib_t) <io> :: this
+  subroutine vv_svglib__arrow_template( this )
+    class(vv_svglib_t) <io> :: this
 
     real <const> :: ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT  &
-                    = SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT / 10.0
+                    = VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT / 10.0
                        ! ratio of the arrow trunk and arrow head triangle
 
-    real :: scale = SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT / 4
+    real :: scale = VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT / 4
                        ! see the fibure below
     !!>
-            SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
+            VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
                  \                           /
                   \                         /
                    |<--------------------->|
@@ -317,8 +317,8 @@ contains
 
     integer :: nop  ! number of options
     integer <const> :: MAX_NOP = 20
-    char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
+    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
 
     px = -2.0*scale
     py = 0.0
@@ -340,12 +340,12 @@ contains
             call write_out( this, '<g id="arrow-template01-scale" transform="scale(1.0)">' )
               call indent_push( this )
                 str(1) = '<line'
-                str(2) = svglib__text_line( 'x1=', px,  &
-                                            'y1=', py,  &
-                                            'x2=', qx,  &
-                                            'y2=', qy )
-                str(3) = svglib__text_line( 'stroke-width=',  &
-                                            ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT )
+                str(2) = vv_svglib__text_line( 'x1=', px,  &
+                                               'y1=', py,  &
+                                               'x2=', qx,  &
+                                               'y2=', qy )
+                str(3) = vv_svglib__text_line( 'stroke-width=',  &
+                                               ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT )
                 str(4) = '/>'
                 nop = 4
                 call string_concatenate( nop, str, str_all )
@@ -365,11 +365,11 @@ contains
       call indent_pop( this )
     call write_out( this, '</defs>' )
     call write_a_comment( this, '</Arrow Template 01>' )
-  end subroutine svglib__arrow_template
+  end subroutine vv_svglib__arrow_template
 
 
-  subroutine svglib__arrow( this, x, y, vx, vy )
-    class(svglib_t) <io> :: this
+  subroutine vv_svglib__arrow( this, x, y, vx, vy )
+    class(vv_svglib_t) <io> :: this
     real <in> :: x, y, vx, vy
 
     real <const> :: TOO_SMALL = 1.e-10  ! a tiny value.
@@ -378,8 +378,8 @@ contains
 
     integer :: nop  ! number of options
     integer <const> :: MAX_NOP = 20
-    char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
+    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
 
     vector_amp = sqrt(vx**2+vy**2)
     if ( vector_amp < TOO_SMALL ) return
@@ -389,7 +389,7 @@ contains
 
     angle_from_x_axis = atan2_in_degree( vy, vx )
 
-    amp_factor = vector_amp / SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
+    amp_factor = vector_amp / VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
 
     str(1) = '<use xlink:href="#arrow-template01"' // SPACE
     str(2) = 'transform=' // QUOTE // 'rotate('
@@ -406,44 +406,45 @@ contains
     call string_concatenate( nop, str, str_all )
     call write_out( this, str_all )
 
-  end subroutine svglib__arrow  
+  end subroutine vv_svglib__arrow  
 
 
-  subroutine svglib__close( this )
-    class(svglib_t) <in> :: this
+  subroutine vv_svglib__close( this )
+    class(vv_svglib_t) <in> :: this
 
     call write_footer( this )
     call fileut__close( this.file_unit )
-  end subroutine svglib__close
+  end subroutine vv_svglib__close
 
 
-  subroutine svglib__group_push( this, attribute )
-    class(svglib_t) <io> :: this
+  subroutine vv_svglib__group_push( this, attribute )
+    class(vv_svglib_t) <io> :: this
     char(len=*) <in> :: attribute
 
-    char(len=SVGLIB__BSL) :: str
+    char(len=VV_SVGLIB__BSL) :: str
 
     str = '<g' // SPACE // trim(attribute) // ' >'
     call write_out( this, str )
     call indent_push( this )
-  end subroutine svglib__group_push
+  end subroutine vv_svglib__group_push
 
 
-  subroutine svglib__group_pop( this )
-    class(svglib_t) <io> :: this
+  subroutine vv_svglib__group_pop( this )
+    class(vv_svglib_t) <io> :: this
 
     call indent_pop( this )
     call write_out( this, '</g>' )
-  end subroutine svglib__group_pop
+  end subroutine vv_svglib__group_pop
 
 
-  subroutine svglib__line( this, x1, y1,        &
-                                 x2, y2,        &
-                                 width,         &
-                                 color,         &
-                                 marker_start,  &
-                                 marker_end )
-    class(svglib_t) <in> :: this
+  subroutine vv_svglib__line( this,          &
+                              x1, y1,        &
+                              x2, y2,        &
+                              width,         &
+                              color,         &
+                              marker_start,  &
+                              marker_end )
+    class(vv_svglib_t) <in> :: this
 
     real <in> :: x1, y1, x2, y2
     real <optin> :: width
@@ -452,8 +453,8 @@ contains
 
     integer :: n, nopt  ! number of options
     integer <const> :: MAX_NOP = 10
-    char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
+    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
     integer :: unit
 
     unit = this.file_unit
@@ -464,15 +465,15 @@ contains
           marker-end="url(#arrow-blue)" />  
     !!<          
 
-    str(1) = svglib__text_line( 'x1=', x1,  &
-                                'y1=', y1,  &
-                                'x2=', x2,  &
-                                'y2=', y2 )
+    str(1) = vv_svglib__text_line( 'x1=', x1,  &
+                                   'y1=', y1,  &
+                                   'x2=', x2,  &
+                                   'y2=', y2 )
     nopt = 1
 
     if ( present( width) ) then
       nopt += 1
-      str(nopt) = svglib__text_line( 'stroke-width=', width )
+      str(nopt) = vv_svglib__text_line( 'stroke-width=', width )
     end if
 
     if ( present( color) ) then
@@ -505,11 +506,11 @@ contains
 
     call write_out( this, '<line ' // trim(str_all) // '/>' )
 
-  end subroutine svglib__line
+  end subroutine vv_svglib__line
 
 
-  subroutine svglib__open( this, file_name, width, height )
-    class(svglib_t) <io> :: this
+  subroutine vv_svglib__open( this, file_name, width, height )
+    class(vv_svglib_t) <io> :: this
     char(len=*) <in> :: file_name
     real <in> :: width, height
 
@@ -522,16 +523,17 @@ contains
     this.width = width
     this.height = height
     call write_header( this, this.width, this.height )
-  end subroutine svglib__open
+  end subroutine vv_svglib__open
 
 
-  subroutine svglib__text( this, x, y,                &
-                                 string,              &
-                                 font_size_in_pixel,  &
-                                 color,               &
-                                 text_anchor,         &
-                                 stroke_width )
-    class(svglib_t) <io> :: this
+  subroutine vv_svglib__text( this,                &
+                              x, y,                &
+                              string,              &
+                              font_size_in_pixel,  &
+                              color,               &
+                              text_anchor,         &
+                              stroke_width )
+    class(vv_svglib_t) <io> :: this
     real <in> :: x, y
     char(len=*) <in> :: string
     real <in> :: font_size_in_pixel
@@ -541,12 +543,12 @@ contains
 
     integer :: nopt   ! number of options
     integer <const> :: MAX_NOP = 10  ! max
-    char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
+    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
 
-    str(1) = svglib__text_line( 'x=', x, 'y=', y )
-    str(2) = svglib__text_line( 'font-size=',       &
-                                 font_size_in_pixel )
+    str(1) = vv_svglib__text_line( 'x=', x, 'y=', y )
+    str(2) = vv_svglib__text_line( 'font-size=',       &
+                                   font_size_in_pixel )
     nopt = 2
 
     if ( present(color) ) then
@@ -567,16 +569,17 @@ contains
       call indent_pop( this )
     call write_out( this, '</text>' )
 
-  end subroutine svglib__text
+  end subroutine vv_svglib__text
 
 
-  subroutine svglib__polygon( this, nverts,       &
-                                    verts_x,      &
-                                    verts_y,      &
-                                    line_width,   &
-                                    line_color,   &
-                                    fill_color )
-    class(svglib_t) <io> :: this
+  subroutine vv_svglib__polygon( this,         &
+                                 nverts,       &
+                                 verts_x,      &
+                                 verts_y,      &
+                                 line_width,   &
+                                 line_color,   &
+                                 fill_color )
+    class(vv_svglib_t) <io> :: this
     integer <in> :: nverts
     real, dimension(nverts) :: verts_x
     real, dimension(nverts) :: verts_y 
@@ -586,22 +589,22 @@ contains
 
     integer :: n, nopt   ! number of options
     integer <const> :: MAX_NOP = 10  ! max
-    char(len=SVGLIB__BSL) :: str_coords
-    char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV_SVGLIB__BSL) :: str_coords
+    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
+    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
 
     str(1) = '<polygon' 
-    str(2) = svglib__text_line( 'stroke-width=', line_width )
+    str(2) = vv_svglib__text_line( 'stroke-width=', line_width )
     nopt = 2
 
     if ( present(line_color) ) then
       nopt += 1
-      str(nopt) = svglib__text_line( 'stroke=', line_color )
+      str(nopt) = vv_svglib__text_line( 'stroke=', line_color )
     end if
 
     if ( present(fill_color) ) then
       nopt += 1
-      str(nopt) = svglib__text_line( 'fill=', fill_color )
+      str(nopt) = vv_svglib__text_line( 'fill=', fill_color )
     end if
 
     nopt += 1
@@ -612,24 +615,24 @@ contains
     call write_out( this, trim(adjustl(str_all)) )
       call indent_push( this )
        do n = 1, nverts
-          str_coords = svglib__text_line( verts_x(n), verts_y(n) )
+          str_coords = vv_svglib__text_line( verts_x(n), verts_y(n) )
           call write_out( this, str_coords )
         end do
       call indent_pop( this )
     call write_out( this, QUOTE // '/>' )
 
-  end subroutine svglib__polygon
+  end subroutine vv_svglib__polygon
 
 
-  subroutine svglib__path( this,            &
-                           nverts,          &
-                           path_directive,  &
-                           verts_x,         &
-                           verts_y,         &
-                           line_width,      &
-                           line_color,      &
-                           fill_color )
-    class(svglib_t) <io> :: this
+  subroutine vv_svglib__path( this,            &
+                              nverts,          &
+                              path_directive,  &
+                              verts_x,         &
+                              verts_y,         &
+                              line_width,      &
+                              line_color,      &
+                              fill_color )
+    class(vv_svglib_t) <io> :: this
     integer <in> :: nverts
     character, dimension(nverts) <in> :: path_directive 
     real, dimension(nverts) <in> :: verts_x
@@ -640,23 +643,23 @@ contains
 
     integer :: n, nopt   ! number of options
     integer <const> :: MAX_NOP = 10  ! max
-    char(len=SVGLIB__BSL) :: str_coords
-    char(len=SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV_SVGLIB__BSL) :: str_coords
+    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
+    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
     character :: directive
 
     str(1) = '<path' 
-    str(2) = svglib__text_line( 'stroke-width=', line_width )
+    str(2) = vv_svglib__text_line( 'stroke-width=', line_width )
     nopt = 2
 
     if ( present(line_color) ) then
       nopt += 1
-      str(nopt) = svglib__text_line( 'stroke=', line_color )
+      str(nopt) = vv_svglib__text_line( 'stroke=', line_color )
     end if
 
     if ( present(fill_color) ) then
       nopt += 1
-      str(nopt) = svglib__text_line( 'fill=', fill_color )
+      str(nopt) = vv_svglib__text_line( 'fill=', fill_color )
     end if
 
     nopt += 1
@@ -671,11 +674,11 @@ contains
           select case (directive)
             case ('M','L') ! M(move) to , L(line) to.
               call write_out( this, directive )
-              str_coords = svglib__text_line( verts_x(n), verts_y(n) )
+              str_coords = vv_svglib__text_line( verts_x(n), verts_y(n) )
               call write_out( this, str_coords )
             case (' ')  ! You can omit directive after 1st 'L'.
               ! Omit the directive letter
-              str_coords = svglib__text_line( verts_x(n), verts_y(n) )
+              str_coords = vv_svglib__text_line( verts_x(n), verts_y(n) )
               call write_out( this, str_coords )
             case ('Z')  ! Close path
               call write_out( this, directive )
@@ -687,6 +690,6 @@ contains
       call indent_pop( this )
     call write_out( this, QUOTE // '/>' )
 
-  end subroutine svglib__path 
+  end subroutine vv_svglib__path 
 
-end module svglib_m
+end module vv_svglib_m

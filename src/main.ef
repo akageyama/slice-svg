@@ -1,13 +1,13 @@
 
 program main
   use color_m
-  use const_base_m
-  use sketch_m
-  use slice_m
+  use vv_const_base_m
+  use vv_sketch_m
+  use vv_slice_m
   implicit none
 
-! type(sketch__sim_pos_t) :: cross_section_lower_left
-! type(sketch__sim_pos_t) :: cross_section_upper_right
+! type(vv_sketch__sim_pos_t) :: cross_section_lower_left
+! type(vv_sketch__sim_pos_t) :: cross_section_upper_right
 
   integer <const> :: NU_VECTOR = 60,   NV_VECTOR = 30
   ! integer <const> :: NU_VECTOR = 240,   NV_VECTOR = 120
@@ -171,121 +171,121 @@ contains
 
 
   subroutine iSample_lines
-    type(sketch_t) :: sketch
-    type(sketch__sim_pos_t) :: ll ! lower left
-    type(sketch__sim_pos_t) :: ur ! upper right
+    type(vv_sketch_t) :: vv_sketch
+    type(vv_sketch__sim_pos_t) :: ll ! lower left
+    type(vv_sketch__sim_pos_t) :: ur ! upper right
     type(color_t) :: black, gray
     
     black = COLOR__CONST.black
     gray = COLOR__CONST.gray(0.7)
 
-    ll = sketch__sim_pos_t(0.0, 0.0)
-    ur = sketch__sim_pos_t(1.0, 1.0)
+    ll = vv_sketch__sim_pos_t(0.0, 0.0)
+    ur = vv_sketch__sim_pos_t(1.0, 1.0)
 
-    call sketch.initialize( ll, ur, &
-                            screen_width_in_pixel=1000.0,  &
-                            title='Line Samples',  &
-                            filename='sample_line.svg' )
+    call vv_sketch.initialize( ll, ur, &
+                               screen_width_in_pixel=1000.0,  &
+                               title='Line Samples',  &
+                               filename='sample_line.svg' )
 
-    call sketch.line( ll, ur,  &
-                      line_width_in_pixel=2.0,  &
-                      color=black )
+    call vv_sketch.line( ll, ur,  &
+                         line_width_in_pixel=2.0,  &
+                         color=black )
 
-    call sketch.group_push( line_width_in_pixel=1.0,  &
+    call vv_sketch.group_push( line_width_in_pixel=1.0,  &
                             line_color=gray )
-      call sketch.line( ll.u, ll.v,  &
-                        ur.u, ll.v )
-      call sketch.line( ll.u, ur.v,  &
-                        ur.u, ll.v )
-    call sketch.group_pop
-    call sketch.finalize()                   
+      call vv_sketch.line( ll.u, ll.v,  &
+                           ur.u, ll.v )
+      call vv_sketch.line( ll.u, ur.v,  &
+                           ur.u, ll.v )
+    call vv_sketch.group_pop
+    call vv_sketch.finalize()                   
   end subroutine iSample_lines
 
 
   subroutine iSample_text_and_colors
-    type(sketch_t) :: sketch
-    type(sketch__sim_pos_t) :: ll ! lower left
-    type(sketch__sim_pos_t) :: ur ! upper right
+    type(vv_sketch_t) :: vv_sketch
+    type(vv_sketch__sim_pos_t) :: ll ! lower left
+    type(vv_sketch__sim_pos_t) :: ur ! upper right
 
-    ll = sketch__sim_pos_t(0.0, 0.3)
-    ur = sketch__sim_pos_t(1.0, 1.6)
-    call sketch.initialize( ll, ur, &
-                            screen_width_in_pixel=1000.0,  &
-                            title='Text and Color Samples',  &
-                            filename='sample_text_color.svg' )
-    call sketch.rectangle( ll, ur,  &
-                           line_width_in_pixel=1.0,  &
-                           line_color=color_t(0.3, 0.4, 0.8) )
-    call sketch.text( 0.5, 1.5,  &
-                      sketch.title,  &
-                      font_size_in_pixel=50.0,  &
-                      text_anchor='middle', &
-                      color=COLOR__CONST.black )
-    call sketch.text( 0.1, 1.4,  &
-                      'black',  &
-                      font_size_in_pixel=40.0,  &
-                      text_anchor='start', &
-                      color=COLOR__CONST.black )
-    call sketch.text( 0.1, 1.3,  &
-                      'red',  &
-                      font_size_in_pixel=40.0,  &
-                      text_anchor='start', &
-                      color=COLOR__CONST.red )
-    call sketch.text( 0.1, 1.2,  &
-                   'green',  &
-                   font_size_in_pixel=40.0,  &
-                   text_anchor='start', &
-                   color=COLOR__CONST.green )
-    call sketch.text( 0.1, 1.1,  &
-                      'blue',  &
-                      font_size_in_pixel=40.0,  &
-                      text_anchor='start', &
-                      color=COLOR__CONST.blue )
-    call sketch.text( 0.1, 1.0,  &
-                      'magenta',  &
-                      font_size_in_pixel=40.0,  &
-                      text_anchor='start', &
-                      color=COLOR__CONST.magenta )
-    call sketch.text( 0.1, 0.9,  &
-                      'yellow',  &
-                      font_size_in_pixel=40.0,  &
-                      text_anchor='start', &
-                      color=COLOR__CONST.yellow )
-    call sketch.text( 0.1, 0.8,  &
-                      'cyan',  &
-                      font_size_in_pixel=40.0,  &
-                      text_anchor='start', &
-                      color=COLOR__CONST.cyan )
-    call sketch.text( 0.1, 0.7,  &
-                      'gray(0.9)',  &
-                      font_size_in_pixel=40.0,  &
-                      text_anchor='start', &
-                      color=COLOR__CONST.gray(0.9) )
-    call sketch.text( 0.1, 0.6,  &
-                      'gray(0.8)',  &
-                      font_size_in_pixel=40.0,  &
-                      text_anchor='start', &
-                      color=COLOR__CONST.gray(0.8) )
-    call sketch.text( 0.1, 0.5,  &
-                      'gray(0.6)',  &
-                      font_size_in_pixel=40.0,  &
-                      text_anchor='start', &
-                      color=COLOR__CONST.gray(0.6) )
-    call sketch.text( 0.1, 0.4,  &
-                      'gray(0.4)',  &
-                      font_size_in_pixel=40.0,  &
-                      text_anchor='start', &
-                      color=COLOR__CONST.gray(0.4) )
-    call sketch.finalize()                   
+    ll = vv_sketch__sim_pos_t(0.0, 0.3)
+    ur = vv_sketch__sim_pos_t(1.0, 1.6)
+    call vv_sketch.initialize( ll, ur, &
+                               screen_width_in_pixel=1000.0,  &
+                               title='Text and Color Samples',  &
+                               filename='sample_text_color.svg' )
+    call vv_sketch.rectangle( ll, ur,  &
+                              line_width_in_pixel=1.0,  &
+                              line_color=color_t(0.3, 0.4, 0.8) )
+    call vv_sketch.text( 0.5, 1.5,  &
+                         vv_sketch.title,  &
+                         font_size_in_pixel=50.0,  &
+                         text_anchor='middle', &
+                         color=COLOR__CONST.black )
+    call vv_sketch.text( 0.1, 1.4,  &
+                         'black',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.black )
+    call vv_sketch.text( 0.1, 1.3,  &
+                         'red',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.red )
+    call vv_sketch.text( 0.1, 1.2,  &
+                         'green',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.green )
+    call vv_sketch.text( 0.1, 1.1,  &
+                         'blue',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.blue )
+    call vv_sketch.text( 0.1, 1.0,  &
+                         'magenta',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.magenta )
+    call vv_sketch.text( 0.1, 0.9,  &
+                         'yellow',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.yellow )
+    call vv_sketch.text( 0.1, 0.8,  &
+                         'cyan',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.cyan )
+    call vv_sketch.text( 0.1, 0.7,  &
+                         'gray(0.9)',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.gray(0.9) )
+    call vv_sketch.text( 0.1, 0.6,  &
+                         'gray(0.8)',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.gray(0.8) )
+    call vv_sketch.text( 0.1, 0.5,  &
+                         'gray(0.6)',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.gray(0.6) )
+    call vv_sketch.text( 0.1, 0.4,  &
+                         'gray(0.4)',  &
+                         font_size_in_pixel=40.0,  &
+                         text_anchor='start', &
+                         color=COLOR__CONST.gray(0.4) )
+    call vv_sketch.finalize()                   
   end subroutine iSample_text_and_colors
 
 
   subroutine iSample_scalar( pressure )
     real, dimension(NU_SCALAR,NV_SCALAR) <in> :: pressure
 
-    type(sketch_t) :: sketch
-    type(sketch__sim_pos_t) :: ll ! lower left
-    type(sketch__sim_pos_t) :: ur ! upper right
+    type(vv_sketch_t) :: vv_sketch
+    type(vv_sketch__sim_pos_t) :: ll ! lower left
+    type(vv_sketch__sim_pos_t) :: ur ! upper right
     type(color_t) :: magenta
 
     type(slice__scalar_t) :: slice_pressure
@@ -301,8 +301,8 @@ contains
 
     magenta = COLOR__CONST.magenta
 
-    ll = sketch__sim_pos_t(umin, vmin)
-    ur = sketch__sim_pos_t(umax, vmax)
+    ll = vv_sketch__sim_pos_t(umin, vmin)
+    ur = vv_sketch__sim_pos_t(umax, vmax)
 
     do i = 1, NU_SCALAR
       grid_pos_u(i) = umin + (umax-umin)/(NU_SCALAR-1)*(i-1)
@@ -412,39 +412,39 @@ contains
                                     vmin, vmax,  &
                                     pressure )
     !!<
-    call sketch.initialize( ll, ur, &
-                            screen_width_in_pixel=1200.0,  &
-                            title='Pressure Field',  &
-                            filename='sample_scalar.svg' )
-    call sketch.text( (ll.u+ur.u)/2,  &
-                      (ur.v*1.1),  &
-                      sketch.title,  &
-                      font_size_in_pixel=30.0,  &
-                      text_anchor='middle', &
-                      color=COLOR__CONST.black )
+    call vv_sketch.initialize( ll, ur, &
+                               screen_width_in_pixel=1200.0,  &
+                               title='Pressure Field',  &
+                               filename='sample_scalar.svg' )
+    call vv_sketch.text( (ll.u+ur.u)/2,  &
+                         (ur.v*1.1),  &
+                         vv_sketch.title,  &
+                         font_size_in_pixel=30.0,  &
+                         text_anchor='middle', &
+                         color=COLOR__CONST.black )
 
-    call sketch.group_push( line_color=magenta,  &
-                            line_width_in_pixel=2.0 )
+    call vv_sketch.group_push( line_color=magenta,  &
+                               line_width_in_pixel=2.0 )
     level_min = minval(slice_pressure.val_vert(:,:))
     level_max = maxval(slice_pressure.val_vert(:,:))
     dlevel = (level_max-level_min)/10
     do l = 1, 10
       level = level_min + dlevel*(real(l)-0.5)
       color = color__normalized_real_to_color( (level-level_min)/(level_max-level_min) )
-      call slice_pressure.vis_contour( sketch, level, line_color=COLOR__CONST.black, fill_color=color )
-!      call slice_pressure.vis_contour( sketch, level, line_color=color )
+      call slice_pressure.vis_contour( vv_sketch, level, line_color=COLOR__CONST.black, fill_color=color )
+!      call slice_pressure.vis_contour( vv_sketch, level, line_color=color )
     end do
 
       !!>
-        call slice_pressure.vis_contour( sketch, 0.6, fill_color=COLOR__CONST.gray(0.9) )
-        call slice_pressure.vis_contour( sketch, 0.9, fill_color=COLOR__CONST.yellow )
+        call slice_pressure.vis_contour( vv_sketch, 0.6, fill_color=COLOR__CONST.gray(0.9) )
+        call slice_pressure.vis_contour( vv_sketch, 0.9, fill_color=COLOR__CONST.yellow )
       !!<
-    call sketch.group_pop
+    call vv_sketch.group_pop
     call slice_pressure.finalize
-    call sketch.rectangle( ll, ur,  &
-                           line_width_in_pixel=2.0, &
-                           line_color=COLOR__CONST.black )
-    call sketch.finalize                 
+    call vv_sketch.rectangle( ll, ur,  &
+                              line_width_in_pixel=2.0, &
+                              line_color=COLOR__CONST.black )
+    call vv_sketch.finalize                 
   end subroutine iSample_scalar
 
 
@@ -452,14 +452,14 @@ contains
     real, dimension(NU_VECTOR,NV_VECTOR) <in> :: velocity_u,  &
                                                  velocity_v
 
-    type(sketch_t) :: sketch
-    type(sketch__sim_pos_t) :: ll ! lower left
-    type(sketch__sim_pos_t) :: ur ! upper right
+    type(vv_sketch_t) :: vv_sketch
+    type(vv_sketch__sim_pos_t) :: ll ! lower left
+    type(vv_sketch__sim_pos_t) :: ur ! upper right
 
     type(slice__vector_t) :: slice_velocity
     
-    ll = sketch__sim_pos_t(umin, vmin)
-    ur = sketch__sim_pos_t(umax, vmax)
+    ll = vv_sketch__sim_pos_t(umin, vmin)
+    ur = vv_sketch__sim_pos_t(umax, vmax)
     
     call slice_velocity.initialize( NU_VECTOR,  &
                                     NV_VECTOR,  &
@@ -467,25 +467,25 @@ contains
                                     vmin, vmax,  &
                                     velocity_u,  &
                                     velocity_v )
-    call sketch.initialize( ll, ur, &
-                            screen_width_in_pixel=1200.0,  &
-                            title='Velocity Field',  &
-                            filename='sample_vector.svg' )
-    call sketch.text( (ll.u+ur.u)/2,  &
-                      (ur.v*1.1),  &
-                      sketch.title,  &
-                      font_size_in_pixel=30.0,  &
-                      text_anchor='middle', &
-                      color=COLOR__CONST.black )
+    call vv_sketch.initialize( ll, ur, &
+                               screen_width_in_pixel=1200.0,  &
+                               title='Velocity Field',  &
+                               filename='sample_vector.svg' )
+    call vv_sketch.text( (ll.u+ur.u)/2,  &
+                         (ur.v*1.1),  &
+                         vv_sketch.title,  &
+                         font_size_in_pixel=30.0,  &
+                         text_anchor='middle', &
+                         color=COLOR__CONST.black )
 
-    call sketch.group_push( line_color=COLOR__CONST.blue )
-      call slice_velocity.vis_arrows( sketch )
-    call sketch.group_pop
+    call vv_sketch.group_push( line_color=COLOR__CONST.blue )
+      call slice_velocity.vis_arrows( vv_sketch )
+    call vv_sketch.group_pop
     call slice_velocity.finalize
-    call sketch.rectangle( ll, ur,  &
-                           line_width_in_pixel=2.0, &
-                           line_color=COLOR__CONST.black )
-    call sketch.finalize                 
+    call vv_sketch.rectangle( ll, ur,  &
+                              line_width_in_pixel=2.0, &
+                              line_color=COLOR__CONST.black )
+    call vv_sketch.finalize                 
   end subroutine iSample_vector
 
 end program main
