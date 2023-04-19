@@ -1,7 +1,7 @@
 
 program main
   use color_m
-  use vv_const_base_m
+  use const_base_m
   use vv_sketch_m
   use vv_slice_m
   implicit none
@@ -288,7 +288,7 @@ contains
     type(vv_sketch__sim_pos_t) :: ur ! upper right
     type(color_t) :: magenta
 
-    type(slice__scalar_t) :: slice_pressure
+    type(vv_slice__scalar_t) :: vv_slice_pressure
     real :: level_min, level_max, dlevel, level
     type(color_t) :: color
     integer :: l
@@ -401,16 +401,16 @@ contains
     grid_flag(30   ,15+10) = 'b'
     grid_flag(30-10,15   ) = 'b'
 
-    call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
-                                    grid_pos_u,  &
-                                    grid_pos_v,  &
-                                    pressure,    &
-                                    grid_flag )
+    call vv_slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
+                                       grid_pos_u,  &
+                                       grid_pos_v,  &
+                                       pressure,    &
+                                       grid_flag )
     !!>
-    call slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
-                                    umin, umax,  &
-                                    vmin, vmax,  &
-                                    pressure )
+    call vv_slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
+                                       umin, umax,  &
+                                       vmin, vmax,  &
+                                       pressure )
     !!<
     call vv_sketch.initialize( ll, ur, &
                                screen_width_in_pixel=1200.0,  &
@@ -425,22 +425,22 @@ contains
 
     call vv_sketch.group_push( line_color=magenta,  &
                                line_width_in_pixel=2.0 )
-    level_min = minval(slice_pressure.val_vert(:,:))
-    level_max = maxval(slice_pressure.val_vert(:,:))
+    level_min = minval(vv_slice_pressure.val_vert(:,:))
+    level_max = maxval(vv_slice_pressure.val_vert(:,:))
     dlevel = (level_max-level_min)/10
     do l = 1, 10
       level = level_min + dlevel*(real(l)-0.5)
       color = color__normalized_real_to_color( (level-level_min)/(level_max-level_min) )
-      call slice_pressure.vis_contour( vv_sketch, level, line_color=COLOR__CONST.black, fill_color=color )
-!      call slice_pressure.vis_contour( vv_sketch, level, line_color=color )
+      call vv_slice_pressure.vis_contour( vv_sketch, level, line_color=COLOR__CONST.black, fill_color=color )
+!      call vv_slice_pressure.vis_contour( vv_sketch, level, line_color=color )
     end do
 
       !!>
-        call slice_pressure.vis_contour( vv_sketch, 0.6, fill_color=COLOR__CONST.gray(0.9) )
-        call slice_pressure.vis_contour( vv_sketch, 0.9, fill_color=COLOR__CONST.yellow )
+        call vv_slice_pressure.vis_contour( vv_sketch, 0.6, fill_color=COLOR__CONST.gray(0.9) )
+        call vv_slice_pressure.vis_contour( vv_sketch, 0.9, fill_color=COLOR__CONST.yellow )
       !!<
     call vv_sketch.group_pop
-    call slice_pressure.finalize
+    call vv_slice_pressure.finalize
     call vv_sketch.rectangle( ll, ur,  &
                               line_width_in_pixel=2.0, &
                               line_color=COLOR__CONST.black )
@@ -456,17 +456,17 @@ contains
     type(vv_sketch__sim_pos_t) :: ll ! lower left
     type(vv_sketch__sim_pos_t) :: ur ! upper right
 
-    type(slice__vector_t) :: slice_velocity
+    type(vv_slice__vector_t) :: vv_slice_velocity
     
     ll = vv_sketch__sim_pos_t(umin, vmin)
     ur = vv_sketch__sim_pos_t(umax, vmax)
     
-    call slice_velocity.initialize( NU_VECTOR,  &
-                                    NV_VECTOR,  &
-                                    umin, umax, &
-                                    vmin, vmax,  &
-                                    velocity_u,  &
-                                    velocity_v )
+    call vv_slice_velocity.initialize( NU_VECTOR,  &
+                                       NV_VECTOR,  &
+                                       umin, umax, &
+                                       vmin, vmax,  &
+                                       velocity_u,  &
+                                       velocity_v )
     call vv_sketch.initialize( ll, ur, &
                                screen_width_in_pixel=1200.0,  &
                                title='Velocity Field',  &
@@ -479,9 +479,9 @@ contains
                          color=COLOR__CONST.black )
 
     call vv_sketch.group_push( line_color=COLOR__CONST.blue )
-      call slice_velocity.vis_arrows( vv_sketch )
+    call vv_slice_velocity.vis_arrows( vv_sketch )
     call vv_sketch.group_pop
-    call slice_velocity.finalize
+    call vv_slice_velocity.finalize
     call vv_sketch.rectangle( ll, ur,  &
                               line_width_in_pixel=2.0, &
                               line_color=COLOR__CONST.black )
