@@ -1403,12 +1403,10 @@ contains
 
   subroutine find_start_edge_on_boundaries( path,     &
                                             vert,     &
-                                            edge,     &
                                             boundary, &
                                             status )
     type(vv_slice_isoline_t) <io> :: path
     type(vv_slice_mesh__vert_t) <in> :: vert
-    type(vv_slice_mesh__edge_t) <io> :: edge
     type(vv_slice_mesh__boundary_t) <io> :: boundary
     char(len=10) <io> :: status ! 'no contour' or 'have found'
 
@@ -1598,7 +1596,6 @@ contains
     status = 'no contour'  ! default 
     call find_start_edge_on_boundaries( this,     &
                                         vert,     &
-                                        edge,     &
                                         boundary, &
                                         status )
     if ( status == 'have found' ) return

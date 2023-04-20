@@ -17,7 +17,8 @@ vv_filebase := $(basename $(notdir $(vv_eflist)))
 vv_f90list := $(addsuffix .F90, $(vv_filebase))
 vv_modlist := $(addsuffix .mod, $(vv_filebase))
 vv_objlist := $(addsuffix .o, $(vv_filebase))
-vv_targetlib := libvv
+vv_basename := vv
+vv_targetlib := lib$(vv_basename).a
 
 # ES3_HOME = /S/home00/G4013/y0394
 
@@ -117,8 +118,17 @@ svglist := sample_line.svg \
 
 # default target
 #
+
 $(vv_targetlib): $(vv_objlist)
 	ar r $(vv_targetlib) $(vv_objlist)
+
+test_program: test_program.o color.o ut.o fileut.o const_base.o $(vv_targetlib)
+	gfortran -o test_program  \
+                 test_program.o   \
+                 color.o          \
+                 ut.o             \
+                 fileut.o         \
+                 const_base.o -L. -l$(vv_basename)
 
 fig: runme
 	# ./runme 
@@ -167,6 +177,6 @@ line:
 clean:
 	rm -rf list.ps list.pdf
 	rm -rf depend_list.mk
-	rm -rf *.o *.lst *.F90 *.mod *.L
+	rm -rf *.o *.lst *.F90 *.mod *.L 
 	rm -rf runme
 
