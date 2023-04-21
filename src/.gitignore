@@ -2,5 +2,6 @@
 *.o
 *.mod
 depend_list.mk
-test
-test.svg
+test_program
+*.svg
+libvv.a

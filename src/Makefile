@@ -14,11 +14,11 @@ objlist := $(addsuffix .o, $(filebase)) # => example.o
 
 vv_eflist := $(shell ls vv_*.ef)
 vv_filebase := $(basename $(notdir $(vv_eflist)))
-vv_f90list := $(addsuffix .F90, $(vv_filebase))
-vv_modlist := $(addsuffix .mod, $(vv_filebase))
-vv_objlist := $(addsuffix .o, $(vv_filebase))
+vv_f90list := $(addsuffix .F90,   $(vv_filebase))
+vv_modlist := $(addsuffix _m.mod, $(vv_filebase))
+vv_objlist := $(addsuffix .o,     $(vv_filebase))
 vv_basename := vv
-vv_targetlib := lib$(vv_basename).a
+vv_lib := lib$(vv_basename).a
 
 # ES3_HOME = /S/home00/G4013/y0394
 
@@ -119,10 +119,14 @@ svglist := sample_line.svg \
 # default target
 #
 
-$(vv_targetlib): $(vv_objlist)
-	ar r $(vv_targetlib) $(vv_objlist)
+install: $(vv_lib)
+	mkdir -p ../lib
+	cp $(vv_lib) $(vv_modlist) ../lib
 
-test_program: test_program.o color.o ut.o fileut.o const_base.o $(vv_targetlib)
+$(vv_lib): $(vv_objlist)
+	ar r $(vv_lib) $(vv_objlist)
+
+test_program: test_program.o color.o ut.o fileut.o const_base.o $(vv_lib)
 	gfortran -o test_program  \
                  test_program.o   \
                  color.o          \
@@ -178,5 +182,5 @@ clean:
 	rm -rf list.ps list.pdf
 	rm -rf depend_list.mk
 	rm -rf *.o *.lst *.F90 *.mod *.L 
-	rm -rf runme
+	rm -rf test_program $(vv_lib)
 
