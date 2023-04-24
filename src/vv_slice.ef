@@ -19,7 +19,6 @@ module vv_slice_m
   use vv_sketch_m
   implicit none
   private
-  public :: VV_SLICE_TAG_NAME_MAX
 
   integer <const> :: VV_SLICE_TAG_NAME_MAX = 100
 
