@@ -1,5 +1,5 @@
 module vv_svglib_m
-  use color_m
+  use vv_color_m
   use ut_m
   use const_base_m
   use fileut_m

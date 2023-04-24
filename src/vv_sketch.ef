@@ -1,5 +1,5 @@
 module vv_sketch_m
-  use color_m
+  use vv_color_m
   use vv_svglib_m
   use ut_m
   implicit none
@@ -55,7 +55,7 @@ contains
     real <in> :: u1, v1 ! line start in simulation coords.
     real <in> :: u2, v2 ! line finish in simulation coords.
     real <optin> :: line_width_in_pixel
-    type(color_t) <optin> :: color
+    type(vv_color_t) <optin> :: color
     logical <optin> :: no_draw
 
     char(len=7) :: color_code
@@ -98,7 +98,7 @@ contains
     type(vv_sketch__sim_pos_t) <in> :: pos1 ! line start in simulation coords.
     type(vv_sketch__sim_pos_t) <in> :: pos2 ! line finish in simulation coords.
     real <optin> :: line_width_in_pixel
-    type(color_t) <optin> :: color
+    type(vv_color_t) <optin> :: color
     logical <optin> :: no_draw
 
     call line_r4( this, pos1.u, pos1.v,                           &
@@ -151,8 +151,8 @@ contains
                                       ! 'dashed'
     real <optin> :: line_width_in_pixel
     real <optin> :: line_opacity
-    type(color_t) <optin> :: line_color
-    type(color_t) <optin> :: fill_color
+    type(vv_color_t) <optin> :: line_color
+    type(vv_color_t) <optin> :: fill_color
     real <optin> :: fill_opacity
 
     integer :: nop ! number of options
@@ -248,7 +248,7 @@ contains
     char(len=*) <in> :: string
     real <in> :: font_size_in_pixel
     char(len=*) <in> :: text_anchor   ! start/ middle / end
-    type(color_t) <optin> :: color
+    type(vv_color_t) <optin> :: color
 
     type(screen_pos_t) :: pos
     char(len=7) :: color_code
@@ -415,8 +415,8 @@ contains
     integer <in> :: nverts
     type(vv_sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
     real <optin> :: width_in_pixels
-    type(color_t) <optin> :: line_color
-    type(color_t) <optin> :: fill_color
+    type(vv_color_t) <optin> :: line_color
+    type(vv_color_t) <optin> :: fill_color
 
     type(screen_pos_t) :: vert_on_screen
     real, dimension(nverts) :: verts_screen_x,  &
@@ -470,8 +470,8 @@ contains
     type(vv_sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
     character, dimension(nverts) <in> :: path_directive
     real <optin> :: width_in_pixels
-    type(color_t) <optin> :: line_color
-    type(color_t) <optin> :: fill_color
+    type(vv_color_t) <optin> :: line_color
+    type(vv_color_t) <optin> :: fill_color
 
     type(screen_pos_t) :: vert_on_screen
     real, dimension(nverts) :: verts_screen_x,  &
@@ -522,8 +522,8 @@ contains
     class(vv_sketch_t) <io> :: this
     type(vv_sketch__sim_pos_t) <in> :: lower_left, upper_right
     real <in> :: line_width_in_pixel
-    type(color_t) <in> :: line_color
-    type(color_t) <optin> :: fill_color
+    type(vv_color_t) <in> :: line_color
+    type(vv_color_t) <optin> :: fill_color
 
     type(screen_pos_t) :: screen_ll, screen_ur
     char(len=7) :: line_color_code , fill_color_code

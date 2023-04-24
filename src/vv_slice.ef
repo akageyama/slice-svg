@@ -12,7 +12,7 @@
 
 !!< 
 module vv_slice_m
-  use color_m
+  use vv_color_m
   use ut_m
   use vv_slice_mesh_m
   use vv_slice_isoline_m
@@ -62,8 +62,8 @@ contains
     type(vv_sketch_t) <io> :: vv_sketch
     real <in> :: level
     real <optin> :: width_in_pixels
-    type(color_t) <optin> :: line_color
-    type(color_t) <optin> :: fill_color
+    type(vv_color_t) <optin> :: line_color
+    type(vv_color_t) <optin> :: fill_color
 
     integer :: nu, nv
     type(vv_slice_isoline_t), save :: vv_slice_isoline
