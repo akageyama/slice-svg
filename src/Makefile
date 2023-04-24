@@ -121,7 +121,7 @@ svglist := sample_line.svg \
 
 install: $(vv_lib)
 	mkdir -p ../lib
-	cp $(vv_lib) $(vv_modlist) ../lib
+	cp $(vv_lib) $(vv_modlist) *.o ../lib
 
 $(vv_lib): $(vv_objlist)
 	ar r $(vv_lib) $(vv_objlist)
