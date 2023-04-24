@@ -19,8 +19,12 @@ module vv_slice_m
   use vv_sketch_m
   implicit none
   private
+  public :: VV_SLICE_TAG_NAME_MAX
+
+  integer <const> :: VV_SLICE_TAG_NAME_MAX = 100
 
   type, public :: vv_slice__scalar_t
+    char(len=VV_SLICE_TAG_NAME_MAX) :: tag
     type(vv_slice_mesh__vert_t) :: mesh_vert
     type(vv_slice_mesh__edge_t) :: mesh_edge
     type(vv_slice_mesh__boundary_t) :: mesh_boundary
@@ -37,6 +41,7 @@ module vv_slice_m
   end type vv_slice__scalar_t
 
   type, public :: vv_slice__vector_t
+    char(len=VV_SLICE_TAG_NAME_MAX) :: tag
     type(vv_slice_mesh__vert_t) :: mesh_vert
     real, dimension(:,:), allocatable :: vect_u
     real, dimension(:,:), allocatable :: vect_v
@@ -144,17 +149,22 @@ contains
   end subroutine vv_slice__scalar_vis_contour
 
 
-  subroutine vv_slice__scalar_initialize_with_uvmax( this, nu, nv,  &
+  subroutine vv_slice__scalar_initialize_with_uvmax( this,          &
+                                                     tag,           &
+                                                     nu, nv,        &
                                                      u_min, u_max,  &
                                                      v_min, v_max,  &
                                                      val )
     class(vv_slice__scalar_t) <out> :: this
+    char(len=*) <in> :: tag
     integer <in> :: nu, nv
     real <in> :: u_min, u_max
     real <in> :: v_min, v_max
     real, dimension(nu,nv) <optin> :: val
 
     allocate(this.val_vert(nu,nv))
+
+    this.tag = tag
 
     call this.mesh_vert.initialize( nu, nv,        &
                                     u_min, u_max,  &
@@ -173,12 +183,14 @@ contains
 
 
   subroutine vv_slice__scalar_initialize_with_grids( this,       &
+                                                     tag,        &
                                                      nu, nv,     &
                                                      grid_pos_u, &
                                                      grid_pos_v, &
                                                      val,        &
                                                      grid_flag )
     class(vv_slice__scalar_t) <out> :: this
+    char(len=*) <in> :: tag
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
     real, dimension(nv) <in> :: grid_pos_v
@@ -186,6 +198,8 @@ contains
     character, dimension(nu,nv) <optin> :: grid_flag
 
     allocate(this.val_vert(nu,nv))
+
+    this.tag = tag
 
     call ut__assert( size(grid_pos_u,dim=1) == nu .and. &
                      size(grid_pos_v,dim=1) == nv,      &
@@ -239,6 +253,7 @@ contains
 
 
   subroutine vv_slice__vector_initialize( this,        &
+                                          tag,         &
                                           vert_nu,     &
                                           vert_nv,     &
                                           vert_u_min,  &
@@ -248,12 +263,15 @@ contains
                                           vect_u,      &
                                           vect_v )
     class(vv_slice__vector_t) <out> :: this
+    char(len=*) <in> :: tag
     integer <in> :: vert_nu, vert_nv
     real <in> :: vert_u_min, vert_u_max
     real <in> :: vert_v_min, vert_v_max
     real, dimension(vert_nu,vert_nv) <optin> :: vect_u, vect_v
 
     real, dimension(vert_nu,vert_nv) :: amp_vect
+
+    this.tag = tag
 
     call this.mesh_vert.initialize( vert_nu,     &
                                     vert_nv,     &

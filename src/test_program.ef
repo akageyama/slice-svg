@@ -402,13 +402,17 @@ contains
     grid_flag(30   ,15+10) = 'b'
     grid_flag(30-10,15   ) = 'b'
 
-    call vv_slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
+    call vv_slice_pressure.initialize( 'pressure',  &
+                                       NU_SCALAR,   &
+                                       NV_SCALAR,  &
                                        grid_pos_u,  &
                                        grid_pos_v,  &
                                        pressure,    &
                                        grid_flag )
     !!>
-    call vv_slice_pressure.initialize( NU_SCALAR, NV_SCALAR,  &
+    call vv_slice_pressure.initialize( 'pressure',  &
+                                       NU_SCALAR,   &
+                                       NV_SCALAR,  &
                                        umin, umax,  &
                                        vmin, vmax,  &
                                        pressure )
@@ -462,9 +466,10 @@ contains
     ll = vv_sketch__sim_pos_t(umin, vmin)
     ur = vv_sketch__sim_pos_t(umax, vmax)
     
-    call vv_slice_velocity.initialize( NU_VECTOR,  &
-                                       NV_VECTOR,  &
-                                       umin, umax, &
+    call vv_slice_velocity.initialize( 'velocity',  &
+                                       NU_VECTOR,   &
+                                       NV_VECTOR,   &
+                                       umin, umax,  &
                                        vmin, vmax,  &
                                        velocity_u,  &
                                        velocity_v )
