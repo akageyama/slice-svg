@@ -127,22 +127,20 @@ contains
     allocate(vector.comp_u(nu,nv))
     allocate(vector.comp_v(nu,nv))
 
-    if ( present(comp_u) ) then
+    if ( present(comp_u) .and. present(comp_v) ) then
       vector.comp_u(:,:) = comp_u(:,:)
+      vector.comp_v(:,:) = comp_v(:,:)
+      amp_vect = sqrt(comp_u**2+comp_v**2)
+      vector.amp_max = maxval(amp_vect)
+      vector.amp_min = minval(amp_vect)
     else
       vector.comp_u(:,:) = 0.0
-    end if
-
-    if ( present(comp_v) ) then
-      vector.comp_v(:,:) = comp_v(:,:)
-    else
       vector.comp_v(:,:) = 0.0
+      vector.amp_max = 0.0
+      vector.amp_min = 0.0
     end if
 
-    amp_vect = sqrt(comp_u**2+comp_v**2)
 
-    vector.amp_max = maxval(amp_vect)
-    vector.amp_min = minval(amp_vect)
   end subroutine vv_slice_vector__initialize_with_grids
 
   
@@ -157,10 +155,17 @@ contains
 
   subroutine vv_slice_vector__set_val( vector, comp_u, comp_v )
     class(vv_slice_vector_t) <io> :: vector
-    real, dimension(vector.mesh_vert.nu,vector.mesh_vert.nv) <in> :: comp_u, comp_v
+    real, dimension(vector.mesh_vert.nu,  &
+                    vector.mesh_vert.nv) <in> :: comp_u, comp_v
+
+    real, dimension(vector.mesh_vert.nu,  &
+                    vector.mesh_vert.nv) :: amp_vect
 
     vector.comp_u(:,:) = comp_u(:,:)
     vector.comp_v(:,:) = comp_v(:,:)
+    amp_vect = sqrt(comp_u**2+comp_v**2)
+    vector.amp_max = maxval(amp_vect)
+    vector.amp_min = minval(amp_vect)
   end subroutine vv_slice_vector__set_val
 
 
