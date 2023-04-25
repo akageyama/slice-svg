@@ -1,0 +1,242 @@
+module vv_slice_scalar_m
+  !!>
+      vv_slice_scalar.ef
+
+      Visualize 2-dimensional cross sections 
+      of 3- (or more) dimensional simulation data.
+
+      Draw contour lines for scalar fields.
+
+      Draw vector arrow glyphs for vector fields.
+      
+      In this module, positions are specified by the
+      simulation coordinates (u,v) with simulation unit
+      such as meters.
+
+  !!< 
+  use vv_color_m
+  use ut_m
+  use vv_slice_mesh_m
+  use vv_slice_isoline_m
+  use vv_sketch_m
+  implicit none
+  private
+
+  integer <const> :: TAG_NAME_MAX = 100
+
+  type, public :: vv_slice_scalar_t
+    char(len=TAG_NAME_MAX) :: tag
+    type(vv_slice_mesh__vert_t) :: mesh_vert
+    type(vv_slice_mesh__edge_t) :: mesh_edge
+    type(vv_slice_mesh__boundary_t) :: mesh_boundary
+    real, dimension(:,:), allocatable :: val_vert
+    real :: val_vert_max, val_vert_min
+  contains
+    procedure, private :: vv_slice_scalar__initialize_with_uvmax
+    procedure, private :: vv_slice_scalar__initialize_with_grids
+    generic :: initialize => vv_slice_scalar__initialize_with_uvmax,  &
+                             vv_slice_scalar__initialize_with_grids
+    procedure :: finalize => vv_slice_scalar__finalize
+    procedure :: set_val => vv_slice_scalar__set_val
+    procedure :: vis_contour => vv_slice_scalar__vis_contour
+  end type vv_slice_scalar_t
+
+
+contains
+
+
+  subroutine vv_slice_scalar__vis_contour( scalar,          &
+                                           vv_sketch,       &
+                                           level,           &
+                                           width_in_pixels, &
+                                           line_color,      &
+                                           fill_color )
+    class(vv_slice_scalar_t) <io> :: scalar
+    type(vv_sketch_t) <io> :: vv_sketch
+    real <in> :: level
+    real <optin> :: width_in_pixels
+    type(vv_color_t) <optin> :: line_color
+    type(vv_color_t) <optin> :: fill_color
+
+    integer :: nu, nv
+    type(vv_slice_isoline_t), save :: vv_slice_isoline
+    logical :: just_once = .true.
+    char(len=10) :: status
+    type(vv_sketch__sim_pos_t), dimension(:), allocatable, save :: verts_sim
+    character, dimension(:), allocatable, save :: path_directive
+    character :: SVG_directive
+    integer :: i, counter
+    real :: u_sim, v_sim, dummy
+
+    ==<just_once>==
+      nu = scalar.mesh_vert.nu
+      nv = scalar.mesh_vert.nv
+      call vv_slice_isoline.initialize( nu, nv )
+      allocate(verts_sim(nu*nv))
+      allocate(path_directive(nu*nv))
+    ==</just_once>==
+
+    call scalar.mesh_edge.set_quarter( scalar.mesh_vert,  &
+                                       scalar.val_vert,   &
+                                       level )
+
+    call scalar.mesh_boundary.set_quarter( scalar.mesh_vert,  &
+                                           scalar.mesh_edge )
+    call vv_slice_isoline.reset
+    call vv_slice_isoline.set_start_edge( scalar.mesh_vert,     &
+                                          scalar.mesh_edge,     &
+                                          scalar.mesh_boundary, &
+                                          status )
+    counter = 0
+    do while ( status == 'have found' )
+      !!  Tring to find the 1st contour for this level.
+      call vv_slice_isoline.trace_and_erase( scalar.mesh_vert,    &
+                                             scalar.mesh_edge,    &
+                                             scalar.mesh_boundary )
+      call  ut__assert( vv_slice_isoline.num >= 2,  &
+                        "__MODULE__(__LINE__): Path too short." )
+        
+      do i = 1, vv_slice_isoline.num
+        counter += 1
+        if ( i == 1 ) then
+          SVG_directive = 'M' ! Move to 
+        else if ( i == 2 ) then
+          SVG_directive = 'L' ! Line to
+        else
+          SVG_directive = ' ' ! Line to (You can ommit this after 1st 'L'.)
+        end if
+        path_directive(counter) = SVG_directive 
+        u_sim = vv_slice_isoline.list_u(i)
+        v_sim = vv_slice_isoline.list_v(i)
+        verts_sim(counter) = vv_sketch__sim_pos_t(u_sim,v_sim)
+      end do
+
+      ! To close the path
+      counter += 1
+      path_directive(counter) = 'Z' ! Close the sub-path.
+      dummy = 0.0  ! any number
+      verts_sim(counter) = vv_sketch__sim_pos_t( dummy, dummy )
+
+      !!  Generally, more contours exist for this level.
+      call vv_slice_isoline.reset
+      call vv_slice_isoline.set_start_edge( scalar.mesh_vert,     &
+                                            scalar.mesh_edge,     &
+                                            scalar.mesh_boundary, &
+                                            status )
+    end do
+
+    if ( counter > 1 ) then
+      call vv_sketch.path( counter,             &
+                           path_directive,      &
+                           verts_sim,           &
+                           width_in_pixels,     &
+                           line_color,          &
+                           fill_color )      
+    end if
+
+  end subroutine vv_slice_scalar__vis_contour
+
+
+  subroutine vv_slice_scalar__initialize_with_uvmax( scalar,        &
+                                                     tag,           &
+                                                     nu, nv,        &
+                                                     u_min, u_max,  &
+                                                     v_min, v_max,  &
+                                                     val )
+    class(vv_slice_scalar_t) <out> :: scalar
+    char(len=*) <in> :: tag
+    integer <in> :: nu, nv
+    real <in> :: u_min, u_max
+    real <in> :: v_min, v_max
+    real, dimension(nu,nv) <optin> :: val
+
+    allocate(scalar.val_vert(nu,nv))
+
+    scalar.tag = tag
+
+    call scalar.mesh_vert.initialize( nu, nv,        &
+                                      u_min, u_max,  &
+                                      v_min, v_max )
+    call scalar.mesh_edge.initialize( scalar.mesh_vert )
+    call scalar.mesh_boundary.initialize( scalar.mesh_vert,  &
+                                          scalar.mesh_edge )
+
+    if ( present(val) ) then
+      scalar.val_vert(:,:) = val(:,:)
+    else
+      scalar.val_vert(:,:) = 0.0
+    end if
+
+  end subroutine vv_slice_scalar__initialize_with_uvmax
+
+
+  subroutine vv_slice_scalar__initialize_with_grids( scalar,     &
+                                                     tag,        &
+                                                     nu, nv,     &
+                                                     grid_pos_u, &
+                                                     grid_pos_v, &
+                                                     val,        &
+                                                     grid_flag )
+    class(vv_slice_scalar_t) <out> :: scalar
+    char(len=*) <in> :: tag
+    integer <in> :: nu, nv
+    real, dimension(nu) <in> :: grid_pos_u
+    real, dimension(nv) <in> :: grid_pos_v
+    real, dimension(nu,nv) <optin> :: val
+    character, dimension(nu,nv) <optin> :: grid_flag
+
+    allocate(scalar.val_vert(nu,nv))
+
+    scalar.tag = tag
+
+    call ut__assert( size(grid_pos_u,dim=1) == nu .and. &
+                     size(grid_pos_v,dim=1) == nv,      &
+                     "__MODULE__(__LINE__): " //        &
+                     "grid size inconsistent." )
+
+    if ( present(grid_flag) ) then
+      call scalar.mesh_vert.initialize( nu, nv,     &
+                                      grid_pos_u, &
+                                      grid_pos_v, &
+                                      grid_flag )
+    else
+      call scalar.mesh_vert.initialize( nu, nv,     &
+                                      grid_pos_u, &
+                                      grid_pos_v )
+    end if
+
+    call scalar.mesh_edge.initialize( scalar.mesh_vert )
+    call scalar.mesh_boundary.initialize( scalar.mesh_vert,  &
+                                        scalar.mesh_edge )
+
+    if ( present(val) ) then
+      scalar.val_vert(:,:) = val(:,:)
+    else
+      scalar.val_vert(:,:) = 0.0
+    end if
+
+  end subroutine vv_slice_scalar__initialize_with_grids
+
+
+  subroutine vv_slice_scalar__set_val( scalar, nu, nv, val )
+    class(vv_slice_scalar_t) <io> :: scalar
+    integer <in> :: nu, nv
+    real, dimension(nu,nv) <in> :: val
+
+    scalar.val_vert(:,:) = val(:,:)
+    scalar.val_vert_max = maxval(val)
+    scalar.val_vert_min = minval(val)
+  end subroutine vv_slice_scalar__set_val
+
+
+  subroutine vv_slice_scalar__finalize( slice )
+    class(vv_slice_scalar_t) <io> :: scalar
+
+    deallocate(scalar.val_vert)
+    call scalar.mesh_vert.finalize
+    call scalar.mesh_edge.finalize
+    call scalar.mesh_boundary.finalize
+  end subroutine vv_slice_scalar__finalize
+
+end module vv_slice_scalar_m
+

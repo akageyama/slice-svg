@@ -1,0 +1,156 @@
+module vv_slice_vector_m
+  !!>
+      vv_slice: Visualize 2-dimensional cross sections 
+      of 3- (or more) dimensional simulation data.
+
+      Draw vector arrow glyphs for vector fields.
+      
+      In this module, positions are specified by the
+      simulation coordinates (u,v) with simulation unit
+      such as meters.
+
+  !!< 
+  use vv_color_m
+  use ut_m
+  use vv_slice_mesh_m
+  use vv_slice_isoline_m
+  use vv_sketch_m
+  implicit none
+  private
+
+  integer <const> :: TAG_NAME_MAX = 100
+
+  type, public :: vv_slice_vector_t
+    char(len=TAG_NAME_MAX) :: tag
+    type(vv_slice_mesh__vert_t) :: mesh_vert
+    real, dimension(:,:), allocatable :: vect_u
+    real, dimension(:,:), allocatable :: vect_v
+    real :: amp_max, amp_min
+  contains
+    procedure :: initialize => vv_slice_vector__initialize
+    procedure :: finalize => vv_slice_vector__finalize    
+    procedure :: set_val => vv_slice_vector__set_val
+    procedure :: vis_arrows => vv_slice_vector__vis_arrows
+  end type vv_slice_vector_t
+
+
+contains
+
+
+  subroutine vv_slice_vector__initialize( this,        &
+                                          tag,         &
+                                          vert_nu,     &
+                                          vert_nv,     &
+                                          vert_u_min,  &
+                                          vert_u_max,  &
+                                          vert_v_min,  &
+                                          vert_v_max,  &
+                                          vect_u,      &
+                                          vect_v )
+    class(vv_slice_vector_t) <out> :: this
+    char(len=*) <in> :: tag
+    integer <in> :: vert_nu, vert_nv
+    real <in> :: vert_u_min, vert_u_max
+    real <in> :: vert_v_min, vert_v_max
+    real, dimension(vert_nu,vert_nv) <optin> :: vect_u, vect_v
+
+    real, dimension(vert_nu,vert_nv) :: amp_vect
+
+    this.tag = tag
+
+    call this.mesh_vert.initialize( vert_nu,     &
+                                    vert_nv,     &
+                                    vert_u_min,  &
+                                    vert_u_max,  &
+                                    vert_v_min,  &
+                                    vert_v_max )
+    allocate(this.vect_u(vert_nu,vert_nv))
+    allocate(this.vect_v(vert_nu,vert_nv))
+
+    if ( present(vect_u) ) then
+      this.vect_u(:,:) = vect_u(:,:)
+    else
+      this.vect_u(:,:) = 0.0
+    end if
+
+    if ( present(vect_v) ) then
+      this.vect_v(:,:) = vect_v(:,:)
+    else
+      this.vect_v(:,:) = 0.0
+    end if
+
+    amp_vect = sqrt(vect_u**2+vect_v**2)
+
+    this.amp_max = maxval(amp_vect)
+    this.amp_min = minval(amp_vect)
+  end subroutine vv_slice_vector__initialize
+
+  
+  subroutine vv_slice_vector__finalize( this )
+    class(vv_slice_vector_t) <io> :: this
+
+    deallocate(this.vect_u)
+    deallocate(this.vect_v)
+    call this.mesh_vert.finalize
+  end subroutine vv_slice_vector__finalize
+
+
+  subroutine vv_slice_vector__set_val( this, vect_u, vect_v )
+    class(vv_slice_vector_t) <io> :: this
+    real, dimension(this.mesh_vert.nu,this.mesh_vert.nv) <in> :: vect_u, vect_v
+
+    this.vect_u(:,:) = vect_u(:,:)
+    this.vect_v(:,:) = vect_v(:,:)
+  end subroutine vv_slice_vector__set_val
+
+
+  subroutine vv_slice_vector__vis_arrows( this, vv_sketch )
+    class(vv_slice_vector_t) <io> :: this
+    type(vv_sketch_t) <io> :: vv_sketch
+    !!>
+        o--o--o--o--o--o--o--o--o <== Original (=finest) grid
+        |  |  |  |  |  |  |  |  |
+        o-----o-----o-----o-----o <== Coarse grid (stride=2)
+        |  |  |  |  |  |  |  |  |
+        o-----------o-----------o <== Coarser grid (stride=4)
+        |  |  |  |  |  |  |  |  |
+        o-----------------------o <== Coarser2 grid (stride=8)
+        |  |  |  |  |  |  |  |  |
+        3  0  1  0  2  0  1  0  3 <====== "skip"    
+    !!<
+    integer :: i, j
+    real :: u, v
+
+    integer :: skip, stride
+    char(len=11) :: tag_for_group
+    logical, dimension(:,:), allocatable :: pass_to_sketch_flag
+
+    allocate(pass_to_sketch_flag(this.mesh_vert.nu,this.mesh_vert.nv))
+
+    pass_to_sketch_flag(:,:) = .false.
+
+    do skip = 3, 0, -1
+      stride = 2**skip
+      write(tag_for_group,"(a,i1)") "arrow-skip", skip
+        ! "arrow-skip4, arrow-skip3, ...
+      call vv_sketch.group_push( id=trim(tag_for_group),  &
+                                 visibility="visible" )
+        do j = 1, this.mesh_vert.nv, stride
+          do i = 1, this.mesh_vert.nu, stride
+            if ( .not. pass_to_sketch_flag(i,j) ) then
+              u = this.mesh_vert.pos_u(i)
+              v = this.mesh_vert.pos_v(j)
+              call vv_sketch.arrow( u, v, &
+                                    this.vect_u(i,j), &
+                                    this.vect_v(i,j) )
+              pass_to_sketch_flag(i,j) = .true.
+            end if
+          end do
+        end do
+      call vv_sketch.group_pop()
+    end do
+
+    deallocate(pass_to_sketch_flag)
+  end subroutine vv_slice_vector__vis_arrows
+
+end module vv_slice_vector_m
