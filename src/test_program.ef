@@ -4,7 +4,8 @@ program test_program
   use const_base_m
   use vv_color_m
   use vv_sketch_m
-  use vv_slice_m
+  use vv_slice_scalar_m
+  use vv_slice_vector_m
   implicit none
 
 ! type(vv_sketch__sim_pos_t) :: cross_section_lower_left
@@ -289,7 +290,7 @@ contains
     type(vv_sketch__sim_pos_t) :: ur ! upper right
     type(vv_color_t) :: magenta
 
-    type(vv_slice__scalar_t) :: vv_slice_pressure
+    type(vv_slice_scalar_t) :: vv_slice_pressure
     real :: level_min, level_max, dlevel, level
     type(vv_color_t) :: color
     integer :: l
@@ -461,18 +462,56 @@ contains
     type(vv_sketch__sim_pos_t) :: ll ! lower left
     type(vv_sketch__sim_pos_t) :: ur ! upper right
 
-    type(vv_slice__vector_t) :: vv_slice_velocity
+    type(vv_slice_vector_t) :: vv_slice_velocity
+
+    real, dimension(NU_VECTOR) :: grid_pos_u
+    real, dimension(NV_VECTOR) :: grid_pos_v
+    character, dimension(NU_VECTOR,NV_VECTOR) :: grid_flag
+    integer :: j, j2, i, i2
     
     ll = vv_sketch__sim_pos_t(umin, vmin)
     ur = vv_sketch__sim_pos_t(umax, vmax)
+
+    do i = 1, NU_VECTOR
+      grid_pos_u(i) = umin + (umax-umin)/(NU_VECTOR-1)*(i-1)
+    end do
+    do j = 1, NV_VECTOR
+      grid_pos_v(j) = vmin + (vmax-vmin)/(NV_VECTOR-1)*(j-1)
+    end do
+
+    grid_flag(:,:) = 'o'
+    do j = 1, NV_VECTOR
+      j2 = j - 15
+      do i = 1, NU_VECTOR
+        i2 = i - 30
+        if ( abs(i2) + abs(j2) < 10 ) then
+          grid_flag(i,j) = 'i'
+        else if ( abs(i2) + abs(j2) <= 10 ) then
+          if ( +(i2) + (j2) == 10 )  then
+            grid_flag(i,j) = 'b'
+          else if ( -(i2) + (j2) == 10 )  then
+            grid_flag(i,j) = 'b'
+          else if ( -(i2) - (j2) == 10 )  then
+            grid_flag(i,j) = 'b'
+          else if ( +(i2) - (j2) == 10 )  then
+            grid_flag(i,j) = 'b'
+          end if
+        end if
+      end do
+    end do
+    grid_flag(30   ,15-10) = 'b'
+    grid_flag(30+10,15   ) = 'b'
+    grid_flag(30   ,15+10) = 'b'
+    grid_flag(30-10,15   ) = 'b'
     
     call vv_slice_velocity.initialize( 'velocity',  &
                                        NU_VECTOR,   &
                                        NV_VECTOR,   &
-                                       umin, umax,  &
-                                       vmin, vmax,  &
+                                       grid_pos_u,  &
+                                       grid_pos_v,  &
                                        velocity_u,  &
-                                       velocity_v )
+                                       velocity_v,  &
+                                       grid_flag )
     call vv_sketch.initialize( ll, ur, &
                                screen_width_in_pixel=1200.0,  &
                                title='Velocity Field',  &

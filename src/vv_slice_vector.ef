@@ -23,11 +23,14 @@ module vv_slice_vector_m
   type, public :: vv_slice_vector_t
     char(len=TAG_NAME_MAX) :: tag
     type(vv_slice_mesh__vert_t) :: mesh_vert
-    real, dimension(:,:), allocatable :: vect_u
-    real, dimension(:,:), allocatable :: vect_v
+    real, dimension(:,:), allocatable :: comp_u
+    real, dimension(:,:), allocatable :: comp_v
     real :: amp_max, amp_min
   contains
-    procedure :: initialize => vv_slice_vector__initialize
+    procedure, private :: vv_slice_vector__initialize_with_uvmax
+    procedure, private :: vv_slice_vector__initialize_with_grids
+    generic :: initialize => vv_slice_vector__initialize_with_uvmax,  &
+                             vv_slice_vector__initialize_with_grids
     procedure :: finalize => vv_slice_vector__finalize    
     procedure :: set_val => vv_slice_vector__set_val
     procedure :: vis_arrows => vv_slice_vector__vis_arrows
@@ -37,75 +40,132 @@ module vv_slice_vector_m
 contains
 
 
-  subroutine vv_slice_vector__initialize( this,        &
-                                          tag,         &
-                                          vert_nu,     &
-                                          vert_nv,     &
-                                          vert_u_min,  &
-                                          vert_u_max,  &
-                                          vert_v_min,  &
-                                          vert_v_max,  &
-                                          vect_u,      &
-                                          vect_v )
-    class(vv_slice_vector_t) <out> :: this
+  subroutine vv_slice_vector__initialize_with_uvmax( vector,      &
+                                                     tag,         &
+                                                     nu,          &
+                                                     nv,          &
+                                                     u_min,       &
+                                                     u_max,       &
+                                                     v_min,       &
+                                                     v_max,       &
+                                                     comp_u,      &
+                                                     comp_v )
+    class(vv_slice_vector_t) <out> :: vector
     char(len=*) <in> :: tag
-    integer <in> :: vert_nu, vert_nv
-    real <in> :: vert_u_min, vert_u_max
-    real <in> :: vert_v_min, vert_v_max
-    real, dimension(vert_nu,vert_nv) <optin> :: vect_u, vect_v
+    integer <in> :: nu, nv
+    real <in> :: u_min, u_max
+    real <in> :: v_min, v_max
+    real, dimension(nu,nv) <optin> :: comp_u, comp_v
 
-    real, dimension(vert_nu,vert_nv) :: amp_vect
+    real, dimension(nu,nv) :: amp_vect
 
-    this.tag = tag
+    vector.tag = tag
 
-    call this.mesh_vert.initialize( vert_nu,     &
-                                    vert_nv,     &
-                                    vert_u_min,  &
-                                    vert_u_max,  &
-                                    vert_v_min,  &
-                                    vert_v_max )
-    allocate(this.vect_u(vert_nu,vert_nv))
-    allocate(this.vect_v(vert_nu,vert_nv))
+    call vector.mesh_vert.initialize( nu,     &
+                                      nv,     &
+                                      u_min,  &
+                                      u_max,  &
+                                      v_min,  &
+                                      v_max )
 
-    if ( present(vect_u) ) then
-      this.vect_u(:,:) = vect_u(:,:)
+    allocate(vector.comp_u(nu,nv))
+    allocate(vector.comp_v(nu,nv))
+
+    if ( present(comp_u) ) then
+      vector.comp_u(:,:) = comp_u(:,:)
     else
-      this.vect_u(:,:) = 0.0
+      vector.comp_u(:,:) = 0.0
     end if
 
-    if ( present(vect_v) ) then
-      this.vect_v(:,:) = vect_v(:,:)
+    if ( present(comp_v) ) then
+      vector.comp_v(:,:) = comp_v(:,:)
     else
-      this.vect_v(:,:) = 0.0
+      vector.comp_v(:,:) = 0.0
     end if
 
-    amp_vect = sqrt(vect_u**2+vect_v**2)
+    amp_vect = sqrt(comp_u**2+comp_v**2)
 
-    this.amp_max = maxval(amp_vect)
-    this.amp_min = minval(amp_vect)
-  end subroutine vv_slice_vector__initialize
+    vector.amp_max = maxval(amp_vect)
+    vector.amp_min = minval(amp_vect)
+  end subroutine vv_slice_vector__initialize_with_uvmax
+
+
+  subroutine vv_slice_vector__initialize_with_grids( vector,     &
+                                                     tag,        &
+                                                     nu,         &
+                                                     nv,         &
+                                                     grid_pos_u, &
+                                                     grid_pos_v, &
+                                                     comp_u,     &
+                                                     comp_v,     &
+                                                     grid_flag )
+    class(vv_slice_vector_t) <out> :: vector
+    char(len=*) <in> :: tag
+    integer <in> :: nu, nv
+    real, dimension(nu) <in> :: grid_pos_u
+    real, dimension(nv) <in> :: grid_pos_v
+    real, dimension(nu,nv) <optin> :: comp_u, comp_v
+    character, dimension(nu,nv) <optin> :: grid_flag
+
+    real, dimension(nu,nv) :: amp_vect
+
+    vector.tag = tag
+
+    if ( present(grid_flag) ) then
+      call vector.mesh_vert.initialize( nu,         &
+                                        nv,         &
+                                        grid_pos_u, &
+                                        grid_pos_v, &
+                                        grid_flag )
+    else
+      call vector.mesh_vert.initialize( nu,         &
+                                        nv,         &
+                                        grid_pos_u, &
+                                        grid_pos_v )
+    end if
+
+    allocate(vector.comp_u(nu,nv))
+    allocate(vector.comp_v(nu,nv))
+
+    if ( present(comp_u) ) then
+      vector.comp_u(:,:) = comp_u(:,:)
+    else
+      vector.comp_u(:,:) = 0.0
+    end if
+
+    if ( present(comp_v) ) then
+      vector.comp_v(:,:) = comp_v(:,:)
+    else
+      vector.comp_v(:,:) = 0.0
+    end if
+
+    amp_vect = sqrt(comp_u**2+comp_v**2)
+
+    vector.amp_max = maxval(amp_vect)
+    vector.amp_min = minval(amp_vect)
+  end subroutine vv_slice_vector__initialize_with_grids
 
   
-  subroutine vv_slice_vector__finalize( this )
-    class(vv_slice_vector_t) <io> :: this
+  subroutine vv_slice_vector__finalize( vector )
+    class(vv_slice_vector_t) <io> :: vector
 
-    deallocate(this.vect_u)
-    deallocate(this.vect_v)
-    call this.mesh_vert.finalize
+    deallocate(vector.comp_u)
+    deallocate(vector.comp_v)
+    call vector.mesh_vert.finalize
   end subroutine vv_slice_vector__finalize
 
 
-  subroutine vv_slice_vector__set_val( this, vect_u, vect_v )
-    class(vv_slice_vector_t) <io> :: this
-    real, dimension(this.mesh_vert.nu,this.mesh_vert.nv) <in> :: vect_u, vect_v
+  subroutine vv_slice_vector__set_val( vector, comp_u, comp_v )
+    class(vv_slice_vector_t) <io> :: vector
+    real, dimension(vector.mesh_vert.nu,vector.mesh_vert.nv) <in> :: comp_u, comp_v
 
-    this.vect_u(:,:) = vect_u(:,:)
-    this.vect_v(:,:) = vect_v(:,:)
+    vector.comp_u(:,:) = comp_u(:,:)
+    vector.comp_v(:,:) = comp_v(:,:)
   end subroutine vv_slice_vector__set_val
 
 
-  subroutine vv_slice_vector__vis_arrows( this, vv_sketch )
-    class(vv_slice_vector_t) <io> :: this
+  subroutine vv_slice_vector__vis_arrows( vector, vv_sketch )
+    class(vv_slice_vector_t) <io> :: vector
     type(vv_sketch_t) <io> :: vv_sketch
     !!>
         o--o--o--o--o--o--o--o--o <== Original (=finest) grid
@@ -125,7 +185,7 @@ contains
     char(len=11) :: tag_for_group
     logical, dimension(:,:), allocatable :: pass_to_sketch_flag
 
-    allocate(pass_to_sketch_flag(this.mesh_vert.nu,this.mesh_vert.nv))
+    allocate(pass_to_sketch_flag(vector.mesh_vert.nu,vector.mesh_vert.nv))
 
     pass_to_sketch_flag(:,:) = .false.
 
@@ -135,14 +195,15 @@ contains
         ! "arrow-skip4, arrow-skip3, ...
       call vv_sketch.group_push( id=trim(tag_for_group),  &
                                  visibility="visible" )
-        do j = 1, this.mesh_vert.nv, stride
-          do i = 1, this.mesh_vert.nu, stride
+        do j = 1, vector.mesh_vert.nv, stride
+          do i = 1, vector.mesh_vert.nu, stride
+            if ( vector.mesh_vert.flag(i,j) == 'o' ) cycle
             if ( .not. pass_to_sketch_flag(i,j) ) then
-              u = this.mesh_vert.pos_u(i)
-              v = this.mesh_vert.pos_v(j)
+              u = vector.mesh_vert.pos_u(i)
+              v = vector.mesh_vert.pos_v(j)
               call vv_sketch.arrow( u, v, &
-                                    this.vect_u(i,j), &
-                                    this.vect_v(i,j) )
+                                    vector.comp_u(i,j), &
+                                    vector.comp_v(i,j) )
               pass_to_sketch_flag(i,j) = .true.
             end if
           end do

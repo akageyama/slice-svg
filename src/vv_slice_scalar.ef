@@ -196,13 +196,13 @@ contains
 
     if ( present(grid_flag) ) then
       call scalar.mesh_vert.initialize( nu, nv,     &
-                                      grid_pos_u, &
-                                      grid_pos_v, &
-                                      grid_flag )
+                                        grid_pos_u, &
+                                        grid_pos_v, &
+                                        grid_flag )
     else
       call scalar.mesh_vert.initialize( nu, nv,     &
-                                      grid_pos_u, &
-                                      grid_pos_v )
+                                        grid_pos_u, &
+                                        grid_pos_v )
     end if
 
     call scalar.mesh_edge.initialize( scalar.mesh_vert )
@@ -229,7 +229,7 @@ contains
   end subroutine vv_slice_scalar__set_val
 
 
-  subroutine vv_slice_scalar__finalize( slice )
+  subroutine vv_slice_scalar__finalize( scalar )
     class(vv_slice_scalar_t) <io> :: scalar
 
     deallocate(scalar.val_vert)
