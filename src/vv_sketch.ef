@@ -46,12 +46,12 @@ module vv_sketch_m
 contains
 
 
-  subroutine line_r4( this, u1, v1,  &
-                            u2, v2,  &
-                            line_width_in_pixel,   &
-                            color,   &
-                            no_draw )
-    class(vv_sketch_t) <in> :: this
+  subroutine line_r4( sketch, u1, v1,  &
+                              u2, v2,  &
+                              line_width_in_pixel,   &
+                              color,   &
+                              no_draw )
+    class(vv_sketch_t) <in> :: sketch
     real <in> :: u1, v1 ! line start in simulation coords.
     real <in> :: u2, v2 ! line finish in simulation coords.
     real <optin> :: line_width_in_pixel
@@ -62,8 +62,8 @@ contains
 
     type(screen_pos_t) :: start, finish
 
-    start  = this.to_screen_pos( vv_sketch__sim_pos_t(u1,v1) )
-    finish = this.to_screen_pos( vv_sketch__sim_pos_t(u2,v2) )
+    start  = sketch.to_screen_pos( vv_sketch__sim_pos_t(u1,v1) )
+    finish = sketch.to_screen_pos( vv_sketch__sim_pos_t(u2,v2) )
 
     color_code = ''  ! Initialization. Will be used below.
 
@@ -76,45 +76,45 @@ contains
     end if
 
     if ( color_code /= '' ) then
-      call this.vv_svglib.line( start.x,  start.y,         &
-                                finish.x, finish.y,        &
-                                color=color_code,          &
-                                width=line_width_in_pixel )
+      call sketch.vv_svglib.line( start.x,  start.y,         &
+                                  finish.x, finish.y,        &
+                                  color=color_code,          &
+                                  width=line_width_in_pixel )
     else 
-      call this.vv_svglib.line( start.x,  start.y,         &
-                                finish.x, finish.y,        &
-                                width=line_width_in_pixel )
+      call sketch.vv_svglib.line( start.x,  start.y,         &
+                                  finish.x, finish.y,        &
+                                  width=line_width_in_pixel )
     end if
 
   end subroutine line_r4
 
 
-  subroutine line_pos2( this, pos1,    &
-                              pos2,    &
-                              line_width_in_pixel,   &
-                              color,   &
-                              no_draw )
-    class(vv_sketch_t) <in> :: this
+  subroutine line_pos2( sketch, pos1,    &
+                                pos2,    &
+                                line_width_in_pixel,   &
+                                color,   &
+                                no_draw )
+    class(vv_sketch_t) <in> :: sketch
     type(vv_sketch__sim_pos_t) <in> :: pos1 ! line start in simulation coords.
     type(vv_sketch__sim_pos_t) <in> :: pos2 ! line finish in simulation coords.
     real <optin> :: line_width_in_pixel
     type(vv_color_t) <optin> :: color
     logical <optin> :: no_draw
 
-    call line_r4( this, pos1.u, pos1.v,                           &
-                        pos2.u, pos2.v,                           &
-                        line_width_in_pixel=line_width_in_pixel,  &
-                        color=color,                              &
-                        no_draw=no_draw)
+    call line_r4( sketch, pos1.u, pos1.v,                           &
+                          pos2.u, pos2.v,                           &
+                          line_width_in_pixel=line_width_in_pixel,  &
+                          color=color,                              &
+                          no_draw=no_draw)
 
   end subroutine line_pos2
 
 
-  subroutine vv_sketch__arrow( this, u,        &
-                                     v,        &
-                                     vect_u,   &
-                                     vect_v )
-    class(vv_sketch_t) <io> :: this
+  subroutine vv_sketch__arrow( sketch, u,        &
+                                       v,        &
+                                       vect_u,   &
+                                       vect_v )
+    class(vv_sketch_t) <io> :: sketch
     real <in> :: u, v   ! position of the arrow in sim coords
     real <in> :: vect_u, vect_v  ! vector components in sim 
 
@@ -126,25 +126,25 @@ contains
     if ( vect_amp < TOO_SMALL ) return
 
     factor = VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
-    screen_pos = this.to_screen_pos( vv_sketch__sim_pos_t(u,v) )
+    screen_pos = sketch.to_screen_pos( vv_sketch__sim_pos_t(u,v) )
     screen_vec.x =  vect_u * factor
     screen_vec.y = -vect_v * factor
-    call this.vv_svglib.arrow( screen_pos.x,     &
-                               screen_pos.y,     &
-                               screen_vec.x,     &
-                               screen_vec.y )
+    call sketch.vv_svglib.arrow( screen_pos.x,     &
+                                 screen_pos.y,     &
+                                 screen_vec.x,     &
+                                 screen_vec.y )
   end subroutine vv_sketch__arrow
 
 
-  subroutine vv_sketch__group_push( this, id,                   &
-                                          visibility,           &
-                                          line_type,            &
-                                          line_width_in_pixel,  &
-                                          line_color,           &
-                                          line_opacity,         &
-                                          fill_color,           &
-                                          fill_opacity )
-    class(vv_sketch_t) <io> :: this
+  subroutine vv_sketch__group_push( sketch, id,                   &
+                                            visibility,           &
+                                            line_type,            &
+                                            line_width_in_pixel,  &
+                                            line_color,           &
+                                            line_opacity,         &
+                                            fill_color,           &
+                                            fill_opacity )
+    class(vv_sketch_t) <io> :: sketch
     char(len=*) <optin> :: id
     char(len=*) <optin> :: visibility ! 'visible' or 'hidden'
     char(len=6) <optin> :: line_type  ! 'dotted' or
@@ -217,7 +217,7 @@ contains
       do n = 1, nop
         str_long = trim(str_long) // ' ' // trim(str(n))
       end do
-      call this.vv_svglib.group_push( trim(adjustl(str_long)) )
+      call sketch.vv_svglib.group_push( trim(adjustl(str_long)) )
     end if
 
   contains
@@ -230,20 +230,20 @@ contains
   end subroutine vv_sketch__group_push
 
 
-  subroutine vv_sketch__group_pop( this )
-    class(vv_sketch_t) <io> :: this
+  subroutine vv_sketch__group_pop( sketch )
+    class(vv_sketch_t) <io> :: sketch
 
-    call this.vv_svglib.group_pop
+    call sketch.vv_svglib.group_pop
   end subroutine vv_sketch__group_pop
 
 
-  subroutine vv_sketch__text( this, u, v,                &
-                                    string,              &
-                                    font_size_in_pixel,  &
-                                    text_anchor,         &
-                                    color )
+  subroutine vv_sketch__text( sketch, u, v,                &
+                                      string,              &
+                                      font_size_in_pixel,  &
+                                      text_anchor,         &
+                                      color )
 
-    class(vv_sketch_t) <io> :: this
+    class(vv_sketch_t) <io> :: sketch
     real <in> :: u, v
     char(len=*) <in> :: string
     real <in> :: font_size_in_pixel
@@ -258,26 +258,26 @@ contains
                      text_anchor == 'end',            &
                      '__MODULE__(__LINE__): text_anchor error.' )
 
-    pos = this.to_screen_pos( vv_sketch__sim_pos_t(u,v) )
+    pos = sketch.to_screen_pos( vv_sketch__sim_pos_t(u,v) )
    
     if ( present(color) ) then
       color_code = color.to_code()
-      call this.vv_svglib.text( pos.x, pos.y,            &
-                                string,                  &
-                                font_size_in_pixel,      &
-                                color=color_code,        &
-                                text_anchor=text_anchor )
+      call sketch.vv_svglib.text( pos.x, pos.y,            &
+                                  string,                  &
+                                  font_size_in_pixel,      &
+                                  color=color_code,        &
+                                  text_anchor=text_anchor )
     else
-      call this.vv_svglib.text( pos.x, pos.y,        &
-                                string,              &
-                                font_size_in_pixel,  &
-                                text_anchor=text_anchor )
+      call sketch.vv_svglib.text( pos.x, pos.y,        &
+                                  string,              &
+                                  font_size_in_pixel,  &
+                                  text_anchor=text_anchor )
     end if
   end subroutine vv_sketch__text
 
 
-  function vv_sketch__to_screen_pos( this, vv_sketch_pos ) result(screen_pos)
-    class(vv_sketch_t) <in> :: this
+  function vv_sketch__to_screen_pos( sketch, vv_sketch_pos ) result(screen_pos)
+    class(vv_sketch_t) <in> :: sketch
     type(vv_sketch__sim_pos_t) <in> :: vv_sketch_pos
     type(screen_pos_t) :: screen_pos
 
@@ -301,22 +301,22 @@ contains
     !!<
     real :: delta_u, delta_v 
     real :: mx, my   ! margin x and y
-    delta_u = vv_sketch_pos.u - this.u_min
-    delta_v = this.v_max - vv_sketch_pos.v
-    mx = this.screen_size.margin_x
-    my = this.screen_size.margin_y
-    screen_pos.x = mx + this.dxdu*delta_u
-    screen_pos.y = my + this.dydv*delta_v
+    delta_u = vv_sketch_pos.u - sketch.u_min
+    delta_v = sketch.v_max - vv_sketch_pos.v
+    mx = sketch.screen_size.margin_x
+    my = sketch.screen_size.margin_y
+    screen_pos.x = mx + sketch.dxdu*delta_u
+    screen_pos.y = my + sketch.dydv*delta_v
   end function vv_sketch__to_screen_pos
 
 
-  subroutine vv_sketch__initialize( this,                  &
+  subroutine vv_sketch__initialize( sketch,                &
                                     lower_left_in_phys,    &
                                     upper_right_in_phys,   &
                                     screen_width_in_pixel, &
                                     title,                 &
                                     filename )
-    class(vv_sketch_t) <out> :: this
+    class(vv_sketch_t) <out> :: sketch
     type(vv_sketch__sim_pos_t) <in> :: lower_left_in_phys,  &
                                        upper_right_in_phys
     real <in> :: screen_width_in_pixel
@@ -329,17 +329,17 @@ contains
             draw_area_height_in_pixel
     real :: aspect_ratio
 
-    this.u_max = upper_right_in_phys.u
-    this.u_min =  lower_left_in_phys.u
-    this.v_max = upper_right_in_phys.v
-    this.v_min =  lower_left_in_phys.v
+    sketch.u_max = upper_right_in_phys.u
+    sketch.u_min =  lower_left_in_phys.u
+    sketch.v_max = upper_right_in_phys.v
+    sketch.v_min =  lower_left_in_phys.v
 
-    call ut__assert( this.u_max > this.u_min .and.  &
-                     this.v_max > this.v_min,       &
+    call ut__assert( sketch.u_max > sketch.u_min .and.  &
+                     sketch.v_max > sketch.v_min,       &
                      '__MODULE__(__LINE__): size error.' )
 
-    this.title = title
-    this.filename = filename
+    sketch.title = title
+    sketch.filename = filename
 
     !!>
         In the following fig, 
@@ -367,51 +367,51 @@ contains
                       (in pixels)
     !!<
 
-    draw_area_width_in_phys  = this.u_max - this.u_min
-    draw_area_height_in_phys = this.v_max - this.v_min
+    draw_area_width_in_phys  = sketch.u_max - sketch.u_min
+    draw_area_height_in_phys = sketch.v_max - sketch.v_min
     aspect_ratio = draw_area_height_in_phys  &
                  / draw_area_width_in_phys
 
-    this.screen_size.width = screen_width_in_pixel
-    this.screen_size.margin_x = 0.1*screen_width_in_pixel
-    this.screen_size.margin_y = this.screen_size.margin_x 
+    sketch.screen_size.width = screen_width_in_pixel
+    sketch.screen_size.margin_x = 0.1*screen_width_in_pixel
+    sketch.screen_size.margin_y = sketch.screen_size.margin_x 
 
     ! Keeping the aspect ratio,
     draw_area_width_in_pixel = screen_width_in_pixel     &
-                             - 2*this.screen_size.margin_x
+                             - 2*sketch.screen_size.margin_x
     draw_area_height_in_pixel = draw_area_width_in_pixel &
                               * aspect_ratio
-    this.screen_size.height = draw_area_height_in_pixel  &
-                            + 2*this.screen_size.margin_y
+    sketch.screen_size.height = draw_area_height_in_pixel  &
+                              + 2*sketch.screen_size.margin_y
 
-    this.dxdu = draw_area_width_in_pixel / draw_area_width_in_phys
-    this.dydv = this.dxdu
+    sketch.dxdu = draw_area_width_in_pixel / draw_area_width_in_phys
+    sketch.dydv = sketch.dxdu
 
-    call ut__assert( this.dxdu > 0.0 .and. &
-                     this.dydv > 0.0,      &
+    call ut__assert( sketch.dxdu > 0.0 .and. &
+                     sketch.dydv > 0.0,      &
                      '__MODULE__(__LINE__): Something is strange.' )
 
-    call this.vv_svglib.open( this.filename,           &
-                              this.screen_size.width,  &
-                              this.screen_size.height )
+    call sketch.vv_svglib.open( sketch.filename,           &
+                                sketch.screen_size.width,  &
+                                sketch.screen_size.height )
 
-    call this.vv_svglib.arrow_template
+    call sketch.vv_svglib.arrow_template
   end subroutine vv_sketch__initialize
 
 
-  subroutine vv_sketch__finalize( this )
-    class(vv_sketch_t) <in> :: this
+  subroutine vv_sketch__finalize( sketch )
+    class(vv_sketch_t) <in> :: sketch
 
-    call this.vv_svglib.close
+    call sketch.vv_svglib.close
   end subroutine vv_sketch__finalize
 
 
-  subroutine vv_sketch__polygon( this, nverts,          &
-                                       verts_sim,       &
-                                       width_in_pixels, &
-                                       line_color,      &
-                                       fill_color )
-    class(vv_sketch_t) <io> :: this
+  subroutine vv_sketch__polygon( sketch, nverts,          &
+                                         verts_sim,       &
+                                         width_in_pixels, &
+                                         line_color,      &
+                                         fill_color )
+    class(vv_sketch_t) <io> :: sketch
     integer <in> :: nverts
     type(vv_sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
     real <optin> :: width_in_pixels
@@ -425,7 +425,7 @@ contains
     integer :: i
 
     do i = 1, nverts
-      vert_on_screen = this.to_screen_pos( verts_sim(i) )
+      vert_on_screen = sketch.to_screen_pos( verts_sim(i) )
       verts_screen_x(i) = vert_on_screen.x
       verts_screen_y(i) = vert_on_screen.y
     end do
@@ -441,31 +441,30 @@ contains
     end if
 
     if ( present(line_color) ) then
-      call this.vv_svglib.polygon( nverts,                       &
-                                   verts_screen_x,               &
-                                   verts_screen_y,               &
-                                   width_in_pixels,              &
-                                   line_color=line_color_code,   &
-                                   fill_color=fill_color_code )
+      call sketch.vv_svglib.polygon( nverts,                       &
+                                     verts_screen_x,               &
+                                     verts_screen_y,               &
+                                     width_in_pixels,              &
+                                     line_color=line_color_code,   &
+                                     fill_color=fill_color_code )
     else
-      call this.vv_svglib.polygon( nverts,                     &
-                                   verts_screen_x,             &
-                                   verts_screen_y,             &
-                                   width_in_pixels,            &
-                                   fill_color=fill_color_code )
+      call sketch.vv_svglib.polygon( nverts,                     &
+                                     verts_screen_x,             &
+                                     verts_screen_y,             &
+                                     width_in_pixels,            &
+                                     fill_color=fill_color_code )
     end if
   end subroutine vv_sketch__polygon
 
 
 
-  subroutine vv_sketch__path( this,            &
-                              nverts,          &
-                              path_directive,  &
-                              verts_sim,       &
-                              width_in_pixels, &
-                              line_color,      &
-                              fill_color )
-    class(vv_sketch_t) <io> :: this
+  subroutine vv_sketch__path( sketch, nverts,          &
+                                      path_directive,  &
+                                      verts_sim,       &
+                                      width_in_pixels, &
+                                      line_color,      &
+                                      fill_color )
+    class(vv_sketch_t) <io> :: sketch
     integer <in> :: nverts
     type(vv_sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
     character, dimension(nverts) <in> :: path_directive
@@ -480,7 +479,7 @@ contains
     integer :: i
 
     do i = 1, nverts
-      vert_on_screen = this.to_screen_pos( verts_sim(i) )
+      vert_on_screen = sketch.to_screen_pos( verts_sim(i) )
       verts_screen_x(i) = vert_on_screen.x
       verts_screen_y(i) = vert_on_screen.y
     end do
@@ -496,30 +495,30 @@ contains
     end if
 
     if ( present(line_color) ) then
-      call this.vv_svglib.path( nverts,                       &
-                                path_directive,               &
-                                verts_screen_x,               &
-                                verts_screen_y,               &
-                                width_in_pixels,              &
-                                line_color=line_color_code,   &
-                                fill_color=fill_color_code )
+      call sketch.vv_svglib.path( nverts,                       &
+                                  path_directive,               &
+                                  verts_screen_x,               &
+                                  verts_screen_y,               &
+                                  width_in_pixels,              &
+                                  line_color=line_color_code,   &
+                                  fill_color=fill_color_code )
     else
-      call this.vv_svglib.path( nverts,                       &
-                                path_directive,               &
-                                verts_screen_x,               &
-                                verts_screen_y,               &
-                                width_in_pixels,              &
-                                fill_color=fill_color_code )
+      call sketch.vv_svglib.path( nverts,                       &
+                                  path_directive,               &
+                                  verts_screen_x,               &
+                                  verts_screen_y,               &
+                                  width_in_pixels,              &
+                                  fill_color=fill_color_code )
     end if
   end subroutine vv_sketch__path
 
 
-  subroutine vv_sketch__rectangle( this, lower_left,           &
-                                         upper_right,          &
-                                         line_width_in_pixel,  &
-                                         line_color,           &
-                                         fill_color  )
-    class(vv_sketch_t) <io> :: this
+  subroutine vv_sketch__rectangle( sketch, lower_left,           &
+                                           upper_right,          &
+                                           line_width_in_pixel,  &
+                                           line_color,           &
+                                           fill_color  )
+    class(vv_sketch_t) <io> :: sketch
     type(vv_sketch__sim_pos_t) <in> :: lower_left, upper_right
     real <in> :: line_width_in_pixel
     type(vv_color_t) <in> :: line_color
@@ -538,8 +537,8 @@ contains
       fill_color_code = 'none'
     end if
 
-    screen_ll  = this.to_screen_pos( lower_left )
-    screen_ur  = this.to_screen_pos( upper_right )
+    screen_ll  = sketch.to_screen_pos( lower_left )
+    screen_ur  = sketch.to_screen_pos( upper_right )
 
     screen_verts_x(1) = screen_ll.x
     screen_verts_y(1) = screen_ll.y
@@ -550,11 +549,11 @@ contains
     screen_verts_x(4) = screen_ll.x
     screen_verts_y(4) = screen_ur.y
 
-    call this.vv_svglib.polygon( 4,                    &
-                                 screen_verts_x,       &
-                                 screen_verts_y,       &
-                                 line_width_in_pixel,  &
-                                 line_color_code,      &
-                                 fill_color_code )
+    call sketch.vv_svglib.polygon( 4,                    &
+                                   screen_verts_x,       &
+                                   screen_verts_y,       &
+                                   line_width_in_pixel,  &
+                                   line_color_code,      &
+                                   fill_color_code )
   end subroutine vv_sketch__rectangle
 end module vv_sketch_m
