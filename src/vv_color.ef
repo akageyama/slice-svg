@@ -24,14 +24,24 @@ module vv_color_m
   end type vv_color__hsv_t
 
   type, public :: vv_color__const_t
-    type(vv_color_t) :: white   = vv_color_t(1.0, 1.0, 1.0)
-    type(vv_color_t) :: black   = vv_color_t(0.0, 0.0, 0.0)
-    type(vv_color_t) :: red     = vv_color_t(1.0, 0.0, 0.0)
-    type(vv_color_t) :: green   = vv_color_t(0.0, 1.0, 0.0)
-    type(vv_color_t) :: blue    = vv_color_t(0.0, 0.0, 1.0)
-    type(vv_color_t) :: magenta = vv_color_t(1.0, 0.0, 1.0)
-    type(vv_color_t) :: yellow  = vv_color_t(1.0, 1.0, 0.0)
-    type(vv_color_t) :: cyan    = vv_color_t(0.0, 1.0, 1.0)
+    type(vv_color_t) :: white       = vv_color_t(1.0,   1.0,   1.0)
+    type(vv_color_t) :: black       = vv_color_t(0.0,   0.0,   0.0)
+    type(vv_color_t) :: red         = vv_color_t(1.0,   0.0,   0.0)
+    !
+    type(vv_color_t) :: green       = vv_color_t(0.0,   1.0,   0.0)
+    type(vv_color_t) :: limegreen   = vv_color_t(0.196, 0.804, 0.196)
+    type(vv_color_t) :: darkgreen   = vv_color_t(0.0,   0.392, 0.0)
+    !
+    type(vv_color_t) :: blue        = vv_color_t(0.0,   0.0,   1.0)
+    !
+    type(vv_color_t) :: brown       = vv_color_t(0.647, 0.165, 0.165)
+    type(vv_color_t) :: sandybrown  = vv_color_t(0.957, 0.643, 0.376)
+    type(vv_color_t) :: wheatbrown  = vv_color_t(0.961, 0.871, 0.702)
+    type(vv_color_t) :: bisquebrown = vv_color_t(1.0,   0.894, 0.769)
+    !
+    type(vv_color_t) :: magenta     = vv_color_t(1.0,   0.0,   1.0)
+    type(vv_color_t) :: yellow      = vv_color_t(1.0,   1.0,   0.0)
+    type(vv_color_t) :: cyan        = vv_color_t(0.0,   1.0,   1.0)
   contains
     procedure, nopass :: gray => vv_color_const__gray
     procedure, nopass :: test_print => vv_color__const__test_print
