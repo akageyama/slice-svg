@@ -23,6 +23,8 @@ module vv_slice_vector_m
   type, public :: vv_slice_vector_t
     char(len=TAG_NAME_MAX) :: tag
     type(vv_slice_mesh__vert_t) :: mesh_vert
+    type(vv_slice_mesh__edge_t) :: mesh_edge
+    type(vv_slice_mesh__boundary_t) :: mesh_boundary
     real, dimension(:,:), allocatable :: comp_u
     real, dimension(:,:), allocatable :: comp_v
     real :: amp_max, amp_min
@@ -34,10 +36,65 @@ module vv_slice_vector_m
     procedure :: finalize => vv_slice_vector__finalize    
     procedure :: set_val => vv_slice_vector__set_val
     procedure :: vis_arrows => vv_slice_vector__vis_arrows
+    procedure :: vis_boundary => vv_slice_vector__vis_boundary
   end type vv_slice_vector_t
 
 
 contains
+
+  subroutine vv_slice_vector__vis_boundary( vector, vv_sketch,        &
+                                                    width_in_pixels,  &
+                                                    line_color,       &
+                                                    fill_color )
+    class(vv_slice_vector_t) <io> :: vector
+    type(vv_sketch_t) <io> :: vv_sketch
+    real <optin> :: width_in_pixels
+    type(vv_color_t) <optin> :: line_color
+    type(vv_color_t) <optin> :: fill_color
+
+    integer :: n, nvert, counter
+    character :: SVG_directive
+    type(vv_sketch__sim_pos_t), dimension(:), allocatable :: verts_sim
+    character, dimension(:), allocatable :: path_directive
+    real :: u_sim, v_sim, dummy
+
+    nvert = vector.mesh_boundary.vert.num
+
+    allocate(verts_sim(nvert+1))
+    allocate(path_directive(nvert+1))
+
+    counter = 0
+    do n = 1, nvert
+      counter += 1
+      if ( n == 1 ) then
+        SVG_directive = 'M' ! Move to 
+      else if ( n == 2 ) then
+        SVG_directive = 'L' ! Line to
+      else
+        SVG_directive = ' ' ! Line to (You can ommit this after 1st 'L'.)
+      end if
+      path_directive(counter) = SVG_directive 
+      u_sim = vector.mesh_boundary.vert.vi(n)
+      v_sim = vector.mesh_boundary.vert.vj(n)
+      verts_sim(counter) = vv_sketch__sim_pos_t(u_sim,v_sim)
+    end do
+
+    ! To close the path
+    counter += 1
+    path_directive(counter) = 'Z' ! Close the sub-path.
+    dummy = 0.0  ! any number
+    verts_sim(counter) = vv_sketch__sim_pos_t( dummy, dummy )
+
+    call vv_sketch.path( counter,         &
+                         path_directive,  &
+                         verts_sim,       &
+                         width_in_pixels, &
+                         line_color,      &
+                         fill_color )      
+
+    deallocate(verts_sim)
+    deallocate(path_directive)
+  end subroutine vv_slice_vector__vis_boundary
 
 
   subroutine vv_slice_vector__initialize_with_uvmax( vector,      &
@@ -123,6 +180,10 @@ contains
                                         grid_pos_u, &
                                         grid_pos_v )
     end if
+
+    call vector.mesh_edge.initialize( vector.mesh_vert )
+    call vector.mesh_boundary.initialize( vector.mesh_vert,  &
+                                          vector.mesh_edge )
 
     allocate(vector.comp_u(nu,nv))
     allocate(vector.comp_v(nu,nv))
@@ -217,6 +278,8 @@ contains
     end do
 
     deallocate(pass_to_sketch_flag)
+
+    call vector.vis_boundary( vv_sketch, line_color=here here @iwidth_in_pixels=1.0 )
   end subroutine vv_slice_vector__vis_arrows
 
 end module vv_slice_vector_m

@@ -207,7 +207,7 @@ contains
 
     call scalar.mesh_edge.initialize( scalar.mesh_vert )
     call scalar.mesh_boundary.initialize( scalar.mesh_vert,  &
-                                        scalar.mesh_edge )
+                                          scalar.mesh_edge )
 
     if ( present(val) ) then
       scalar.val_vert(:,:) = val(:,:)
