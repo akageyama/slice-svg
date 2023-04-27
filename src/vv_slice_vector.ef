@@ -52,7 +52,7 @@ contains
     type(vv_color_t) <optin> :: line_color
     type(vv_color_t) <optin> :: fill_color
 
-    integer :: n, nvert, counter
+    integer :: n, nvert, counter, vert_i, vert_j
     character :: SVG_directive
     type(vv_sketch__sim_pos_t), dimension(:), allocatable :: verts_sim
     character, dimension(:), allocatable :: path_directive
@@ -74,8 +74,10 @@ contains
         SVG_directive = ' ' ! Line to (You can ommit this after 1st 'L'.)
       end if
       path_directive(counter) = SVG_directive 
-      u_sim = vector.mesh_boundary.vert.vi(n)
-      v_sim = vector.mesh_boundary.vert.vj(n)
+      vert_i = vector.mesh_boundary.vert.vi(n)
+      vert_j = vector.mesh_boundary.vert.vj(n)
+      u_sim = vector.mesh_vert.pos_u(vert_i)
+      v_sim = vector.mesh_vert.pos_v(vert_j)
       verts_sim(counter) = vv_sketch__sim_pos_t(u_sim,v_sim)
     end do
 
@@ -253,6 +255,11 @@ contains
 
     allocate(pass_to_sketch_flag(vector.mesh_vert.nu,vector.mesh_vert.nv))
 
+    ! boundary curve
+    call vector.vis_boundary( vv_sketch,                        &
+                              line_color=VV_COLOR__CONST.black,  &
+                              width_in_pixels=2.0 )
+
     pass_to_sketch_flag(:,:) = .false.
 
     do skip = 3, 0, -1
@@ -278,8 +285,6 @@ contains
     end do
 
     deallocate(pass_to_sketch_flag)
-
-    call vector.vis_boundary( vv_sketch, line_color=here here @iwidth_in_pixels=1.0 )
   end subroutine vv_slice_vector__vis_arrows
 
 end module vv_slice_vector_m
