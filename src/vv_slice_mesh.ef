@@ -157,6 +157,8 @@
 module vv_slice_mesh_m
   use const_base_m
   use ut_m
+  use vv_color_m
+  use vv_sketch_m
   implicit none
   private
   public :: VV_SLICE_MESH__EDGE_MM,  &
@@ -260,10 +262,93 @@ module vv_slice_mesh_m
   contains
     procedure :: initialize => vv_slice_mesh__initialize
     procedure :: finalize => vv_slice_mesh__finalize
+    procedure :: draw => vv_slice_mesh__draw
   end type vv_slice_mesh_t
 
 
 contains
+
+
+  subroutine vv_slice_mesh__draw( mesh, vv_sketch,       &
+                                        width_in_pixels, &
+                                        line_color,      &
+                                        fill_color )
+    class(vv_slice_mesh_t) <in> :: mesh
+    type(vv_sketch_t) <io> :: vv_sketch
+    real <optin> :: width_in_pixels
+    type(vv_color_t) <optin> :: line_color
+    type(vv_color_t) <optin> :: fill_color
+
+    call iCoordinates_min_max_rectangle( mesh.vert )
+    call iBoundary_curve( mesh.boundary.vert, mesh.vert )
+
+  contains
+
+    subroutine iCoordinates_min_max_rectangle( vert )
+      type(vv_slice_mesh_vert_t) <in> :: vert
+
+      type(vv_sketch__sim_pos_t) :: ll ! lower left
+      type(vv_sketch__sim_pos_t) :: ur ! upper right
+
+      ll = vv_sketch__sim_pos_t(vert.u_min, vert.v_min)
+      ur = vv_sketch__sim_pos_t(vert.u_max, vert.v_max)
+
+      call vv_sketch.rectangle( ll, ur,  &
+                                line_width_in_pixel=2.0, &
+                                line_color=VV_COLOR__CONST.black )
+    end subroutine iCoordinates_min_max_rectangle
+
+
+    subroutine iBoundary_curve( b_vert, vert )
+      type(vv_slice_mesh_boundary_vert_t) <in> :: b_vert
+      type(vv_slice_mesh_vert_t) <in> :: vert
+
+      character :: SVG_directive
+      integer :: n, nvert, counter, vert_i, vert_j
+      type(vv_sketch__sim_pos_t), dimension(:), allocatable :: verts_sim
+      character, dimension(:), allocatable :: path_directive
+      real :: u_sim, v_sim, dummy
+      
+      nvert = b_vert.num
+
+      allocate(verts_sim(nvert+1))
+      allocate(path_directive(nvert+1))
+
+      counter = 0
+      do n = 1, nvert
+        counter += 1
+        if ( n == 1 ) then
+          SVG_directive = 'M' ! Move to 
+        else if ( n == 2 ) then
+          SVG_directive = 'L' ! Line to
+        else
+          SVG_directive = ' ' ! Line to (You can ommit this after 1st 'L'.)
+        end if
+        path_directive(counter) = SVG_directive 
+        vert_i = b_vert.vi(n)
+        vert_j = b_vert.vj(n)
+        u_sim = vert.pos_u(vert_i)
+        v_sim = vert.pos_v(vert_j)
+        verts_sim(counter) = vv_sketch__sim_pos_t(u_sim,v_sim)
+      end do
+
+      ! To close the path
+      counter += 1
+      path_directive(counter) = 'Z' ! Close the sub-path.
+      dummy = 0.0  ! any number
+      verts_sim(counter) = vv_sketch__sim_pos_t( dummy, dummy )
+
+      call vv_sketch.path( counter,         &
+                           path_directive,  &
+                           verts_sim,       &
+                           width_in_pixels, &
+                           line_color,      &
+                           fill_color )      
+      deallocate(verts_sim)
+      deallocate(path_directive)
+    end subroutine iBoundary_curve
+
+  end subroutine vv_slice_mesh__draw
 
 
   subroutine vv_slice_mesh__initialize( mesh, nu, nv,      &
