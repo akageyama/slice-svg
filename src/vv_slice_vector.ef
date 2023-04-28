@@ -22,83 +22,86 @@ module vv_slice_vector_m
 
   type, public :: vv_slice_vector_t
     char(len=TAG_NAME_MAX) :: tag
-    type(vv_slice_mesh__vert_t) :: mesh_vert
+    type(vv_slice_mesh_t) :: mesh
     real, dimension(:,:), allocatable :: comp_u
     real, dimension(:,:), allocatable :: comp_v
     real :: amp_max, amp_min
   contains
-    procedure, private :: vv_slice_vector__initialize_with_uvmax
-    procedure, private :: vv_slice_vector__initialize_with_grids
-    generic :: initialize => vv_slice_vector__initialize_with_uvmax,  &
-                             vv_slice_vector__initialize_with_grids
+    procedure :: initialize => vv_slice_vector__initialize
     procedure :: finalize => vv_slice_vector__finalize    
     procedure :: set_val => vv_slice_vector__set_val
     procedure :: vis_arrows => vv_slice_vector__vis_arrows
+    procedure :: vis_boundary => vv_slice_vector__vis_boundary
   end type vv_slice_vector_t
 
 
 contains
 
 
-  subroutine vv_slice_vector__initialize_with_uvmax( vector,      &
-                                                     tag,         &
-                                                     nu,          &
-                                                     nv,          &
-                                                     u_min,       &
-                                                     u_max,       &
-                                                     v_min,       &
-                                                     v_max,       &
-                                                     comp_u,      &
-                                                     comp_v )
-    class(vv_slice_vector_t) <out> :: vector
-    char(len=*) <in> :: tag
-    integer <in> :: nu, nv
-    real <in> :: u_min, u_max
-    real <in> :: v_min, v_max
-    real, dimension(nu,nv) <optin> :: comp_u, comp_v
+  subroutine vv_slice_vector__vis_boundary( vector, vv_sketch,        &
+                                                    width_in_pixels,  &
+                                                    line_color,       &
+                                                    fill_color )
+    class(vv_slice_vector_t) <io> :: vector
+    type(vv_sketch_t) <io> :: vv_sketch
+    real <optin> :: width_in_pixels
+    type(vv_color_t) <optin> :: line_color
+    type(vv_color_t) <optin> :: fill_color
 
-    real, dimension(nu,nv) :: amp_vect
+    integer :: n, nvert, counter, vert_i, vert_j
+    character :: SVG_directive
+    type(vv_sketch__sim_pos_t), dimension(:), allocatable :: verts_sim
+    character, dimension(:), allocatable :: path_directive
+    real :: u_sim, v_sim, dummy
 
-    vector.tag = tag
+    nvert = vector.mesh.boundary.vert.num
 
-    call vector.mesh_vert.initialize( nu,     &
-                                      nv,     &
-                                      u_min,  &
-                                      u_max,  &
-                                      v_min,  &
-                                      v_max )
+    allocate(verts_sim(nvert+1))
+    allocate(path_directive(nvert+1))
 
-    allocate(vector.comp_u(nu,nv))
-    allocate(vector.comp_v(nu,nv))
+    counter = 0
+    do n = 1, nvert
+      counter += 1
+      if ( n == 1 ) then
+        SVG_directive = 'M' ! Move to 
+      else if ( n == 2 ) then
+        SVG_directive = 'L' ! Line to
+      else
+        SVG_directive = ' ' ! Line to (You can ommit this after 1st 'L'.)
+      end if
+      path_directive(counter) = SVG_directive 
+      vert_i = vector.mesh.boundary.vert.vi(n)
+      vert_j = vector.mesh.boundary.vert.vj(n)
+      u_sim = vector.mesh.vert.pos_u(vert_i)
+      v_sim = vector.mesh.vert.pos_v(vert_j)
+      verts_sim(counter) = vv_sketch__sim_pos_t(u_sim,v_sim)
+    end do
 
-    if ( present(comp_u) ) then
-      vector.comp_u(:,:) = comp_u(:,:)
-    else
-      vector.comp_u(:,:) = 0.0
-    end if
+    ! To close the path
+    counter += 1
+    path_directive(counter) = 'Z' ! Close the sub-path.
+    dummy = 0.0  ! any number
+    verts_sim(counter) = vv_sketch__sim_pos_t( dummy, dummy )
 
-    if ( present(comp_v) ) then
-      vector.comp_v(:,:) = comp_v(:,:)
-    else
-      vector.comp_v(:,:) = 0.0
-    end if
+    call vv_sketch.path( counter,         &
+                         path_directive,  &
+                         verts_sim,       &
+                         width_in_pixels, &
+                         line_color,      &
+                         fill_color )      
 
-    amp_vect = sqrt(comp_u**2+comp_v**2)
-
-    vector.amp_max = maxval(amp_vect)
-    vector.amp_min = minval(amp_vect)
-  end subroutine vv_slice_vector__initialize_with_uvmax
+    deallocate(verts_sim)
+    deallocate(path_directive)
+  end subroutine vv_slice_vector__vis_boundary
 
 
-  subroutine vv_slice_vector__initialize_with_grids( vector,     &
-                                                     tag,        &
-                                                     nu,         &
-                                                     nv,         &
-                                                     grid_pos_u, &
-                                                     grid_pos_v, &
-                                                     comp_u,     &
-                                                     comp_v,     &
-                                                     grid_flag )
+  subroutine vv_slice_vector__initialize( vector, tag,        &
+                                                  nu, nv,     &
+                                                  grid_pos_u, &
+                                                  grid_pos_v, &
+                                                  comp_u,     &
+                                                  comp_v,     &
+                                                  grid_flag )
     class(vv_slice_vector_t) <out> :: vector
     char(len=*) <in> :: tag
     integer <in> :: nu, nv
@@ -111,18 +114,10 @@ contains
 
     vector.tag = tag
 
-    if ( present(grid_flag) ) then
-      call vector.mesh_vert.initialize( nu,         &
-                                        nv,         &
-                                        grid_pos_u, &
-                                        grid_pos_v, &
-                                        grid_flag )
-    else
-      call vector.mesh_vert.initialize( nu,         &
-                                        nv,         &
-                                        grid_pos_u, &
-                                        grid_pos_v )
-    end if
+    call vector.mesh.initialize( nu, nv,     &
+                                 grid_pos_u, &
+                                 grid_pos_v, &
+                                 grid_flag )
 
     allocate(vector.comp_u(nu,nv))
     allocate(vector.comp_v(nu,nv))
@@ -140,8 +135,7 @@ contains
       vector.amp_min = 0.0
     end if
 
-
-  end subroutine vv_slice_vector__initialize_with_grids
+  end subroutine vv_slice_vector__initialize
 
   
   subroutine vv_slice_vector__finalize( vector )
@@ -149,17 +143,17 @@ contains
 
     deallocate(vector.comp_u)
     deallocate(vector.comp_v)
-    call vector.mesh_vert.finalize
+    call vector.mesh.finalize
   end subroutine vv_slice_vector__finalize
 
 
   subroutine vv_slice_vector__set_val( vector, comp_u, comp_v )
     class(vv_slice_vector_t) <io> :: vector
-    real, dimension(vector.mesh_vert.nu,  &
-                    vector.mesh_vert.nv) <in> :: comp_u, comp_v
+    real, dimension(vector.mesh.vert.nu,  &
+                    vector.mesh.vert.nv) <in> :: comp_u, comp_v
 
-    real, dimension(vector.mesh_vert.nu,  &
-                    vector.mesh_vert.nv) :: amp_vect
+    real, dimension(vector.mesh.vert.nu,  &
+                    vector.mesh.vert.nv) :: amp_vect
 
     vector.comp_u(:,:) = comp_u(:,:)
     vector.comp_v(:,:) = comp_v(:,:)
@@ -190,7 +184,12 @@ contains
     char(len=11) :: tag_for_group
     logical, dimension(:,:), allocatable :: pass_to_sketch_flag
 
-    allocate(pass_to_sketch_flag(vector.mesh_vert.nu,vector.mesh_vert.nv))
+    allocate(pass_to_sketch_flag(vector.mesh.vert.nu,vector.mesh.vert.nv))
+
+    ! boundary curve
+    call vector.vis_boundary( vv_sketch,                         &
+                              line_color=VV_COLOR__CONST.black,  &
+                              width_in_pixels=2.0 )
 
     pass_to_sketch_flag(:,:) = .false.
 
@@ -200,12 +199,12 @@ contains
         ! "arrow-skip4, arrow-skip3, ...
       call vv_sketch.group_push( id=trim(tag_for_group),  &
                                  visibility="visible" )
-        do j = 1, vector.mesh_vert.nv, stride
-          do i = 1, vector.mesh_vert.nu, stride
-            if ( vector.mesh_vert.flag(i,j) == 'o' ) cycle
+        do j = 1, vector.mesh.vert.nv, stride
+          do i = 1, vector.mesh.vert.nu, stride
+            if ( vector.mesh.vert.flag(i,j) == 'o' ) cycle
             if ( .not. pass_to_sketch_flag(i,j) ) then
-              u = vector.mesh_vert.pos_u(i)
-              v = vector.mesh_vert.pos_v(j)
+              u = vector.mesh.vert.pos_u(i)
+              v = vector.mesh.vert.pos_v(j)
               call vv_sketch.arrow( u, v, &
                                     vector.comp_u(i,j), &
                                     vector.comp_v(i,j) )
