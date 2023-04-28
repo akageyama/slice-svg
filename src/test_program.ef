@@ -428,6 +428,11 @@ contains
                          font_size_in_pixel=30.0,  &
                          text_anchor='middle', &
                          color=VV_COLOR__CONST.black )
+    ! --<boundary curve>--
+    call vv_slice_pressure.mesh.draw( vv_sketch, &
+                                      line_color=VV_COLOR__CONST.black,  &
+                                      width_in_pixels=2.0 )
+    ! --</boundary curve>--
 
     call vv_sketch.group_push( line_color=magenta,  &
                                line_width_in_pixel=2.0 )
@@ -447,9 +452,9 @@ contains
       !!<
     call vv_sketch.group_pop
     call vv_slice_pressure.finalize
-    call vv_sketch.rectangle( ll, ur,  &
-                              line_width_in_pixel=2.0, &
-                              line_color=VV_COLOR__CONST.black )
+!   call vv_sketch.rectangle( ll, ur,  &
+!                             line_width_in_pixel=2.0, &
+!                             line_color=VV_COLOR__CONST.black )
     call vv_sketch.finalize                 
   end subroutine iSample_scalar
 
@@ -524,12 +529,14 @@ contains
                          color=VV_COLOR__CONST.black )
 
     call vv_sketch.group_push( line_color=VV_COLOR__CONST.blue )
+    ! --<boundary curve>--
+    call vv_slice_velocity.mesh.draw( vv_sketch, &
+                                      line_color=VV_COLOR__CONST.black,  &
+                                      width_in_pixels=2.0 )
+    ! --</boundary curve>--
     call vv_slice_velocity.vis_arrows( vv_sketch )
     call vv_sketch.group_pop
     call vv_slice_velocity.finalize
-    call vv_sketch.rectangle( ll, ur,  &
-                              line_width_in_pixel=2.0, &
-                              line_color=VV_COLOR__CONST.black )
     call vv_sketch.finalize                 
   end subroutine iSample_vector
 

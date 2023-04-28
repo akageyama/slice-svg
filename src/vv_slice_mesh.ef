@@ -157,6 +157,8 @@
 module vv_slice_mesh_m
   use const_base_m
   use ut_m
+  use vv_color_m
+  use vv_sketch_m
   implicit none
   private
   public :: VV_SLICE_MESH__EDGE_MM,  &
@@ -170,7 +172,7 @@ module vv_slice_mesh_m
   integer <const> :: VV_SLICE_MESH__EDGE_PP = 3  ! --p---p-- 
 
 
-  type, public :: vv_slice_mesh__vert_t
+  type, public :: vv_slice_mesh_vert_t
     integer :: nu, nv
     real, dimension(:), allocatable :: pos_u
     real, dimension(:), allocatable :: pos_v
@@ -182,17 +184,14 @@ module vv_slice_mesh_m
                        !        'o' : outside the boundary
                        !        'b' : on the boundary
   contains
-    procedure, private :: vv_slice_mesh__vert_init_with_grids
-    procedure, private :: vv_slice_mesh__vert_init_without_grids
-    generic :: initialize => vv_slice_mesh__vert_init_with_grids,  &
-                             vv_slice_mesh__vert_init_without_grids
+    procedure :: initialize => vv_slice_mesh__vert_initialize     
     procedure :: finalize => vv_slice_mesh__vert_finalize
     procedure :: debug_print_flag => vv_slice_mesh_vert__debug_print_flag
     procedure :: grid_flag_check => vv_slice_mesh_vert__grid_flag_check
-  end type vv_slice_mesh__vert_t  
+  end type vv_slice_mesh_vert_t  
 
 
-  type, public :: vv_slice_mesh__edge_t
+  type, public :: vv_slice_mesh_edge_t
     integer :: u_nu, u_nv
     integer :: v_nu, v_nv
     integer, dimension(:,:), allocatable :: u_quarter   ! {0,1,2,3}
@@ -214,10 +213,10 @@ module vv_slice_mesh_m
     procedure :: finalize => vv_slice_mesh__edge_finalize
     procedure :: set_quarter => vv_slice_mesh__edge_set_quarter
     procedure :: erase => vv_slice_mesh_edge__erase
-  end type vv_slice_mesh__edge_t    
+  end type vv_slice_mesh_edge_t    
 
 
-  type, public :: vv_slice_mesh__boundary_vert_t
+  type, public :: vv_slice_mesh_boundary_vert_t
     integer :: num ! number of boundary verts
     integer, dimension(:), allocatable :: octa_direct
     integer, dimension(:), allocatable :: vi  ! vert position index
@@ -226,10 +225,10 @@ module vv_slice_mesh_m
     procedure :: initialize => vv_slice_mesh__boundary_vert_initialize
     procedure :: finalize => vv_slice_mesh__boundary_vert_finalize
     procedure :: get_nth => vv_slice_mesh__boundary_vert_vij_to_nth
-  end type vv_slice_mesh__boundary_vert_t
+  end type vv_slice_mesh_boundary_vert_t
 
 
-  type, public :: vv_slice_mesh__boundary_edge_t
+  type, public :: vv_slice_mesh_boundary_edge_t
     integer :: num ! number of boundary edges
     character, dimension(:), allocatable :: type  ! 'u'/'v'/'a'/'d'
     integer, dimension(:), allocatable :: ei  ! edge position index
@@ -238,29 +237,151 @@ module vv_slice_mesh_m
     real, dimension(:), allocatable :: cross_coord_u
     real, dimension(:), allocatable :: cross_coord_v
   contains
-    procedure :: initialize => vv_slice_mesh__boundary_edge_initialize
+    procedure :: initialize => vv_slice_mesh__boundary_edge_init
     procedure :: finalize => vv_slice_mesh__boundary_edge_finalize
     procedure :: erase => vv_slice_mesh__boundary_edge_erase
     procedure :: get_nth => vv_slice_mesh__boundary_edge_eij_to_nth
-  end type vv_slice_mesh__boundary_edge_t
+  end type vv_slice_mesh_boundary_edge_t
 
 
-  type, public :: vv_slice_mesh__boundary_t
-    type(vv_slice_mesh__boundary_vert_t) :: vert
-    type(vv_slice_mesh__boundary_edge_t) :: edge
+  type, public :: vv_slice_mesh_boundary_t
+    type(vv_slice_mesh_boundary_vert_t) :: vert
+    type(vv_slice_mesh_boundary_edge_t) :: edge
   contains
     procedure :: initialize => vv_slice_mesh__boundary_initialize
     procedure :: finalize => vv_slice_mesh__boundary_finalize
     procedure :: make_list => vv_slice_mesh__boundary_make_list
     procedure :: set_quarter => vv_slice_mesh__boundary_set_quarter
-  end type vv_slice_mesh__boundary_t
+  end type vv_slice_mesh_boundary_t
+
+
+  type, public :: vv_slice_mesh_t
+    type(vv_slice_mesh_vert_t) :: vert
+    type(vv_slice_mesh_edge_t) :: edge
+    type(vv_slice_mesh_boundary_t) :: boundary
+  contains
+    procedure :: initialize => vv_slice_mesh__initialize
+    procedure :: finalize => vv_slice_mesh__finalize
+    procedure :: draw => vv_slice_mesh__draw
+  end type vv_slice_mesh_t
 
 
 contains
 
 
-  subroutine vv_slice_mesh_vert__debug_print_flag( this )
-    class(vv_slice_mesh__vert_t) <in> :: this
+  subroutine vv_slice_mesh__draw( mesh, vv_sketch,       &
+                                        width_in_pixels, &
+                                        line_color,      &
+                                        fill_color )
+    class(vv_slice_mesh_t) <in> :: mesh
+    type(vv_sketch_t) <io> :: vv_sketch
+    real <optin> :: width_in_pixels
+    type(vv_color_t) <optin> :: line_color
+    type(vv_color_t) <optin> :: fill_color
+
+    call iCoordinates_min_max_rectangle( mesh.vert )
+    call iBoundary_curve( mesh.boundary.vert, mesh.vert )
+
+  contains
+
+    subroutine iCoordinates_min_max_rectangle( vert )
+      type(vv_slice_mesh_vert_t) <in> :: vert
+
+      type(vv_sketch__sim_pos_t) :: ll ! lower left
+      type(vv_sketch__sim_pos_t) :: ur ! upper right
+
+      ll = vv_sketch__sim_pos_t(vert.u_min, vert.v_min)
+      ur = vv_sketch__sim_pos_t(vert.u_max, vert.v_max)
+
+      call vv_sketch.rectangle( ll, ur,  &
+                                line_width_in_pixel=2.0, &
+                                line_color=VV_COLOR__CONST.black )
+    end subroutine iCoordinates_min_max_rectangle
+
+
+    subroutine iBoundary_curve( b_vert, vert )
+      type(vv_slice_mesh_boundary_vert_t) <in> :: b_vert
+      type(vv_slice_mesh_vert_t) <in> :: vert
+
+      character :: SVG_directive
+      integer :: n, nvert, counter, vert_i, vert_j
+      type(vv_sketch__sim_pos_t), dimension(:), allocatable :: verts_sim
+      character, dimension(:), allocatable :: path_directive
+      real :: u_sim, v_sim, dummy
+      
+      nvert = b_vert.num
+
+      allocate(verts_sim(nvert+1))
+      allocate(path_directive(nvert+1))
+
+      counter = 0
+      do n = 1, nvert
+        counter += 1
+        if ( n == 1 ) then
+          SVG_directive = 'M' ! Move to 
+        else if ( n == 2 ) then
+          SVG_directive = 'L' ! Line to
+        else
+          SVG_directive = ' ' ! Line to (You can ommit this after 1st 'L'.)
+        end if
+        path_directive(counter) = SVG_directive 
+        vert_i = b_vert.vi(n)
+        vert_j = b_vert.vj(n)
+        u_sim = vert.pos_u(vert_i)
+        v_sim = vert.pos_v(vert_j)
+        verts_sim(counter) = vv_sketch__sim_pos_t(u_sim,v_sim)
+      end do
+
+      ! To close the path
+      counter += 1
+      path_directive(counter) = 'Z' ! Close the sub-path.
+      dummy = 0.0  ! any number
+      verts_sim(counter) = vv_sketch__sim_pos_t( dummy, dummy )
+
+      call vv_sketch.path( counter,         &
+                           path_directive,  &
+                           verts_sim,       &
+                           width_in_pixels, &
+                           line_color,      &
+                           fill_color )      
+      deallocate(verts_sim)
+      deallocate(path_directive)
+    end subroutine iBoundary_curve
+
+  end subroutine vv_slice_mesh__draw
+
+
+  subroutine vv_slice_mesh__initialize( mesh, nu, nv,      &
+                                              grid_pos_u,  &
+                                              grid_pos_v,  &
+                                              grid_flag )
+    class(vv_slice_mesh_t) <io> :: mesh
+    integer <in> :: nu, nv
+    real, dimension(nu) <in> :: grid_pos_u
+    real, dimension(nv) <in> :: grid_pos_v
+    character, dimension(nu,nv) <optin> :: grid_flag
+
+    call mesh.vert.initialize( nu, nv,      &
+                               grid_pos_u,  &
+                               grid_pos_v,  &
+                               grid_flag )
+    call mesh.edge.initialize( mesh.vert )
+    call mesh.boundary.initialize( mesh.vert,  &
+                                   mesh.edge )
+  end subroutine vv_slice_mesh__initialize
+
+
+  subroutine vv_slice_mesh__finalize( mesh )
+    class(vv_slice_mesh_t) <io> :: mesh
+
+    call mesh.vert.finalize
+    call mesh.edge.finalize
+    call mesh.boundary.finalize
+  end subroutine vv_slice_mesh__finalize
+
+
+  subroutine vv_slice_mesh_vert__debug_print_flag( vert )
+    class(vv_slice_mesh_vert_t) <in> :: vert
 
     integer <const> :: PRINT_LINE_LEN = 120
     char(len=PRINT_LINE_LEN) :: string
@@ -268,23 +389,23 @@ contains
     integer :: i, j
     integer :: num_rows_print, num_columns_print
 
-    num_rows_print = min(this.nv,PRINT_LINE_LEN)
-    num_columns_print = min(this.nu,PRINT_LINE_LEN)
+    num_rows_print = min(vert.nv,PRINT_LINE_LEN)
+    num_columns_print = min(vert.nu,PRINT_LINE_LEN)
 
 
     do j = num_rows_print, 1, -1
       do i = 1, num_columns_print
-        string(i:i) = this.flag(i,j)
+        string(i:i) = vert.flag(i,j)
       end do
       print *, string(1:num_columns_print)
     end do
   end subroutine vv_slice_mesh_vert__debug_print_flag
 
 
-  subroutine vv_slice_mesh_vert__grid_flag_check( this )
-    class(vv_slice_mesh__vert_t) <in> :: this
+  subroutine vv_slice_mesh_vert__grid_flag_check( vert )
+    class(vv_slice_mesh_vert_t) <in> :: vert
 
-    call iCheck_flag_char( this.nu, this.nv, this.flag )
+    call iCheck_flag_char( vert.nu, vert.nv, vert.flag )
 
   contains
 
@@ -338,36 +459,38 @@ contains
   end subroutine vv_slice_mesh_vert__grid_flag_check
 
 
-  subroutine vv_slice_mesh__boundary_initialize( this, vert, edge )
-    class(vv_slice_mesh__boundary_t) <io> :: this
-    type(vv_slice_mesh__vert_t) <io> :: vert
-    type(vv_slice_mesh__edge_t) <io> :: edge
+  subroutine vv_slice_mesh__boundary_initialize( boundary, vert,  &
+                                                           edge )
+    class(vv_slice_mesh_boundary_t) <io> :: boundary
+    type(vv_slice_mesh_vert_t) <io> :: vert
+    type(vv_slice_mesh_edge_t) <io> :: edge
 
-    call this.vert.initialize( vert.nu, vert.nv, vert.flag )
-    call this.edge.initialize( this.vert.num )
-    call this.make_list( vert, edge )
+    call boundary.vert.initialize( vert.nu, vert.nv, vert.flag )
+    call boundary.edge.initialize( boundary.vert.num )
+    call boundary.make_list( vert, edge )
   end subroutine vv_slice_mesh__boundary_initialize
 
 
-  subroutine vv_slice_mesh__boundary_finalize( this )
-    class(vv_slice_mesh__boundary_t) <io> :: this
+  subroutine vv_slice_mesh__boundary_finalize( boundary )
+    class(vv_slice_mesh_boundary_t) <io> :: boundary
 
-    call this.vert.finalize
-    call this.edge.finalize
+    call boundary.vert.finalize
+    call boundary.edge.finalize
   end subroutine vv_slice_mesh__boundary_finalize
 
 
-  subroutine vv_slice_mesh__boundary_edge_erase( this, nth )
-    class(vv_slice_mesh__boundary_edge_t) <io> :: this
+  subroutine vv_slice_mesh__boundary_edge_erase( b_edge, nth )
+    class(vv_slice_mesh_boundary_edge_t) <io> :: b_edge
     integer <in> :: nth
 
-    this.quarter(nth) = VV_SLICE_MESH__EDGE_MM
+    b_edge.quarter(nth) = VV_SLICE_MESH__EDGE_MM
 
   end subroutine vv_slice_mesh__boundary_edge_erase
 
 
-  function vv_slice_mesh__boundary_vert_vij_to_nth( this, vi, vj ) result(nth)
-    class(vv_slice_mesh__boundary_vert_t) <in> :: this
+  function vv_slice_mesh__boundary_vert_vij_to_nth( b_vert, vi,  &
+                                                            vj ) result(nth)
+    class(vv_slice_mesh_boundary_vert_t) <in> :: b_vert
     integer <in> :: vi, vj
     integer :: nth
 
@@ -375,9 +498,9 @@ contains
 
     nth = -NIL ! To supress uninit warning.
 
-    do n = 1, this.num
-      i = this.vi(n)
-      j = this.vj(n)
+    do n = 1, b_vert.num
+      i = b_vert.vi(n)
+      j = b_vert.vj(n)
       if ( i == vi .and. j == vj ) then
         nth = n
         return
@@ -387,12 +510,11 @@ contains
   end function vv_slice_mesh__boundary_vert_vij_to_nth
 
 
-  function vv_slice_mesh__boundary_edge_eij_to_nth( this,      &
-                                                    edge_type, &
-                                                    ei,        &
-                                                    ej )       &
-                                                    result(nth)
-    class(vv_slice_mesh__boundary_edge_t) <in> :: this
+  function vv_slice_mesh__boundary_edge_eij_to_nth( b_edge, edge_type, &
+                                                            ei,        &
+                                                            ej )       &
+                                                            result(nth)
+    class(vv_slice_mesh_boundary_edge_t) <in> :: b_edge
     character <in> :: edge_type
     integer <in> :: ei, ej
     integer :: nth
@@ -402,10 +524,10 @@ contains
 
     nth = -NIL ! To supress uninit warning.
 
-    do n = 1, this.num
-      i = this.ei(n)
-      j = this.ej(n)
-      t = this.type(n)
+    do n = 1, b_edge.num
+      i = b_edge.ei(n)
+      j = b_edge.ej(n)
+      t = b_edge.type(n)
       if ( i == ei .and. j == ej .and. t == edge_type ) then
         nth = n
         return
@@ -415,19 +537,21 @@ contains
   end function vv_slice_mesh__boundary_edge_eij_to_nth
 
 
-  subroutine vv_slice_mesh__boundary_vert_initialize( this, nu, nv, vert_flag )
-    class(vv_slice_mesh__boundary_vert_t) <out> :: this
+  subroutine vv_slice_mesh__boundary_vert_initialize( b_vert, nu,  &
+                                                              nv,  &
+                                                              vert_flag )
+    class(vv_slice_mesh_boundary_vert_t) <out> :: b_vert
     integer <in> :: nu, nv
     character, dimension(nu,nv) <in> :: vert_flag
 
     integer :: boundary_vert_num
 
     boundary_vert_num = iCount_boundary_vert( nu, nv, vert_flag )
-    this.num = boundary_vert_num
+    b_vert.num = boundary_vert_num
 
-    allocate(this.octa_direct(boundary_vert_num))
-    allocate(         this.vi(boundary_vert_num))
-    allocate(         this.vj(boundary_vert_num))
+    allocate(b_vert.octa_direct(boundary_vert_num))
+    allocate(         b_vert.vi(boundary_vert_num))
+    allocate(         b_vert.vj(boundary_vert_num))
 
   contains
 
@@ -451,12 +575,12 @@ contains
   end subroutine vv_slice_mesh__boundary_vert_initialize
 
 
-  subroutine vv_slice_mesh__boundary_vert_finalize( this )
-    class(vv_slice_mesh__boundary_vert_t) <io> :: this
+  subroutine vv_slice_mesh__boundary_vert_finalize( b_vert )
+    class(vv_slice_mesh_boundary_vert_t) <io> :: b_vert
 
-    deallocate(this.octa_direct)
-    deallocate(this.vi)
-    deallocate(this.vj)
+    deallocate(b_vert.octa_direct)
+    deallocate(b_vert.vi)
+    deallocate(b_vert.vj)
   end subroutine vv_slice_mesh__boundary_vert_finalize
 
 
@@ -672,10 +796,11 @@ contains
   end subroutine get_edge_id
 
 
-  subroutine vv_slice_mesh__boundary_make_list( this, vert, edge )
-    class(vv_slice_mesh__boundary_t) <io> :: this
-    type(vv_slice_mesh__vert_t) <io> :: vert
-    type(vv_slice_mesh__edge_t) <io> :: edge
+  subroutine vv_slice_mesh__boundary_make_list( boundary, vert,  &
+                                                          edge )
+    class(vv_slice_mesh_boundary_t) <io> :: boundary
+    type(vv_slice_mesh_vert_t) <io> :: vert
+    type(vv_slice_mesh_edge_t) <io> :: edge
 
     integer :: vi, vj, start_vi, start_vj
     integer :: ei, ej
@@ -684,7 +809,7 @@ contains
     integer :: octa_direct
     character :: edge_type
 
-    num_of_boundary_vert = this.vert.num
+    num_of_boundary_vert = boundary.vert.num
 
     call iFind_border_vert_and_its_direct( vert.nu, vert.nv, &
                                            vert.flag,        &
@@ -702,13 +827,13 @@ contains
     start_vj = vj
     counter = 1
     vert.octa_direct(vi,vj) = octa_direct
-    this.vert.octa_direct(counter) = octa_direct
-    this.vert.vi(counter) = vi
-    this.vert.vj(counter) = vj
+    boundary.vert.octa_direct(counter) = octa_direct
+    boundary.vert.vi(counter) = vi
+    boundary.vert.vj(counter) = vj
     call get_edge_id( vi, vj, octa_direct, ei, ej, edge_type )
-    this.edge.ei(counter) = ei
-    this.edge.ej(counter) = ej
-    this.edge.type(counter) = edge_type
+    boundary.edge.ei(counter) = ei
+    boundary.edge.ej(counter) = ej
+    boundary.edge.type(counter) = edge_type
     call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     do counter = 2, num_of_boundary_vert + 1
       ! the last "+1" is necesary to close the path
@@ -721,13 +846,13 @@ contains
         return
       end if
       vert.octa_direct(vi,vj) = octa_direct
-      this.vert.octa_direct(counter) = octa_direct
-      this.vert.vi(counter) = vi
-      this.vert.vj(counter) = vj
+      boundary.vert.octa_direct(counter) = octa_direct
+      boundary.vert.vi(counter) = vi
+      boundary.vert.vj(counter) = vj
       call get_edge_id( vi, vj, octa_direct, ei, ej, edge_type )
-      this.edge.ei(counter) = ei
-      this.edge.ej(counter) = ej
-      this.edge.type(counter) = edge_type
+      boundary.edge.ei(counter) = ei
+      boundary.edge.ej(counter) = ej
+      boundary.edge.type(counter) = edge_type
       call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
     end do
 
@@ -736,7 +861,7 @@ contains
   contains
 
     subroutine iSet_boundary_mark_on_mesh_edge( edge, type, ei, ej )
-      type(vv_slice_mesh__edge_t) <io> :: edge
+      type(vv_slice_mesh_edge_t) <io> :: edge
       character <in> :: type
       integer <in> :: ei, ej
 
@@ -895,20 +1020,21 @@ contains
   end function quarter_of_edge_ends
 
 
-  subroutine vv_slice_mesh_edge__erase( this, edge_type, ei, ej )
-    class(vv_slice_mesh__edge_t) <io> :: this
+  subroutine vv_slice_mesh_edge__erase( edge, edge_type,  &
+                                              ei, ej )
+    class(vv_slice_mesh_edge_t) <io> :: edge
     character <in> :: edge_type
     integer <in> :: ei, ej
     
     select case (edge_type)
       case ('u')
-        this.u_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+        edge.u_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
       case ('v') 
-        this.v_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+        edge.v_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
       case ('a') 
-        this.a_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+        edge.a_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
       case ('d') 
-        this.d_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+        edge.d_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
       case default
         call ut__fatal( "__MODULE__(__LINE__): " //  &
                         "case error." )
@@ -916,12 +1042,12 @@ contains
   end subroutine vv_slice_mesh_edge__erase
 
 
-  subroutine vv_slice_mesh__vert_init_with_grids( this,          &
-                                                  nu, nv,        &
-                                                  grid_pos_u,    &
-                                                  grid_pos_v,    &
-                                                  vert_flag )
-    class(vv_slice_mesh__vert_t) <out> :: this
+  subroutine vv_slice_mesh__vert_initialize( vert, nu,          &
+                                                   nv,          &
+                                                   grid_pos_u,  &
+                                                   grid_pos_v,  &
+                                                   vert_flag )
+    class(vv_slice_mesh_vert_t) <out> :: vert
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
     real, dimension(nv) <in> :: grid_pos_v
@@ -979,92 +1105,45 @@ contains
     call ut__assert( v_max > v_min,       &
                     '__MODULE__(__LINE__): Invalid coords v.' )
 
-    this.nu = nu
-    this.nv = nv
-    this.u_min = u_min
-    this.u_max = u_max
-    this.v_min = v_min
-    this.v_max = v_max
+    vert.nu = nu
+    vert.nv = nv
+    vert.u_min = u_min
+    vert.u_max = u_max
+    vert.v_min = v_min
+    vert.v_max = v_max
 
-    allocate(this.pos_u(nu))
-    allocate(this.pos_v(nv))
-    allocate(this.flag(nu,nv))
-    allocate(this.octa_direct(nu,nv))
+    allocate(vert.pos_u(nu))
+    allocate(vert.pos_v(nv))
+    allocate(vert.flag(nu,nv))
+    allocate(vert.octa_direct(nu,nv))
 
-    this.pos_u(:) = grid_pos_u(:)
-    this.pos_v(:) = grid_pos_v(:)
+    vert.pos_u(:) = grid_pos_u(:)
+    vert.pos_v(:) = grid_pos_v(:)
 
     if ( present(vert_flag) ) then
-      this.flag(:,:) = vert_flag(:,:)
-      call this.grid_flag_check
-      call this.debug_print_flag
+      vert.flag(:,:) = vert_flag(:,:)
+      call vert.grid_flag_check
+      call vert.debug_print_flag
     else
-      call set_default_vert_flag( nu, nv, this.flag )      
+      call set_default_vert_flag( nu, nv, vert.flag )      
     end if
-  end subroutine vv_slice_mesh__vert_init_with_grids
+  end subroutine vv_slice_mesh__vert_initialize
 
 
-  subroutine vv_slice_mesh__vert_finalize( this )
-    class(vv_slice_mesh__vert_t) <io> :: this
+  subroutine vv_slice_mesh__vert_finalize( vert )
+    class(vv_slice_mesh_vert_t) <io> :: vert
 
-    deallocate(this.pos_u)
-    deallocate(this.pos_v)
-    deallocate(this.flag)
-    deallocate(this.octa_direct)
+    deallocate(vert.pos_u)
+    deallocate(vert.pos_v)
+    deallocate(vert.flag)
+    deallocate(vert.octa_direct)
   end subroutine vv_slice_mesh__vert_finalize
 
 
-  subroutine vv_slice_mesh__vert_init_without_grids( this, nu, nv,  &
-                                                     u_min, u_max,  &
-                                                     v_min, v_max )
-    class(vv_slice_mesh__vert_t) <out> :: this
-    integer <in> :: nu, nv
-    real <in> :: u_min, u_max
-    real <in> :: v_min, v_max
 
-    real :: du, dv
-    integer :: i, j
-
-    call ut__assert( (nu > 1) .and.         &
-                     (nv > 1) .and.         &
-                     (u_max > u_min) .and.  &
-                     (v_max > v_min),       &
-                    '__MODULE__(__LINE__): Invalid arguments.' )
-
-    this.nu = nu
-    this.nv = nv
-    this.u_min = u_min
-    this.u_max = u_max
-    this.v_min = v_min
-    this.v_max = v_max
-
-    allocate(this.pos_u(nu))
-    allocate(this.pos_v(nv))
-    allocate(this.flag(nu,nv))
-    allocate(this.octa_direct(nu,nv))
-
-    du = ( u_max - u_min ) / (nu-1)
-    dv = ( v_max - v_min ) / (nv-1)
-
-    do i = 1, nu
-      this.pos_u(i) = u_min + du*(i-1)
-    end do
-
-    do j = 1, nv
-      this.pos_v(j) = v_min + dv*(j-1)
-    end do
-
-    call set_default_vert_flag( nu, nv, this.flag )      
-
-!   call this.grid_flag_check
-!   call this.debug_print_flag
-
-  end subroutine vv_slice_mesh__vert_init_without_grids
-
-
-  subroutine vv_slice_mesh__edge_initialize( this, vert )
-    class(vv_slice_mesh__edge_t) <out> :: this
-    type(vv_slice_mesh__vert_t) <io> :: vert
+  subroutine vv_slice_mesh__edge_initialize( edge, vert )
+    class(vv_slice_mesh_edge_t) <out> :: edge
+    type(vv_slice_mesh_vert_t) <io> :: vert
     !!>
                             edgev                                    
                               |
@@ -1095,68 +1174,68 @@ contains
     v_nu = vert.nu
     v_nv = vert.nv - 1
 
-    this.u_nu = u_nu
-    this.u_nv = u_nv
-    this.v_nu = v_nu
-    this.v_nv = v_nv
+    edge.u_nu = u_nu
+    edge.u_nv = u_nv
+    edge.v_nu = v_nu
+    edge.v_nv = v_nv
 
-    allocate(this.u_quarter(u_nu,u_nv))
-    allocate(this.v_quarter(v_nu,v_nv))
-    allocate(this.a_quarter(u_nu,v_nv))
-    allocate(this.d_quarter(u_nu,v_nv))
-    allocate(this.u_cross_coord(u_nu,u_nv))
-    allocate(this.v_cross_coord(v_nu,v_nv))
-    allocate(this.a_cross_coord_u(u_nu,v_nv))
-    allocate(this.a_cross_coord_v(u_nu,v_nv))
-    allocate(this.d_cross_coord_u(u_nu,v_nv))
-    allocate(this.d_cross_coord_v(u_nu,v_nv))
-    allocate(this.u_is_boundary(u_nu,u_nv))
-    allocate(this.v_is_boundary(v_nu,v_nv))
-    allocate(this.a_is_boundary(u_nu,v_nv))
-    allocate(this.d_is_boundary(u_nu,v_nv))
+    allocate(edge.u_quarter(u_nu,u_nv))
+    allocate(edge.v_quarter(v_nu,v_nv))
+    allocate(edge.a_quarter(u_nu,v_nv))
+    allocate(edge.d_quarter(u_nu,v_nv))
+    allocate(edge.u_cross_coord(u_nu,u_nv))
+    allocate(edge.v_cross_coord(v_nu,v_nv))
+    allocate(edge.a_cross_coord_u(u_nu,v_nv))
+    allocate(edge.a_cross_coord_v(u_nu,v_nv))
+    allocate(edge.d_cross_coord_u(u_nu,v_nv))
+    allocate(edge.d_cross_coord_v(u_nu,v_nv))
+    allocate(edge.u_is_boundary(u_nu,u_nv))
+    allocate(edge.v_is_boundary(v_nu,v_nv))
+    allocate(edge.a_is_boundary(u_nu,v_nv))
+    allocate(edge.d_is_boundary(u_nu,v_nv))
   end subroutine vv_slice_mesh__edge_initialize
 
 
-  subroutine vv_slice_mesh__edge_finalize( this )
-    class(vv_slice_mesh__edge_t) <io> :: this
+  subroutine vv_slice_mesh__edge_finalize( edge )
+    class(vv_slice_mesh_edge_t) <io> :: edge
 
-    deallocate(this.u_quarter)
-    deallocate(this.v_quarter)
-    deallocate(this.a_quarter)
-    deallocate(this.d_quarter)
-    deallocate(this.u_cross_coord)
-    deallocate(this.v_cross_coord)
-    deallocate(this.a_cross_coord_u)
-    deallocate(this.a_cross_coord_v)
-    deallocate(this.d_cross_coord_u)
-    deallocate(this.d_cross_coord_v)
+    deallocate(edge.u_quarter)
+    deallocate(edge.v_quarter)
+    deallocate(edge.a_quarter)
+    deallocate(edge.d_quarter)
+    deallocate(edge.u_cross_coord)
+    deallocate(edge.v_cross_coord)
+    deallocate(edge.a_cross_coord_u)
+    deallocate(edge.a_cross_coord_v)
+    deallocate(edge.d_cross_coord_u)
+    deallocate(edge.d_cross_coord_v)
   end subroutine vv_slice_mesh__edge_finalize
 
 
-  subroutine vv_slice_mesh__boundary_edge_initialize( this, num_boundary_vert )
-    class(vv_slice_mesh__boundary_edge_t) <out> :: this
+  subroutine vv_slice_mesh__boundary_edge_init( b_edge, num_boundary_vert )
+    class(vv_slice_mesh_boundary_edge_t) <out> :: b_edge
     integer <in> :: num_boundary_vert
 
-    this.num = num_boundary_vert
+    b_edge.num = num_boundary_vert
 
-    allocate(         this.type(this.num))
-    allocate(           this.ei(this.num))
-    allocate(           this.ej(this.num))
-    allocate(      this.quarter(this.num))
-    allocate(this.cross_coord_u(this.num))
-    allocate(this.cross_coord_v(this.num))
-  end subroutine vv_slice_mesh__boundary_edge_initialize
+    allocate(         b_edge.type(b_edge.num))
+    allocate(           b_edge.ei(b_edge.num))
+    allocate(           b_edge.ej(b_edge.num))
+    allocate(      b_edge.quarter(b_edge.num))
+    allocate(b_edge.cross_coord_u(b_edge.num))
+    allocate(b_edge.cross_coord_v(b_edge.num))
+  end subroutine vv_slice_mesh__boundary_edge_init
 
 
-  subroutine vv_slice_mesh__boundary_edge_finalize( this )
-    class(vv_slice_mesh__boundary_edge_t) <io> :: this
+  subroutine vv_slice_mesh__boundary_edge_finalize( b_edge )
+    class(vv_slice_mesh_boundary_edge_t) <io> :: b_edge
 
-    deallocate(this.type)
-    deallocate(this.ei)
-    deallocate(this.ej)
-    deallocate(this.quarter)
-    deallocate(this.cross_coord_u)
-    deallocate(this.cross_coord_v)
+    deallocate(b_edge.type)
+    deallocate(b_edge.ei)
+    deallocate(b_edge.ej)
+    deallocate(b_edge.quarter)
+    deallocate(b_edge.cross_coord_u)
+    deallocate(b_edge.cross_coord_v)
   end subroutine vv_slice_mesh__boundary_edge_finalize
 
 
@@ -1164,10 +1243,10 @@ contains
                                val_vert,   &
                                level,      &
                                edge )
-    type(vv_slice_mesh__vert_t) <in> :: vert
+    type(vv_slice_mesh_vert_t) <in> :: vert
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
-    type(vv_slice_mesh__edge_t) <io> :: edge
+    type(vv_slice_mesh_edge_t) <io> :: edge
     !!>
         Here we compare the scalar field value "vert_val" 
         on each vertex at (i,j) 
@@ -1379,24 +1458,23 @@ contains
   end subroutine set_edge_quarter
 
 
-  subroutine vv_slice_mesh__edge_set_quarter( this,       &
-                                              vert,       &
-                                              val_vert,   &
-                                              level )
-    class(vv_slice_mesh__edge_t) <io> :: this
-    type(vv_slice_mesh__vert_t) <in> :: vert
+  subroutine vv_slice_mesh__edge_set_quarter( edge, vert,       &
+                                                    val_vert,   &
+                                                    level )
+    class(vv_slice_mesh_edge_t) <io> :: edge
+    type(vv_slice_mesh_vert_t) <in> :: vert
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
 
-    this.u_quarter(:,:) = -999  ! Any negative. Note that
-    this.v_quarter(:,:) = -999  ! QUATER_MM, MP, PM, PP are
+    edge.u_quarter(:,:) = -999  ! Any negative. Note that
+    edge.v_quarter(:,:) = -999  ! QUATER_MM, MP, PM, PP are
                                 ! all positive.
 
-    call set_edge_quarter( vert, val_vert, level, this )
-    call set_edge_cross_coord( vert, val_vert, level, this )
-    call ut__assert( minval(this.u_quarter) >= 0,  &
+    call set_edge_quarter( vert, val_vert, level, edge )
+    call set_edge_cross_coord( vert, val_vert, level, edge )
+    call ut__assert( minval(edge.u_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_u.quarter" )
-    call ut__assert( minval(this.v_quarter) >= 0,  &
+    call ut__assert( minval(edge.v_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_v.quarter" )
   end subroutine vv_slice_mesh__edge_set_quarter  
 
@@ -1417,12 +1495,11 @@ contains
   end function quarter_pm_and_mp_swap
 
 
-  subroutine vv_slice_mesh__boundary_set_quarter( this,       &
-                                                  vert,       &
-                                                  edge )
-    class(vv_slice_mesh__boundary_t) <io> :: this
-    type(vv_slice_mesh__vert_t) <in> :: vert
-    type(vv_slice_mesh__edge_t) <in> :: edge
+  subroutine vv_slice_mesh__boundary_set_quarter( boundary, vert,  &
+                                                            edge )
+    class(vv_slice_mesh_boundary_t) <io> :: boundary
+    type(vv_slice_mesh_vert_t) <in> :: vert
+    type(vv_slice_mesh_edge_t) <in> :: edge
 
     integer :: index_e           ! edge index
     integer :: index_v           ! vert index for both ends
@@ -1433,14 +1510,14 @@ contains
     integer :: quarter_along_path
     integer :: octa_direct
 
-    this.edge.cross_coord_u(:) = NAN
-    this.edge.cross_coord_v(:) = NAN
+    boundary.edge.cross_coord_u(:) = NAN
+    boundary.edge.cross_coord_v(:) = NAN
       !!> 
            To catch errornous cases in which a contour
            path tries to cross a non PM or MP edge.
       !!<
 
-    this.edge.quarter(:) = -999  ! Any negative (anomourous) number.
+    boundary.edge.quarter(:) = -999  ! Any negative (anomourous) number.
 
     !!>
               v7--[e6]--v6--[e5]--v5
@@ -1450,13 +1527,13 @@ contains
            v1--[e2]--v2--[e3]--v3
     !!<
 
-    do index_e = 1, this.vert.num ! boundary verts num (= edge num)
+    do index_e = 1, boundary.vert.num ! boundary verts num (= edge num)
       index_v = index_e
-      octa_direct = this.vert.octa_direct(index_v)
-      vi = this.vert.vi(index_v)
-      vj = this.vert.vj(index_v)
-      ei = this.edge.ei(index_e)
-      ej = this.edge.ej(index_e)
+      octa_direct = boundary.vert.octa_direct(index_v)
+      vi = boundary.vert.vi(index_v)
+      vj = boundary.vert.vj(index_v)
+      ei = boundary.edge.ei(index_e)
+      ej = boundary.edge.ej(index_e)
       u = vert.pos_u(vi)
       v = vert.pos_v(vj)
       select case (octa_direct)
@@ -1499,7 +1576,7 @@ contains
         quarter_along_path = quarter
       end if
 
-      this.edge.quarter(index_e) = quarter_along_path
+      boundary.edge.quarter(index_e) = quarter_along_path
       if ( quarter_along_path == VV_SLICE_MESH__EDGE_PM ) then
         ! Only PM case.
         select case (octa_direct)
@@ -1560,8 +1637,8 @@ contains
                             "case error." )
         end select
 
-        this.edge.cross_coord_u(index_e) = cross_u
-        this.edge.cross_coord_v(index_e) = cross_v
+        boundary.edge.cross_coord_u(index_e) = cross_u
+        boundary.edge.cross_coord_v(index_e) = cross_v
       end if        
     end do    
 
@@ -1569,10 +1646,10 @@ contains
 
 
   subroutine set_edge_cross_coord( vert, val_vert, level, edge )
-    type(vv_slice_mesh__vert_t) <in> :: vert
+    type(vv_slice_mesh_vert_t) <in> :: vert
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
-    type(vv_slice_mesh__edge_t) <io> :: edge
+    type(vv_slice_mesh_edge_t) <io> :: edge
     !!> 
             .                                 .
               .       u2            u1      . 

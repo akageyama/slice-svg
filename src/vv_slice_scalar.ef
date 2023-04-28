@@ -26,16 +26,11 @@ module vv_slice_scalar_m
 
   type, public :: vv_slice_scalar_t
     char(len=TAG_NAME_MAX) :: tag
-    type(vv_slice_mesh__vert_t) :: mesh_vert
-    type(vv_slice_mesh__edge_t) :: mesh_edge
-    type(vv_slice_mesh__boundary_t) :: mesh_boundary
+    type(vv_slice_mesh_t) :: mesh
     real, dimension(:,:), allocatable :: val_vert
     real :: val_vert_max, val_vert_min
   contains
-    procedure, private :: vv_slice_scalar__initialize_with_uvmax
-    procedure, private :: vv_slice_scalar__initialize_with_grids
-    generic :: initialize => vv_slice_scalar__initialize_with_uvmax,  &
-                             vv_slice_scalar__initialize_with_grids
+    procedure :: initialize => vv_slice_scalar__initialize
     procedure :: finalize => vv_slice_scalar__finalize
     procedure :: set_val => vv_slice_scalar__set_val
     procedure :: vis_contour => vv_slice_scalar__vis_contour
@@ -69,30 +64,30 @@ contains
     real :: u_sim, v_sim, dummy
 
     ==<just_once>==
-      nu = scalar.mesh_vert.nu
-      nv = scalar.mesh_vert.nv
+      nu = scalar.mesh.vert.nu
+      nv = scalar.mesh.vert.nv
       call vv_slice_isoline.initialize( nu, nv )
       allocate(verts_sim(nu*nv))
       allocate(path_directive(nu*nv))
     ==</just_once>==
 
-    call scalar.mesh_edge.set_quarter( scalar.mesh_vert,  &
+    call scalar.mesh.edge.set_quarter( scalar.mesh.vert,  &
                                        scalar.val_vert,   &
                                        level )
 
-    call scalar.mesh_boundary.set_quarter( scalar.mesh_vert,  &
-                                           scalar.mesh_edge )
+    call scalar.mesh.boundary.set_quarter( scalar.mesh.vert,  &
+                                           scalar.mesh.edge )
     call vv_slice_isoline.reset
-    call vv_slice_isoline.set_start_edge( scalar.mesh_vert,     &
-                                          scalar.mesh_edge,     &
-                                          scalar.mesh_boundary, &
+    call vv_slice_isoline.set_start_edge( scalar.mesh.vert,     &
+                                          scalar.mesh.edge,     &
+                                          scalar.mesh.boundary, &
                                           status )
     counter = 0
     do while ( status == 'have found' )
       !!  Tring to find the 1st contour for this level.
-      call vv_slice_isoline.trace_and_erase( scalar.mesh_vert,    &
-                                             scalar.mesh_edge,    &
-                                             scalar.mesh_boundary )
+      call vv_slice_isoline.trace_and_erase( scalar.mesh.vert,    &
+                                             scalar.mesh.edge,    &
+                                             scalar.mesh.boundary )
       call  ut__assert( vv_slice_isoline.num >= 2,  &
                         "__MODULE__(__LINE__): Path too short." )
         
@@ -119,9 +114,9 @@ contains
 
       !!  Generally, more contours exist for this level.
       call vv_slice_isoline.reset
-      call vv_slice_isoline.set_start_edge( scalar.mesh_vert,     &
-                                            scalar.mesh_edge,     &
-                                            scalar.mesh_boundary, &
+      call vv_slice_isoline.set_start_edge( scalar.mesh.vert,     &
+                                            scalar.mesh.edge,     &
+                                            scalar.mesh.boundary, &
                                             status )
     end do
 
@@ -137,46 +132,13 @@ contains
   end subroutine vv_slice_scalar__vis_contour
 
 
-  subroutine vv_slice_scalar__initialize_with_uvmax( scalar,        &
-                                                     tag,           &
-                                                     nu, nv,        &
-                                                     u_min, u_max,  &
-                                                     v_min, v_max,  &
-                                                     val )
-    class(vv_slice_scalar_t) <out> :: scalar
-    char(len=*) <in> :: tag
-    integer <in> :: nu, nv
-    real <in> :: u_min, u_max
-    real <in> :: v_min, v_max
-    real, dimension(nu,nv) <optin> :: val
 
-    allocate(scalar.val_vert(nu,nv))
-
-    scalar.tag = tag
-
-    call scalar.mesh_vert.initialize( nu, nv,        &
-                                      u_min, u_max,  &
-                                      v_min, v_max )
-    call scalar.mesh_edge.initialize( scalar.mesh_vert )
-    call scalar.mesh_boundary.initialize( scalar.mesh_vert,  &
-                                          scalar.mesh_edge )
-
-    if ( present(val) ) then
-      scalar.val_vert(:,:) = val(:,:)
-    else
-      scalar.val_vert(:,:) = 0.0
-    end if
-
-  end subroutine vv_slice_scalar__initialize_with_uvmax
-
-
-  subroutine vv_slice_scalar__initialize_with_grids( scalar,     &
-                                                     tag,        &
-                                                     nu, nv,     &
-                                                     grid_pos_u, &
-                                                     grid_pos_v, &
-                                                     val,        &
-                                                     grid_flag )
+  subroutine vv_slice_scalar__initialize( scalar, tag,        &
+                                                  nu, nv,     &
+                                                  grid_pos_u, &
+                                                  grid_pos_v, &
+                                                  val,        &
+                                                  grid_flag )
     class(vv_slice_scalar_t) <out> :: scalar
     char(len=*) <in> :: tag
     integer <in> :: nu, nv
@@ -194,20 +156,11 @@ contains
                      "__MODULE__(__LINE__): " //        &
                      "grid size inconsistent." )
 
-    if ( present(grid_flag) ) then
-      call scalar.mesh_vert.initialize( nu, nv,     &
-                                        grid_pos_u, &
-                                        grid_pos_v, &
-                                        grid_flag )
-    else
-      call scalar.mesh_vert.initialize( nu, nv,     &
-                                        grid_pos_u, &
-                                        grid_pos_v )
-    end if
 
-    call scalar.mesh_edge.initialize( scalar.mesh_vert )
-    call scalar.mesh_boundary.initialize( scalar.mesh_vert,  &
-                                          scalar.mesh_edge )
+    call scalar.mesh.initialize( nu, nv,     &
+                                 grid_pos_u, &
+                                 grid_pos_v, &
+                                 grid_flag )
 
     if ( present(val) ) then
       scalar.val_vert(:,:) = val(:,:)
@@ -215,7 +168,7 @@ contains
       scalar.val_vert(:,:) = 0.0
     end if
 
-  end subroutine vv_slice_scalar__initialize_with_grids
+  end subroutine vv_slice_scalar__initialize
 
 
   subroutine vv_slice_scalar__set_val( scalar, nu, nv, val )
@@ -233,9 +186,7 @@ contains
     class(vv_slice_scalar_t) <io> :: scalar
 
     deallocate(scalar.val_vert)
-    call scalar.mesh_vert.finalize
-    call scalar.mesh_edge.finalize
-    call scalar.mesh_boundary.finalize
+    call scalar.mesh.finalize
   end subroutine vv_slice_scalar__finalize
 
 end module vv_slice_scalar_m

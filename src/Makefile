@@ -134,9 +134,9 @@ test_program: test_program.o ut.o fileut.o const_base.o $(vv_lib)
                  const_base.o -L. -l$(vv_basename)
 
 fig: runme
-	# ./runme 
-	./runme && open sample_scalar.svg
-	# open $(svglist)
+	./runme 
+	# ./runme && open sample_scalar.svg
+	open $(svglist)
 
 runme: $(objlist)
 	$(FC) $(FFLAGS) -o runme $(objlist)
