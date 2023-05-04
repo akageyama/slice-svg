@@ -1470,7 +1470,9 @@ contains
     edge.v_quarter(:,:) = -999  ! QUATER_MM, MP, PM, PP are
                                 ! all positive.
 
+!debugp 'calling set_edge_quarter', level
     call set_edge_quarter( vert, val_vert, level, edge )
+!debugp 'calling set_edge_cross_coord'
     call set_edge_cross_coord( vert, val_vert, level, edge )
     call ut__assert( minval(edge.u_quarter) >= 0,  &
                      "__MODULE__(__LINE__): You missed some edge_u.quarter" )
