@@ -403,6 +403,7 @@ contains
     grid_flag(30   ,15+10) = 'b'
     grid_flag(30-10,15   ) = 'b'
 
+    !!>
     call vv_slice_pressure.initialize( 'pressure',  &
                                        NU_SCALAR,   &
                                        NV_SCALAR,  &
@@ -410,14 +411,13 @@ contains
                                        grid_pos_v,  &
                                        pressure,    &
                                        grid_flag )
-    !!>
+    !!<
     call vv_slice_pressure.initialize( 'pressure',  &
                                        NU_SCALAR,   &
                                        NV_SCALAR,  &
-                                       umin, umax,  &
-                                       vmin, vmax,  &
+                                       grid_pos_u,  &
+                                       grid_pos_v,  &
                                        pressure )
-    !!<
     call vv_sketch.initialize( ll, ur, &
                                screen_width_in_pixel=1200.0,  &
                                title='Pressure Field',  &
