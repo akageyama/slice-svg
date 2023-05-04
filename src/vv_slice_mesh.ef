@@ -184,7 +184,7 @@ module vv_slice_mesh_m
                        !        'o' : outside the boundary
                        !        'b' : on the boundary
   contains
-    procedure :: initialize => vv_slice_mesh__vert_initialize     
+    procedure :: initialize => vv_slice_mesh__vert_initialize 
     procedure :: finalize => vv_slice_mesh__vert_finalize
     procedure :: debug_print_flag => vv_slice_mesh_vert__debug_print_flag
     procedure :: grid_flag_check => vv_slice_mesh_vert__grid_flag_check
@@ -1009,9 +1009,13 @@ contains
       ans = VV_SLICE_MESH__EDGE_MM
     else if ( v1 > level .and. v2 > level ) then
       ans = VV_SLICE_MESH__EDGE_PP
-    else if ( v1 >= level .and. v2 < level ) then          
+    else if ( v1 == level .and. v2 == level ) then
+      ans = VV_SLICE_MESH__EDGE_PP
+    ! else if ( v1 >= level .and. v2 < level ) then
+    else if ( v1 >= level .and. v2 <= level ) then
       ans = VV_SLICE_MESH__EDGE_PM
-    else if ( v1 < level .and. v2 >= level ) then
+    ! else if ( v1 < level .and. v2 >= level ) then
+    else if ( v1 <= level .and. v2 >= level ) then
       ans = VV_SLICE_MESH__EDGE_MP  
     else
       call ut__fatal( "__MODULE__(__LINE__): " //  &
@@ -1126,6 +1130,7 @@ contains
       call vert.debug_print_flag
     else
       call set_default_vert_flag( nu, nv, vert.flag )      
+      ! call vert.debug_print_flag
     end if
   end subroutine vv_slice_mesh__vert_initialize
 

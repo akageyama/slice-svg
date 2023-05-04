@@ -799,7 +799,6 @@ contains
     ej = boundary.edge.ej(nth)
     edge_type = boundary.edge.type(nth)
 
-
     call ut__assert(        ei == path.head.ei .and.    &
                             ej == path.head.ej .and.    &
                      edge_type == path.head.edge_type,  &
@@ -809,7 +808,6 @@ contains
     numbv = boundary.vert.num
 
     quarter = boundary.edge.quarter(nth)
-
     if ( quarter == VV_SLICE_MESH__EDGE_PP ) then
       !!>
                  .            
@@ -1640,6 +1638,9 @@ contains
     do
       select case (path.head.cruising_lane)
         case ('on')
+          nthbv = boundary.edge.get_nth( path.head.edge_type,  &
+                                         path.head.ei,         &
+                                         path.head.ej )
           call one_step_along_boundary( path, vert, edge, boundary, nthbv )
         case ('in')
           if ( path.head.edge_type == 'u' .or.  &
@@ -1653,9 +1654,9 @@ contains
       end select
 
       if ( path.is_closed() ) then
-        call ut__assert( nthbe_start_path /= NIL,  &
-                         "__MODULE__(__LINE__): inconsistent." )
         if ( path.start_edge_is_on_boundary ) then
+          call ut__assert( nthbe_start_path /= NIL,  &
+                           "__MODULE__(__LINE__): inconsistent." )
           call boundary.edge.erase( nthbe_start_path )
         end if
         call edge.erase( path.start.edge_type,  &
