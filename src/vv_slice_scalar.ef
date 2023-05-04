@@ -67,12 +67,10 @@ contains
       nu = scalar.mesh.vert.nu
       nv = scalar.mesh.vert.nv
       call vv_slice_isoline.initialize( nu, nv )
-!debugp 'called vv_slice_isoline.initialize'
       allocate(verts_sim(nu*nv))
       allocate(path_directive(nu*nv))
     ==</just_once>==
 
-!debugp 'calling scalar.mesh.edge.set_quarter'
     call scalar.mesh.edge.set_quarter( scalar.mesh.vert,  &
                                        scalar.val_vert,   &
                                        level )
@@ -80,25 +78,20 @@ contains
     call scalar.mesh.boundary.set_quarter( scalar.mesh.vert,  &
                                            scalar.mesh.edge )
     call vv_slice_isoline.reset
-!debugp 'calling vv_slice_isoline.set_start_edge'
     call vv_slice_isoline.set_start_edge( scalar.mesh.vert,     &
                                           scalar.mesh.edge,     &
                                           scalar.mesh.boundary, &
                                           status )
-!debugp '  ', status
     counter = 0
     do while ( status == 'have found' )
       !!  Tring to find the 1st contour for this level.
-!debugp '  calling vv_slice_isoline.trace_and_erase'
       call vv_slice_isoline.trace_and_erase( scalar.mesh.vert,    &
                                              scalar.mesh.edge,    &
                                              scalar.mesh.boundary )
-!debugp '    ', vv_slice_isoline.num
       call  ut__assert( vv_slice_isoline.num >= 2,  &
                         "__MODULE__(__LINE__): Path too short." )
         
       do i = 1, vv_slice_isoline.num
-!debugp '    ', i
         counter += 1
         if ( i == 1 ) then
           SVG_directive = 'M' ! Move to 
@@ -120,9 +113,7 @@ contains
       verts_sim(counter) = vv_sketch__sim_pos_t( dummy, dummy )
 
       !!  Generally, more contours exist for this level.
-!debugp '(2nd) vv_slice_isoline.reset'
       call vv_slice_isoline.reset
-!debugp '(2nd) calling vv_slice_isoline.set_start_edge'
       call vv_slice_isoline.set_start_edge( scalar.mesh.vert,     &
                                             scalar.mesh.edge,     &
                                             scalar.mesh.boundary, &

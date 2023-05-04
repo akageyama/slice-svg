@@ -274,10 +274,6 @@ contains
     vi_left  = ei
     vj = ej
 
-if( ei==13 .and. ej==2 ) then
-!debugp 'xxx', ei, ej
-!debugp 'xxx', edge.u_quarter(ei,ej)
-end if
     if ( edge.u_quarter(ei,ej) == VV_SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = edge.u_cross_coord(ei,ej)
@@ -908,20 +904,6 @@ end if
     ei = path.head.ei
     ej = path.head.ej
 
-!debugp ei, ej
-!debugp path.head.path_go_toward
-!debugp edge.d_is_boundary(ei,ej)
-!debugp edge.a_is_boundary(ei,ej) 
-!debugp edge.u_quarter(ei,ej)
-!debugp edge.u_quarter(ei,ej+1)
-if ( ej>=2 ) then
-!debugp edge.u_quarter(ei,ej-1)
-end if
-!debugp edge.v_quarter(ei,ej)
-!debugp edge.v_quarter(ei+1,ej)
-if ( ei>=2 ) then
-!debugp edge.v_quarter(ei-1,ej)
-end if
     select case (path.head.path_go_toward)
       !!>
                         edge.u(ei,ej+1)
@@ -941,7 +923,6 @@ end if
                         edge.u(ei,ej)
       !!<
       case ('N')
-!debugp 'ENTERED N case'
         call ut__assert( path.head.edge_type == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
 
@@ -992,11 +973,8 @@ end if
                                   From 
                          !!<
         else  
-!debugp 'calling jump_to_v_edge_mp_if_possible'
-!debugp '  with', ei+1, ej
           call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei+1, ej )
-!debugp jumped
                            !!>
                                 p - - p
                                 |    *|To
@@ -1004,11 +982,8 @@ end if
                                 p -*- m
                                   From 
                            !!<
-!debugp 'calling jump_to_u_edge_pm_if_possible'
           call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                               jumped, ei, ej+1 )
-!debugp '  with', ei, ej+1
-!debugp jumped
                            !!>
                                   To
                                 p -*- m
@@ -1017,11 +992,8 @@ end if
                                 p -*- m
                                   From 
                            !!<
-!debugp 'calling jump_to_v_edge_pm_if_possible'
-!debugp '  with', ei, ej
           call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
                                               jumped, ei, ej )
-!debugp jumped
                            !!>
                                 m - - m
                               To*     |
@@ -1031,7 +1003,6 @@ end if
                            !!<
         end if
       case ('W')
-!debugp 'ENTERED W case'
         call ut__assert( path.head.edge_type == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
 
@@ -1081,11 +1052,8 @@ end if
                               o - - - - p
                          !!<
         else  
-!debugp 'calling jump_to_u_edge_pm_if_possible'
-!debugp '  with', ei-1, ej+1
           call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                               jumped, ei-1, ej+1 )
-!debugp jumped
                          !!>
                                   To
                                 p -*- m
@@ -1093,11 +1061,8 @@ end if
                                 |    *|From
                                 p - - p
                          !!<
-!debugp 'calling jump_to_v_edge_pm_if_possible'
-!debugp '  with', ei-1, ej
           call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
                                               jumped, ei-1, ej )
-!debugp jumped
                          !!>
                                 m - - m
                                 |     |
@@ -1105,11 +1070,8 @@ end if
                                 p - - p
                          !!<
 
-!debugp 'calling jump_to_u_edge_mp_if_possible'
-!debugp '  with', ei-1, ej
           call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei-1, ej )
-!debugp jumped
                          !!>
                                 m - - m
                                 |    *|
@@ -1119,7 +1081,6 @@ end if
                          !!<
         end if
       case ('S')
-!debugp 'ENTERED S case'
         call ut__assert( path.head.edge_type == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
 
@@ -1172,11 +1133,8 @@ end if
                                
                          !!<
         else  
-!debugp 'calling jump_to_v_edge_pm_if_possible'
-!debugp '  with', ei, ej-1
           call jump_to_v_edge_pm_if_possible( path, vert, edge,  &
                                               jumped, ei, ej-1 )
-!debugp jumped
                          !!>
                                   From
                                 m -*- p
@@ -1184,11 +1142,8 @@ end if
                              To |*    |
                                 p - - p
                          !!<
-!debugp 'calling jump_to_u_edge_mp_if_possible'
-!debugp '  with', ei, ej-1
           call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei, ej-1 )
-!debugp jumped
                          !!>
                                   From
                                 m -*- p
@@ -1197,8 +1152,6 @@ end if
                                 m -*- p
                                    To
                          !!<
-!debugp 'calling jump_to_v_edge_mp_if_possible'
-!debugp '  with', ei+1, ej-1
           call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei+1, ej-1 )
                          !!>
@@ -1210,7 +1163,6 @@ end if
                          !!<
         end if
       case ('E')
-!debugp 'ENTERED E case'
         call ut__assert( path.head.edge_type == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
 
@@ -1260,11 +1212,8 @@ end if
                               m - - - - o
                          !!<
         else  
-!debugp 'calling jump_to_u_edge_mp_if_possible'
-!debugp '  with', ei, ej
           call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei, ej )
-!debugp jumped
                          !!>
                                 p - - p
                            From *     |
@@ -1272,22 +1221,16 @@ end if
                                 m * - p
                                   To
                          !!<
-!debugp 'calling jump_to_v_edge_mp_if_possible'
-!debugp '  with', ei+1, ej
           call jump_to_v_edge_mp_if_possible ( path, vert, edge,  &
                                               jumped, ei+1, ej )
-!debugp jumped
                          !!>
                                 p - - p
                            From * * * * To
                                 |     |
                                 m - - m
                          !!<
-!debugp 'calling jump_to_u_edge_pm_if_possible'
-!debugp '  with', ei, ej+1
           call jump_to_u_edge_pm_if_possible( path, vert, edge,  &
                                               jumped, ei, ej+1 )
-!debugp jumped
                          !!>
                                   To
                                 p * - m
@@ -1512,11 +1455,8 @@ end if
     call ut__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset vv_slice_isoline.' )
 
-!debugp 'calling do_loop'
     do edge_index = 1, boundary.edge.num
-!debugp '  ', edge_index
       quarter = boundary.edge.quarter(edge_index)
-!debugp '  ', quarter
       if ( quarter == VV_SLICE_MESH__EDGE_PP  .or.  &
            quarter == VV_SLICE_MESH__EDGE_PM ) then
         status = 'have found'
@@ -1538,21 +1478,15 @@ end if
         else ! quarter == VV_SLICE_MESH__EDGE_PM
           u2 = boundary.edge.cross_coord_u(edge_index)
           v2 = boundary.edge.cross_coord_v(edge_index)
-!debugp '  ', u2, v2
           call ut__assert( u2 /= NAN .and. v2 /= NAN,  &
                            "__MODULE__(__LINE__): Invalid cross coord." )
           cruising_lane = 'in'
-!debugp '  ', boundary.vert.vi(vert_index1)
-!debugp '  ', boundary.vert.vj(vert_index1)
-!debugp '  ', boundary.vert.octa_direct(vert_index1)
           call leave_from_boundary( boundary.vert.vi(vert_index1),          &
                                     boundary.vert.vj(vert_index1),          &
                                     boundary.vert.octa_direct(vert_index1), &
                                     ei, ej,                                 &
                                     edge_type,                              &
                                     path_go_toward )
-!debugp '  ', ei, ej
-!debugp '  ', edge_type, path_go_toward
         end if
 
         call path.register_new_vert( u2, v2 )
@@ -1659,12 +1593,10 @@ end if
     char(len=10) <out> :: status ! 'no contour' or 'have found'
 
     status = 'no contour'  ! default 
-!debugp 'calling find_start_edge_on_boundaries'
     call find_start_edge_on_boundaries( this,     &
                                         vert,     &
                                         boundary, &
                                         status )
-!debugp status
     if ( status == 'have found' ) then
       this.start_edge_is_on_boundary = .true.
       return
@@ -1693,60 +1625,44 @@ end if
     integer :: nthbv ! nth of border vert
     integer :: nthbe_start_path
 
-!debugp 'i am in vv_slice_isoline__trace_and_erase'
-!debugp path.head.cruising_lane
-
     nthbe_start_path = NIL ! reset
 
-Here
     if ( path.start_edge_is_on_boundary ) then
       nthbe = boundary.edge.get_nth( path.head.edge_type,  &
                                      path.head.ei,         &
                                      path.head.ej )
       nthbe_start_path = nthbe
-!debugp '     set', nthbe_start_path
       nthbv = nthbe  ! same number
         !    v1 - - - v2 - - - v3 - - - v4 - ...
         !         e1       e2       e3  ...
     end if
 
     do
-!debugp 'entered do'
       select case (path.head.cruising_lane)
         case ('on')
-!debugp '  case on'
           call one_step_along_boundary( path, vert, edge, boundary, nthbv )
-          if ( path.is_closed() ) then
-!debugp '        path closed in case on '
-            call boundary.edge.erase( nthbe_start_path )
-            call edge.erase( path.start.edge_type,  &
-                             path.start.ei,         &
-                             path.start.ej ) 
-            return
-          end if
         case ('in')
-!debugp '  case in'
-!debugp '         ', path.head.edge_type
           if ( path.head.edge_type == 'u' .or.  &
                path.head.edge_type == 'v'  ) then
             call jump_to_other_edge_from_edge_uv( path, vert, edge )
           else
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
           end if
-          if ( path.is_closed() ) then
-!debugp '        path closed in case in ', nthbe_start_path
-            if ( nthbe_start_path /= NIL ) then
-              ! this path started from an edge on the border.
-              call boundary.edge.erase( nthbe_start_path )
-            end if
-            call edge.erase( path.start.edge_type,  &
-                             path.start.ei,         &
-                             path.start.ej ) 
-            return
-          end if
         case default
           call ut__fatal( "__MODULE__(__LINE__): case error." )
       end select
+
+      if ( path.is_closed() ) then
+        call ut__assert( nthbe_start_path /= NIL,  &
+                         "__MODULE__(__LINE__): inconsistent." )
+        if ( path.start_edge_is_on_boundary ) then
+          call boundary.edge.erase( nthbe_start_path )
+        end if
+        call edge.erase( path.start.edge_type,  &
+                         path.start.ei,         &
+                         path.start.ej ) 
+        return
+      end if
     end do
 
   end subroutine vv_slice_isoline__trace_and_erase
