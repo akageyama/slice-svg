@@ -2,7 +2,6 @@ module vv_svglib_m
   use vv_color_m
   use ut_m
   use const_base_m
-  use fileut_m
   implicit none
   private
   public :: vv_svglib__text_line
@@ -413,7 +412,7 @@ contains
     class(vv_svglib_t) <in> :: this
 
     call write_footer( this )
-    call fileut__close( this.file_unit )
+    close( this.file_unit )
   end subroutine vv_svglib__close
 
 
@@ -517,9 +516,9 @@ contains
     this.file_name = trim(file_name)
     this.indent_level = 0
 
-    this.file_unit = fileut__open( file=trim(file_name),  &
-                                   action="readwrite",    &
-                                   status="unknown" ) 
+    open(newunit=this.file_unit,file=trim(file_name),     &
+                                     action="readwrite",  &
+                                     status="unknown" ) 
     this.width = width
     this.height = height
     call write_header( this, this.width, this.height )

@@ -1,6 +1,5 @@
 
 program test_program
-  use fileut_m
   use const_base_m
   use vv_color_m
   use vv_sketch_m
@@ -8,8 +7,6 @@ program test_program
   use vv_slice_vector_m
   implicit none
 
-! type(vv_sketch__sim_pos_t) :: cross_section_lower_left
-! type(vv_sketch__sim_pos_t) :: cross_section_upper_right
 
   integer <const> :: NU_VECTOR = 60,   NV_VECTOR = 30
   ! integer <const> :: NU_VECTOR = 240,   NV_VECTOR = 120
