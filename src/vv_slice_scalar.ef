@@ -114,12 +114,13 @@ contains
     integer :: i, counter
     real :: u_sim, v_sim, dummy
 
+    nu = scalar.mesh.vert.nu
+    nv = scalar.mesh.vert.nv
+
     ==<just_once>==
-      nu = scalar.mesh.vert.nu
-      nv = scalar.mesh.vert.nv
       call vv_slice_isoline.initialize( nu, nv )
-      allocate(verts_sim(nu*nv))
-      allocate(path_directive(nu*nv))
+      allocate(verts_sim(nu*nv*10))
+      allocate(path_directive(nu*nv*10))
     ==</just_once>==
 
     call scalar.mesh.edge.set_quarter( scalar.mesh.vert,  &
@@ -129,7 +130,8 @@ contains
     if ( present(debug_print) ) then
       if ( debug_print ) then
         call scalar.mesh.debug_print( 15, 19, 1, 4 )
-        call scalar.debug_print( 15, 19, 1, 4 )
+        call scalar.debug_print( 15, 19, 1, 8 )
+        call scalar.debug_print( 15, 19, nv-7, nv )
       end if
     end if
 
