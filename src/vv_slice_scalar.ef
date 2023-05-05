@@ -34,10 +34,59 @@ module vv_slice_scalar_m
     procedure :: finalize => vv_slice_scalar__finalize
     procedure :: set_val => vv_slice_scalar__set_val
     procedure :: vis_contour => vv_slice_scalar__vis_contour
+    procedure :: debug_print => vv_slice_scalar__debug_print
   end type vv_slice_scalar_t
 
 
 contains
+
+
+  subroutine vv_slice_scalar__debug_print( scalar, ifrom,  &
+                                                   ito,    &
+                                                   jfrom,  &
+                                                   jto )
+    class(vv_slice_scalar_t) <in> :: scalar
+    integer <in> :: ifrom, ito, jfrom, jto
+
+    integer :: i, j
+    char(len=13) :: str13_val
+    char(len=4) :: str4_int
+    char(len=1000) :: line
+    integer :: cc ! character counter
+
+    print *,' --- '
+    do j = jto, jfrom, -1
+      line = '' ! reset
+      line(1:2) = 'j='
+      cc = 3
+      str4_int = ut__i2c4( j )
+      line(cc:cc+3) = str4_int
+      cc += 4
+      line(cc:cc+1) = ' |'
+      cc += 2
+      do i = ifrom, ito
+        line(cc:cc) = ' '
+        cc += 1
+        str13_val = ut__real_to_str13( scalar.val_vert(i,j) )
+        line(cc:cc+12) = str13_val(1:13)
+        cc += 13
+      end do
+      print *, trim(line)
+    end do
+    print *, repeat('-',cc) !! horizontal line
+    line = '' ! reset
+    line(1:8) = '        '
+    cc = 9
+    !           'j=0003 |'
+    do i = ifrom, ito
+      str4_int = ut__i2c4( i )
+      line(cc:cc+13) = '    i=' // str4_int // '    '
+      cc += 14
+    end do
+    print *, trim(line)
+    print *,' --- '
+
+  end subroutine vv_slice_scalar__debug_print
 
 
   subroutine vv_slice_scalar__vis_contour( scalar,          &
@@ -45,13 +94,15 @@ contains
                                            level,           &
                                            width_in_pixels, &
                                            line_color,      &
-                                           fill_color )
+                                           fill_color,      &
+                                           debug_print )
     class(vv_slice_scalar_t) <io> :: scalar
     type(vv_sketch_t) <io> :: vv_sketch
     real <in> :: level
     real <optin> :: width_in_pixels
     type(vv_color_t) <optin> :: line_color
     type(vv_color_t) <optin> :: fill_color
+    logical <optin> :: debug_print
 
     integer :: nu, nv
     type(vv_slice_isoline_t), save :: vv_slice_isoline
@@ -74,6 +125,13 @@ contains
     call scalar.mesh.edge.set_quarter( scalar.mesh.vert,  &
                                        scalar.val_vert,   &
                                        level )
+    ! The following debug functions were useful.
+    if ( present(debug_print) ) then
+      if ( debug_print ) then
+        call scalar.mesh.debug_print( 15, 19, 1, 4 )
+        call scalar.debug_print( 15, 19, 1, 4 )
+      end if
+    end if
 
     call scalar.mesh.boundary.set_quarter( scalar.mesh.vert,  &
                                            scalar.mesh.edge )

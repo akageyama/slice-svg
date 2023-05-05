@@ -263,10 +263,100 @@ module vv_slice_mesh_m
     procedure :: initialize => vv_slice_mesh__initialize
     procedure :: finalize => vv_slice_mesh__finalize
     procedure :: draw => vv_slice_mesh__draw
+    procedure :: debug_print => vv_slice_mesh__debug_print
   end type vv_slice_mesh_t
 
 
 contains
+
+
+  subroutine vv_slice_mesh__debug_print( mesh, vi_from, &
+                                               vi_to,   &
+                                               vj_from, &
+                                               vj_to )
+    class(vv_slice_mesh_t) <in> :: mesh
+    integer <in> :: vi_from, vi_to, vj_from, vj_to
+
+    integer <const> :: PRINT_VERT_NUM = 50
+    integer <const> :: PRINT_LINE_LEN = 2*PRINT_VERT_NUM-1
+    !!> 
+        Print out the quarter values of edge_u and edge_v.
+        This is covenient in debugging.
+               |       |
+            -- + --u-- + --
+               |       |
+               v       v
+               |       |
+            -- + --u-- + --
+               |       |
+
+        Example output
+         +3+2+1+3+3+3+3+3+3+3+3+
+         3 3 2 3 3 3 3 1 1 1 1 1
+         +3+3+3+3+3+3+2+0+0+0+0+
+         3 3 3 3 3 3 3 2 2 0 0 0
+         +3+3+3+3+3+3+2+1+2+0+0+
+         3 3 3 3 3 3 3 1 1 0 0 0
+         +3+3+3+3+3+3+2+0+0+0+0+
+         3 3 3 3 3 3 3 0 0 0 0 0
+         +3+3+3+3+3+3+2+0+0+0+0+
+    !!<
+    char(len=PRINT_LINE_LEN) :: line
+    integer :: vj_range, vi_range
+    integer :: vi, vj, ei, ej
+    character :: char_vert = '+'
+    character :: char_edge_u, char_edge_v
+    integer :: cc ! character counter
+
+    vi_range = vi_to - vi_from
+    vj_range = vj_to - vj_from
+
+    vi_range = min(vi_range,PRINT_VERT_NUM-1)
+    vj_range = min(vj_range,PRINT_VERT_NUM-1)
+
+    do vj = vj_from+vj_range, vj_from, -1  ! upside-down
+      !! edge-u
+      cc = 1
+      line = '' ! reset
+      do vi = vi_from, vi_from+vi_range
+        line(cc:cc) = char_vert
+        cc += 1  ! shift rightward
+        ei = vi
+        ej = vj
+        if ( cc <= PRINT_LINE_LEN ) then
+          char_edge_u = ut__i2c1( mesh.edge.u_quarter(ei,ej) )
+          line(cc:cc) = char_edge_u
+          cc += 1  ! shift rightward
+        end if
+      end do
+      print *, trim(line)
+
+      if ( vj > vj_from ) then  ! Do not print for lowest line.
+        !! edge-v
+        cc = 1 
+        line = '' ! reset
+        do vi = vi_from, vi_from+vi_range
+          !!>
+               |   |
+              -o---o- vj=4
+               | <== ej=3
+              -o---o- vj=3
+               |   |
+          !!<
+          ei = vi
+          ej = vj - 1
+          char_edge_v = ut__i2c1( mesh.edge.v_quarter(ei,ej) )
+          line(cc:cc) = char_edge_v
+          cc += 1  ! shift rightward
+          if ( cc <= PRINT_LINE_LEN ) then
+            line(cc:cc) = ' '
+            cc += 1  ! shift rightward
+          end if
+        end do
+        print *, trim(line)
+      end if
+    end do
+  end subroutine vv_slice_mesh__debug_print 
 
 
   subroutine vv_slice_mesh__draw( mesh, vv_sketch,       &
@@ -1005,21 +1095,18 @@ contains
     real <in> :: v1, v2, level
     integer :: ans
 
-    if ( v1 < level .and. v2 < level ) then
-      ans = VV_SLICE_MESH__EDGE_MM
-    else if ( v1 > level .and. v2 > level ) then
-      ans = VV_SLICE_MESH__EDGE_PP
-    else if ( v1 == level .and. v2 == level ) then
-      ans = VV_SLICE_MESH__EDGE_PP
-    ! else if ( v1 >= level .and. v2 < level ) then
-    else if ( v1 >= level .and. v2 <= level ) then
-      ans = VV_SLICE_MESH__EDGE_PM
-    ! else if ( v1 < level .and. v2 >= level ) then
-    else if ( v1 <= level .and. v2 >= level ) then
-      ans = VV_SLICE_MESH__EDGE_MP  
+    if ( v1 >= level ) then
+      if ( v2 >= level ) then
+        ans = VV_SLICE_MESH__EDGE_PP
+      else
+        ans = VV_SLICE_MESH__EDGE_PM
+      end if
     else
-      call ut__fatal( "__MODULE__(__LINE__): " //  &
-                      "case error." )
+      if ( v2 >= level ) then
+        ans = VV_SLICE_MESH__EDGE_MP
+      else
+        ans = VV_SLICE_MESH__EDGE_MM
+      end if
     end if
   end function quarter_of_edge_ends
 
