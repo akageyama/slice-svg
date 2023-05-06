@@ -8,7 +8,7 @@ module vv_svglib_m
   public :: VV_SVGLIB__BSL
   public :: VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
 
-  real <const> :: VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT = 40.0
+  real <const> :: VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT = 20.0
 
   type, public :: vv_svglib_t
     char(len=300) :: file_name
@@ -343,10 +343,10 @@ contains
 
     subroutine iWrite_template01
       call write_a_blank_line( this )
-      call write_a_comment( this, '<Arrow Template 01>' )
+      call write_a_comment( this, '<Arrow 01>' )
       call write_out( this, '<defs>' )
         call indent_push( this )
-          call write_out( this, '<g id="arrow-template01" transform="scale(1.0)">' )
+          call write_out( this, '<g id="arrow01" transform="scale(1.0)">' )
             call indent_push( this )
               str(1) = '<line'
               str(2) = vv_svglib__text_line( 'x1=', px,  &
@@ -386,7 +386,7 @@ contains
                                   // ' stroke="#aaaaaa"'     & ! gray
                                   // ' /> '
           call write_out( this, str_all )
-          str_all = '<g id="arrow-template02" transform="scale(1.0)">'
+          str_all = '<g id="arrow02" transform="scale(1.0)">'
           call write_out( this, str_all )
             call indent_push( this )
               str_all = '<use xlink:href="#animated-arrow-shaft"/>'
@@ -444,7 +444,7 @@ contains
 
     amp_factor = vector_amp / VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
 
-    str(1) = '<use xlink:href="#arrow-template01"' // SPACE
+    str(1) = '<use xlink:href="#arrow02"' // SPACE
     str(2) = 'transform=' // QUOTE // 'rotate('
     str(3) = trim(r2s(angle_from_x_axis)) // COMMA  &
              // trim(r2s(x)) // COMMA  &
