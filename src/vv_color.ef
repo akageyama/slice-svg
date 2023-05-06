@@ -3,6 +3,7 @@ module vv_color_m
   implicit none
   private
   public :: VV_COLOR__CONST
+  public :: vv_color__real_to_color
   public :: vv_color__normalized_real_to_color
 
 
@@ -118,16 +119,34 @@ contains
 
   end function vv_color__hsv__to_rgb
 
-  function vv_color__normalized_real_to_color( value ) result(col)
-    real <in> :: value
+
+  function vv_color__real_to_color( vmin, vmax, val ) result(col)
+    real <in> :: vmin, vmax
+    real <in> :: val
+    type(vv_color_t) :: col
+
+    real :: val_norm
+
+    call ut__assert( vmax > vmin,  &
+                    '__MODULE__(__LINE__): bad vmax/vmin. ' )
+    call ut__assert( vmax-vmin > 1.e-20,  &
+                    '__MODULE__(__LINE__): vmax,vmin too close.' )
+
+    val_norm = (val-vmin)/(vmax-vmin)
+    col = vv_color__normalized_real_to_color( val_norm )
+  end function vv_color__real_to_color
+
+
+  function vv_color__normalized_real_to_color( val_norm ) result(col)
+    real <in> :: val_norm
     type(vv_color_t) :: col
 
     type(vv_color__hsv_t) :: hsv
 
-    call ut__assert( value >= 0.0 .and. value <= 1.0,  &
-                    '__MODULE__(__LINE__): Normalized value out of range.' )
+    call ut__assert( val_norm >= 0.0 .and. val_norm <= 1.0,  &
+                    '__MODULE__(__LINE__): val_norm must be normalized.' )
 
-    hsv.hue = 0.3 + 0.5 * value
+    hsv.hue = 0.3 + 0.5 * val_norm
     hsv.sat = 0.7
     hsv.val = 0.6
     col = hsv.to_rgb()
