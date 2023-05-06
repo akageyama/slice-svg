@@ -6,29 +6,21 @@ module simulation_region_m
     real :: xmin, xmax
     real :: ymin, ymax
   end type simulation_region_t
-
-  type(simulation_region_t), public :: SIMULATION_REGION
-
-contains
-
-  simulation_region__initialize( sreg )
-    class(simulatin_region_t) <out> :: sreg
    
-    real <const> :: XMIN_ = -20.0 ! temporal, private
-    real <const> :: XMAX_ =  80.0
-    real <const> :: XMIN_ = -20.0
-    real <const> :: XMAX_ =  30.0
+  real <const> :: XMIN_ = -20.0 ! temporal, private
+  real <const> :: XMAX_ =  80.0
+  real <const> :: YMIN_ = -20.0
+  real <const> :: YMAX_ =  30.0
 
-    sreg = simulation_region_t( XMIN_, XMAX_,  &
-                                YMIN_, YMAX_ )
-  end simulation_region__initialize
-
+  type(simulation_region_t), public ::  &
+    SIMULATION_REGION = simulation_region_t( XMIN_, XMAX_,  &
+                                             YMIN_, YMAX_ )
 end module simulation_region_m
 
 
 module grid_m
   use simulation_region_m
-  imlicit none
+  implicit none
   private
   public :: GRID__NX, GRID__NY
 
@@ -56,12 +48,12 @@ contains
       dx = (SREG.xmax-SREG.xmin)/(GRID__NX-1)
       do i = 1, GRID__NX
         grid.pos_x(i) = SREG.xmin + dx*(i-1)
-      end if
+      end do
 
       dy = (SREG.ymax-SREG.ymin)/(GRID__NY-1)
       do j = 1, GRID__NY
         grid.pos_y(j) = SREG.ymin + dy*(j-1)
-      end if
+      end do
     end associate
   end subroutine grid__initialize
 
@@ -86,13 +78,16 @@ contains
 
     integer :: i, j
     real :: x, y, x_, y_
+    real :: scale
+    scale = max(SIMULATION_REGION.xmax,  &
+                SIMULATION_REGION.xmin )        
 
     do j = 1, GRID__NY
       do i = 1, GRID__NX
-        x = Grid.posx(i)
-        y = Grid.posy(j)
-        x_ = x / max(Grid.xmax,Grid.ymax)
-        y_ = y / max(Grid.xmax,Grid.ymax)
+        x = Grid.pos_x(i)
+        y = Grid.pos_y(j)
+        x_ = x / scale
+        y_ = y / scale
         temp.field(i,j) = exp( x_**2 + y_** 2)
       end do
     end do
@@ -126,7 +121,6 @@ program contour01_in_full_box
   integer :: l ! level
 
   call Grid.initialize
-  call Simulation_region.initialize
   call temperature.set
   call vv_scalar.initialize( 'temperature',  &
                              GRID__NX,       &
