@@ -35,6 +35,6 @@ line:
 	@echo "="{1..100} | sed 's/[ 0-9]//g' # bash one-liner for a line
 
 clean:
-	rm -f smoke_ring core *.o *.mod *.L
+	rm -f smoke_ring core *.svg *.o *.mod *.L
 	rm -rf *.F90
 	rm -rf example01_contour_fullbox

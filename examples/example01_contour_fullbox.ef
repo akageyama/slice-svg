@@ -68,7 +68,7 @@ module temperature_m
 
   type, public :: temperature_t
     real :: vmax, vmin ! max and mini values
-    real, dimension(GRID__NX,GRID__NY) :: field
+    real, dimension(GRID__NX,GRID__NY) :: field2d
   contains
     procedure :: set => temperature__set
   end type temperature_t
@@ -90,12 +90,12 @@ contains
         y = Grid.pos_y(j)
         x_ = x / scale
         y_ = y / scale
-        temp.field(i,j) = exp( - (x_**2 + y_** 2) )
+        temp.field2d(i,j) = exp( - (x_**2 + y_** 2) )
       end do
     end do
 
-    temp.vmax = maxval( temp.field(:,:) )
-    temp.vmin = minval( temp.field(:,:) )
+    temp.vmax = maxval( temp.field2d(:,:) )
+    temp.vmin = minval( temp.field2d(:,:) )
   end subroutine temperature__set
 
 end module temperature_m
@@ -129,7 +129,7 @@ program example01_contour_fullbox
                              GRID__NY,       &
                              Grid.pos_x,     &
                              Grid.pos_y,     &
-                             temperature.field )
+                             temperature.field2d )
   ll = vv_sketch__sim_pos_t(SIMULATION_REGION.xmin,  &
                             SIMULATION_REGION.ymin)
   ur = vv_sketch__sim_pos_t(SIMULATION_REGION.xmax,  &
@@ -144,7 +144,9 @@ program example01_contour_fullbox
 
     do l = 1, 10
       level = temperature.vmin + dlevel*(real(l)-0.5)
-      color = vv_color__normalized_real_to_color( (level-temperature.vmin) / temp_range )
+      color = vv_color__real_to_color( vmin=temperature.vmin,  &
+                                       vmax=temperature.vmax,  &
+                                       val=level )
       call vv_scalar.vis_contour( vv_sketch,  &
                                   level,  &
                                   fill_color=color )
@@ -160,7 +162,7 @@ contains
   subroutine iSketch_initialize
     call vv_sketch.initialize( ll, ur, &
                                screen_width_in_pixel=1200.0,  &
-                               title='Temperature Field',  &
+                               title='Temperature field',  &
                                filename='example01_contour_fullbox.svg' )
   end subroutine iSketch_initialize
 
