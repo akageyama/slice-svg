@@ -101,7 +101,7 @@ contains
 end module temperature_m
 
 
-program contour01_in_full_box
+program example01_contour_fullbox
   use simulation_region_m
   use grid_m
   use temperature_m
@@ -161,7 +161,7 @@ contains
     call vv_sketch.initialize( ll, ur, &
                                screen_width_in_pixel=1200.0,  &
                                title='Temperature Field',  &
-                               filename='example_contour01_in_full_box.svg' )
+                               filename='example01_contour_fullbox.svg' )
   end subroutine iSketch_initialize
 
   subroutine iSketch_message_header( string )
@@ -178,13 +178,26 @@ contains
     real :: vmin, vmax
     char(len=200) :: string
 
+    real :: text_v_pos_in_physical_unit
+    real :: tsep ! text v position separation betwen lines
+
+    tsep = (ur.v-ll.v)*0.06
+    text_v_pos_in_physical_unit = ll.v - tsep
+
     vmin = temperature.vmin
     vmax = temperature.vmax
     string = ' vmin = ' // ut__real_to_str10(vmin) //  &
              ' vmax = ' // ut__real_to_str10(vmax)
-
     call vv_sketch.text( (ll.u+ur.u)/2,  &
-                         ll.v-(ur.v-ll.v)*0.07,  &
+                         text_v_pos_in_physical_unit,  &
+                         string,  &
+                         font_size_in_pixel=20.0,  &
+                         text_anchor='middle', &
+                         color=VV_COLOR__CONST.black )
+    text_v_pos_in_physical_unit -= tsep
+    string = trim(vv_sketch.filename)
+    call vv_sketch.text( (ll.u+ur.u)/2,  &
+                         text_v_pos_in_physical_unit,  &
                          string,  &
                          font_size_in_pixel=20.0,  &
                          text_anchor='middle', &
@@ -201,4 +214,4 @@ contains
                               width_in_pixels=2.0 )
   end subroutine iSketch_boundary
 
-end program contour01_in_full_box
+end program example01_contour_fullbox

@@ -18,7 +18,7 @@ FFLAGS += -fcheck-array-temporaries
 FFLAGS += -O0
 # FFLAGS += -Wuninitialized
 
-contour01_in_full_box: contour01_in_full_box.ef ut.o
+example01_contour_fullbox: example01_contour_fullbox.ef ut.o 
 	$(EFPP) $@.ef > $@.F90
 	$(FC) $(FFLAGS) -o $@ constants.o ut.o $@.F90
 	./$@
@@ -35,7 +35,6 @@ line:
 	@echo "="{1..100} | sed 's/[ 0-9]//g' # bash one-liner for a line
 
 clean:
-	rm -f smoke_ring core ${objlist} *.mod *.L
-	rm -rf depend_list.mk
+	rm -f smoke_ring core *.o *.mod *.L
 	rm -rf *.F90
-	rm -rf ../data/vis2d
+	rm -rf example01_contour_fullbox
