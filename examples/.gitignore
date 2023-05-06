@@ -1,5 +1,4 @@
 *.F90
 *.o
 *.mod
-efpp_alias.list
 *.svg
