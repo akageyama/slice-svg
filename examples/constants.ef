@@ -1,0 +1,17 @@
+module constants_m
+  use iso_fortran_env
+  implicit none
+
+  ! << f90 constants >>
+  integer <const> :: SI = int32     ! 単精度整数
+  integer <const> :: DI = int64     ! 倍精度整数
+  integer <const> :: SR = real32    ! 単精度実数
+  integer <const> :: DR = real64    ! 倍精度実数
+
+  integer <const> :: NIL = -huge(1)
+
+  ! << Mathematical constants >>
+  real(DR) <const> :: PI = atan(1.0_DR)*4
+  real(DR) <const> :: TWOPI = PI*2
+
+end module constants_m
