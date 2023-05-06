@@ -228,6 +228,12 @@ contains
   end subroutine write_a_comment  
 
 
+  subroutine write_a_blank_line( this )
+    type(vv_svglib_t) <in> :: this
+    call write_out( this, '' )
+  end subroutine write_a_blank_line  
+
+
   subroutine write_decorated_comment( this, message )
     type(vv_svglib_t) <in> :: this
     char(len=*) <in> :: message
@@ -330,40 +336,88 @@ contains
     tx = scale
     ty = scale*0.5
 
-    call write_a_comment( this, '<Arrow Template 01>' )
+    call iWrite_template01
+    call iWrite_template02
 
-    call write_out( this, '<defs>' )
-      call indent_push( this )
-        call write_out( this, '<g id="arrow-template01">' )
-          call indent_push( this )
-            call write_out( this, '<g id="arrow-template01-scale" transform="scale(1.0)">' )
+  contains
+
+    subroutine iWrite_template01
+      call write_a_blank_line( this )
+      call write_a_comment( this, '<Arrow Template 01>' )
+      call write_out( this, '<defs>' )
+        call indent_push( this )
+          call write_out( this, '<g id="arrow-template01" transform="scale(1.0)">' )
+            call indent_push( this )
+              str(1) = '<line'
+              str(2) = vv_svglib__text_line( 'x1=', px,  &
+                                             'y1=', py,  &
+                                             'x2=', qx,  &
+                                             'y2=', qy )
+              str(3) = vv_svglib__text_line( 'stroke-width=',  &
+                                             ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT )
+              str(4) = '/>'
+              nop = 4
+              call string_concatenate( nop, str, str_all )
+              call write_out( this, str_all )
+              str_all = '<polygon points=' // QUOTE // trim(r2s(rx))  &
+                                           // COMMA // trim(r2s(ry))  &
+                                           // SPACE // trim(r2s(sx))  &
+                                           // COMMA // trim(r2s(sy))  &
+                                           // SPACE // trim(r2s(tx))  &
+                                           // COMMA // trim(r2s(ty))  &
+                                           // QUOTE // ' />'
+              call write_out( this, str_all )
+            call indent_pop( this )
+          call write_out( this, '</g>' )
+        call indent_pop( this )
+      call write_out( this, '</defs>' )
+    end subroutine iWrite_template01
+
+    subroutine iWrite_template02
+      call write_a_blank_line( this )
+      call write_a_comment( this, '<Arrow Template 02 (Animation)>' )
+      call write_out( this, '<defs>' )
+        call indent_push( this )
+          str_all = '<path id="animated-arrow-shaft"'        &
+                      // ' d="M ' // trim(r2s(px)) // COMMA  &
+                                  // trim(r2s(py)) // SPACE  &
+                         // ' L ' // trim(r2s(rx)) // COMMA  &
+                                  // trim(r2s(ry)) // '"'    &
+                                  // ' stroke="#aaaaaa"'     & ! gray
+                                  // ' /> '
+          call write_out( this, str_all )
+          str_all = '<g id="arrow-template02" transform="scale(1.0)">'
+          call write_out( this, str_all )
+            call indent_push( this )
+              str_all = '<use xlink:href="#animated-arrow-shaft"/>'
+              call write_out( this, str_all )
+              str_all = '<path d="M' // trim(r2s(sx)) // COMMA  &
+                                     // trim(r2s(sy)) // SPACE  &
+                                     // trim(r2s(tx)) // COMMA  &
+                                     // trim(r2s(ty)) // SPACE  &
+                                     // trim(r2s(rx)) // COMMA  &
+                                     // trim(r2s(ry)) // 'z">'
+              call write_out( this, str_all )
               call indent_push( this )
-                str(1) = '<line'
-                str(2) = vv_svglib__text_line( 'x1=', px,  &
-                                               'y1=', py,  &
-                                               'x2=', qx,  &
-                                               'y2=', qy )
-                str(3) = vv_svglib__text_line( 'stroke-width=',  &
-                                               ARROW_LINE_WIDTH_PIXEL_FOR_UNIT_VECT )
-                str(4) = '/>'
-                nop = 4
-                call string_concatenate( nop, str, str_all )
+                str_all = '<animateMotion dur="2s"'  &
+                                  // ' rotate="auto"'  &
+                                  // ' repeatCount="indefinite"'  &
+                                  // ' >'
                 call write_out( this, str_all )
-                str_all = '<polygon points=' // QUOTE // trim(r2s(rx))  &
-                                             // COMMA // trim(r2s(ry))  &
-                                             // SPACE // trim(r2s(sx))  &
-                                             // COMMA // trim(r2s(sy))  &
-                                             // SPACE // trim(r2s(tx))  &
-                                             // COMMA // trim(r2s(ty))  &
-                                             // QUOTE // ' />'
+                call indent_push( this )
+                  str_all = '<mpath xlink:href="#animated-arrow-shaft"/>'
+                  call write_out( this, str_all )
+                call indent_pop( this )
+                str_all = '</animateMotion>'
                 call write_out( this, str_all )
               call indent_pop( this )
-            call write_out( this, '</g>' )
-          call indent_pop( this )
-        call write_out( this, '</g>' )
-      call indent_pop( this )
-    call write_out( this, '</defs>' )
-    call write_a_comment( this, '</Arrow Template 01>' )
+              str_all = '</path>'
+              call write_out( this, str_all )
+            call indent_pop( this )
+          call write_out( this, '</g>' )
+        call indent_pop( this )
+      call write_out( this, '</defs>' )
+    end subroutine iWrite_template02
   end subroutine vv_svglib__arrow_template
 
 
