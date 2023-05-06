@@ -517,7 +517,8 @@ contains
     call vv_sketch.initialize( ll, ur, &
                                screen_width_in_pixel=1200.0,  &
                                title='Velocity Field',  &
-                               filename='sample_vector.svg' )
+                               filename='sample_vector.svg',  &
+                               write_arrow_template=.true. )
     call vv_sketch.text( (ll.u+ur.u)/2,  &
                          (ur.v*1.1),  &
                          vv_sketch.title,  &

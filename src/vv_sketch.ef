@@ -315,13 +315,15 @@ contains
                                     upper_right_in_phys,   &
                                     screen_width_in_pixel, &
                                     title,                 &
-                                    filename )
+                                    filename,              &
+                                    write_arrow_template )
     class(vv_sketch_t) <out> :: sketch
     type(vv_sketch__sim_pos_t) <in> :: lower_left_in_phys,  &
                                        upper_right_in_phys
     real <in> :: screen_width_in_pixel
     char(len=*) <in> :: title
     char(len=*) <in> :: filename
+    logical <optin> :: write_arrow_template
 
     real :: draw_area_width_in_phys,   &
             draw_area_height_in_phys
@@ -395,7 +397,11 @@ contains
                                 sketch.screen_size.width,  &
                                 sketch.screen_size.height )
 
-    call sketch.vv_svglib.arrow_template
+    if ( present(write_arrow_template) ) then
+      if ( write_arrow_template ) then
+        call sketch.vv_svglib.arrow_template
+      end if
+    end if
   end subroutine vv_sketch__initialize
 
 
