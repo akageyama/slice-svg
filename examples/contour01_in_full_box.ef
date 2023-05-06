@@ -59,12 +59,14 @@ contains
 
 end module grid_m
 
+
 module temperature_m
   use grid_m
+  use simulation_region_m
   implicit none
   private
 
-  type :: temperature_t
+  type, public :: temperature_t
     real :: vmax, vmin ! max and mini values
     real, dimension(GRID__NX,GRID__NY) :: field
   contains
@@ -88,7 +90,7 @@ contains
         y = Grid.pos_y(j)
         x_ = x / scale
         y_ = y / scale
-        temp.field(i,j) = exp( x_**2 + y_** 2)
+        temp.field(i,j) = exp( - (x_**2 + y_** 2) )
       end do
     end do
 
@@ -103,21 +105,21 @@ program contour01_in_full_box
   use simulation_region_m
   use grid_m
   use temperature_m
+  use ut_m
   use vv_color_m
   use vv_sketch_m
   use vv_slice_scalar_m
   implicit none
 
   type(temperature_t) :: temperature
-  real :: temp_min, temp_max
   real :: level ! contour level
-  real :: dlevel
+  real :: temp_range, dlevel
 
   type(vv_sketch__sim_pos_t) :: ll ! lower-left corner of sketch
   type(vv_sketch__sim_pos_t) :: ur ! upper-right corner of sketch
   type(vv_sketch_t) :: vv_sketch
   type(vv_slice_scalar_t) :: vv_scalar
-  type(vv_color_t) :: black = VV_COLOR__CONST.black 
+  type(vv_color_t) :: color
   integer :: l ! level
 
   call Grid.initialize
@@ -133,21 +135,23 @@ program contour01_in_full_box
   ur = vv_sketch__sim_pos_t(SIMULATION_REGION.xmax,  &
                             SIMULATION_REGION.ymax)
   call iSketch_initialize
+  call iSketch_message_header( 'Temperature' )
   call iSketch_boundary
 
   temp_range = temperature.vmax - temperature.vmin
   dlevel = temp_range / 10
-  call vv_sketch.group_push( line_color=black )
+  call vv_sketch.group_push( line_color=VV_COLOR__CONST.black )
 
     do l = 1, 10
       level = temperature.vmin + dlevel*(real(l)-0.5)
-      color = vv_color__normalized_real_to_color( level / temp_range )
+      color = vv_color__normalized_real_to_color( (level-temperature.vmin) / temp_range )
       call vv_scalar.vis_contour( vv_sketch,  &
                                   level,  &
                                   fill_color=color )
     end do
 
   call vv_sketch.group_pop
+  call iSketch_message_footer
   call vv_scalar.finalize
   call iSketch_finalize
 
@@ -158,13 +162,34 @@ contains
                                screen_width_in_pixel=1200.0,  &
                                title='Temperature Field',  &
                                filename='example_contour01_in_full_box.svg' )
+  end subroutine iSketch_initialize
+
+  subroutine iSketch_message_header( string )
+    char(len=*) <in> :: string
     call vv_sketch.text( (ll.u+ur.u)/2,  &
                          (ur.v*1.1),  &
-                         vv_sketch.title,  &
+                         string,  &
                          font_size_in_pixel=30.0,  &
                          text_anchor='middle', &
                          color=VV_COLOR__CONST.black )
-  end subroutine iSketch_initialize
+  end subroutine iSketch_message_header
+
+  subroutine iSketch_message_footer
+    real :: vmin, vmax
+    char(len=200) :: string
+
+    vmin = temperature.vmin
+    vmax = temperature.vmax
+    string = ' vmin = ' // ut__real_to_str10(vmin) //  &
+             ' vmax = ' // ut__real_to_str10(vmax)
+
+    call vv_sketch.text( (ll.u+ur.u)/2,  &
+                         ll.v-(ur.v-ll.v)*0.07,  &
+                         string,  &
+                         font_size_in_pixel=20.0,  &
+                         text_anchor='middle', &
+                         color=VV_COLOR__CONST.black )
+  end subroutine iSketch_message_footer
 
   subroutine iSketch_finalize
     call vv_sketch.finalize                 

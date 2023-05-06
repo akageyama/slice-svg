@@ -18,10 +18,18 @@ FFLAGS += -fcheck-array-temporaries
 FFLAGS += -O0
 # FFLAGS += -Wuninitialized
 
-contour01_in_full_box: contour01_in_full_box.ef
+contour01_in_full_box: contour01_in_full_box.ef ut.o
 	$(EFPP) $@.ef > $@.F90
-	$(FC) $(FFLAGS) -o $@ $@.F90
+	$(FC) $(FFLAGS) -o $@ constants.o ut.o $@.F90
 	./$@
+
+constants.o: constants.ef
+	$(EFPP) constants.ef > constants.F90
+	$(FC) $(FFLAGS) -c constants.F90
+
+ut.o: ut.ef constants.o
+	$(EFPP) ut.ef > ut.F90
+	$(FC) $(FFLAGS) -c ut.F90
 
 line:
 	@echo "="{1..100} | sed 's/[ 0-9]//g' # bash one-liner for a line
