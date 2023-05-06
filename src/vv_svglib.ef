@@ -684,7 +684,8 @@ contains
                               verts_y,         &
                               line_width,      &
                               line_color,      &
-                              fill_color )
+                              fill_color,      &
+                              line_dash_array )
     class(vv_svglib_t) <io> :: this
     integer <in> :: nverts
     character, dimension(nverts) <in> :: path_directive 
@@ -693,6 +694,7 @@ contains
     real <in> :: line_width
     char(len=*) <optin> :: line_color
     char(len=*) <optin> :: fill_color
+    char(len=*) <optin> :: line_dash_array
 
     integer :: n, nopt   ! number of options
     integer <const> :: MAX_NOP = 10  ! max
@@ -713,6 +715,11 @@ contains
     if ( present(fill_color) ) then
       nopt += 1
       str(nopt) = vv_svglib__text_line( 'fill=', fill_color )
+    end if
+
+    if ( present(line_dash_array) ) then
+      nopt += 1
+      str(nopt) = vv_svglib__text_line( 'stroke-dasharray=', line_dash_array )
     end if
 
     nopt += 1

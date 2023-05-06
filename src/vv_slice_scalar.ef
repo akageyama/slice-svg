@@ -95,6 +95,7 @@ contains
                                            width_in_pixels, &
                                            line_color,      &
                                            fill_color,      &
+                                           line_dash_array, &
                                            debug_print )
     class(vv_slice_scalar_t) <io> :: scalar
     type(vv_sketch_t) <io> :: vv_sketch
@@ -103,6 +104,7 @@ contains
     type(vv_color_t) <optin> :: line_color
     type(vv_color_t) <optin> :: fill_color
     logical <optin> :: debug_print
+    char(len=*) <optin> :: line_dash_array
 
     integer :: nu, nv
     type(vv_slice_isoline_t), save :: vv_slice_isoline
@@ -186,7 +188,8 @@ contains
                            verts_sim,           &
                            width_in_pixels,     &
                            line_color,          &
-                           fill_color )      
+                           fill_color,          &
+                           line_dash_array )      
     end if
 
   end subroutine vv_slice_scalar__vis_contour
