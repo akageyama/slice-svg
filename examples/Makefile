@@ -33,6 +33,12 @@ example03_contour_triangle: example03_contour_triangle.ef ut.o
 	$(FC) $(FFLAGS) -o $@ constants.o ut.o $@.F90
 	./$@
 
+example04_vector_arrows: example04_vector_arrows.ef
+	$(EFPP) $@.ef > $@.F90
+	$(FC) $(FFLAGS) -c $@.F90
+	$(FC) $(FFLAGS) -o $@ *.o
+	./$@
+
 constants.o: constants.ef
 	$(EFPP) constants.ef > constants.F90
 	$(FC) $(FFLAGS) -c constants.F90

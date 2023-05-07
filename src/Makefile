@@ -12,7 +12,7 @@ f90list := $(addsuffix .F90, $(filebase)) # => example.F90
 modlist := $(addsuffix .mod, $(filebase)) # => example.mod
 objlist := $(addsuffix .o, $(filebase)) # => example.o
 
-vv_eflist := $(shell ls vv_*.ef)
+vv_eflist := $(shell ls vv*.ef)
 vv_filebase := $(basename $(notdir $(vv_eflist)))
 vv_f90list := $(addsuffix .F90,   $(vv_filebase))
 vv_modlist := $(addsuffix _m.mod, $(vv_filebase))
