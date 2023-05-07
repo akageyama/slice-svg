@@ -28,6 +28,11 @@ example02_contour_dashed: example02_contour_dashed.ef ut.o
 	$(FC) $(FFLAGS) -o $@ constants.o ut.o $@.F90
 	./$@
 
+example03_contour_triangle: example03_contour_triangle.ef ut.o 
+	$(EFPP) $@.ef > $@.F90
+	$(FC) $(FFLAGS) -o $@ constants.o ut.o $@.F90
+	./$@
+
 constants.o: constants.ef
 	$(EFPP) constants.ef > constants.F90
 	$(FC) $(FFLAGS) -c constants.F90

@@ -135,7 +135,7 @@ program example01_contour_fullbox
   ur = vv_sketch__sim_pos_t(SIMULATION_REGION.xmax,  &
                             SIMULATION_REGION.ymax)
   call iSketch_initialize
-  call iSketch_message_header( 'Temperature' )
+  call iSketch_message_header( 'Color contouring with SVG' )
   call iSketch_boundary
 
   temp_range = temperature.vmax - temperature.vmin

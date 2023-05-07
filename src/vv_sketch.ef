@@ -218,6 +218,8 @@ contains
         str_long = trim(str_long) // ' ' // trim(str(n))
       end do
       call sketch.vv_svglib.group_push( trim(adjustl(str_long)) )
+    else
+      call sketch.vv_svglib.group_push( ' ' )
     end if
 
   contains

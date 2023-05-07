@@ -10,7 +10,7 @@ module simulation_region_m
   real <const> :: XMIN_ = -20.0 ! temporal, private
   real <const> :: XMAX_ =  80.0
   real <const> :: YMIN_ = -20.0
-  real <const> :: YMAX_ =  30.0
+  real <const> :: YMAX_ =  80.0
 
   type(simulation_region_t), public ::  &
     SIMULATION_REGION = simulation_region_t( XMIN_, XMAX_,  &
@@ -24,12 +24,17 @@ module grid_m
   private
   public :: GRID__NX, GRID__NY
 
-  integer <const> :: GRID__NX = 200
-  integer <const> :: GRID__NY = 100
+  integer <const> :: GRID__NX = 60
+  integer <const> :: GRID__NY = GRID__NX - 2 
+    !! Just for a special flag pattern in this example.
 
   type, public :: grid_t
     real, dimension(GRID__NX) :: pos_x
     real, dimension(GRID__NX) :: pos_y
+    character, dimension(GRID__NX,GRID__NY) :: flag
+      !! flag = 'i' (inside the border)
+      !!        'o' (outside the border)
+      !!        'b' (just on the border)
   contains
     procedure :: initialize => grid__initialize
   end type grid_t
@@ -55,6 +60,47 @@ contains
         grid.pos_y(j) = SREG.ymin + dy*(j-1)
       end do
     end associate
+
+    call iSet_flag
+
+  contains
+
+    subroutine iSet_flag
+      integer :: nx, ny
+      nx = GRID__NX
+      ny = GRID__NY  ! just to shorten
+
+      if ( ny /= nx-2 ) then
+        print *, "__MODULE__(__LINE__): change NY."
+        stop
+      end if
+      !!>
+               GRID__NX=10, GRID__NY=8
+              8 | o o o o o o o o o o  
+              7 | o o o o o b b b b o  
+              6 | o o o o b i i i b o  
+              5 | o o o b i i i i b o  
+              4 | o o b i i i i i b o  
+              3 | o b i i i i i i b o  
+              2 | o o b b b b b b b o  
+              1 | o o o o o o o o o o  
+                + --------------------
+                  1 2 3 4 5 6 7 8 9 10 
+      !!<
+      grid.flag(:,:) = 'o' !! default (outside)
+
+      grid.flag(   3:nx-1,     2) = 'b'  !! bottom edge
+      grid.flag(     nx-1,3:ny-1) = 'b'  !! right edge
+      grid.flag(ny-2:nx-2,  ny-1) = 'b'  !! top edge
+
+      do j = 3, ny-2
+        grid.flag(j-1,j) = 'b' !! hypotenuse
+        do i = j, ny
+          grid.flag(i,j) = 'i' !! inside the triangle
+        end do
+      end do
+    end subroutine iSet_flag
+
   end subroutine grid__initialize
 
 end module grid_m
@@ -109,7 +155,7 @@ contains
 end module pressurechange_m
 
 
-program example02_contour_dashed
+program example03_contour_triangle
   use simulation_region_m
   use grid_m
   use pressurechange_m
@@ -127,46 +173,48 @@ program example02_contour_dashed
   type(vv_sketch__sim_pos_t) :: ur ! upper-right corner of sketch
   type(vv_sketch_t) :: vv_sketch
   type(vv_slice_scalar_t) :: vv_scalar
-  type(vv_color_t) :: color, brown
+  type(vv_color_t) :: color, gray, brown
   integer :: l ! level
 
   call Grid.initialize
   call pressurechange.set
-  call vv_scalar.initialize( 'pressurechange',  &
-                             GRID__NX,          &
-                             GRID__NY,          &
-                             Grid.pos_x,        &
-                             Grid.pos_y,        &
-                             pressurechange.field2d )
+  call vv_scalar.initialize( 'pressurechange',       &
+                             GRID__NX,               &
+                             GRID__NY,               &
+                             Grid.pos_x,             &
+                             Grid.pos_y,             &
+                             pressurechange.field2d, &
+                             Grid.flag )
   ll = vv_sketch__sim_pos_t(SIMULATION_REGION.xmin,  &
                             SIMULATION_REGION.ymin)
   ur = vv_sketch__sim_pos_t(SIMULATION_REGION.xmax,  &
                             SIMULATION_REGION.ymax)
   call iSketch_initialize
-  call iSketch_message_header( 'Contouring with color and dash' )
+  call iSketch_message_header( 'Contouring with diagonal border' )
   call iSketch_boundary
 
   range = pressurechange.vmax - pressurechange.vmin
-  dlevel = range / 40
+  dlevel = range / 20
 
+  gray = VV_COLOR__CONST.gray( 0.7 )
   brown = VV_COLOR__CONST.brown
 
-    do l = 1, 40
+    do l = 1, 20
       level = pressurechange.vmin + dlevel*(real(l)-0.5)
       color = vv_color__real_to_color( vmin=pressurechange.vmin,  &
                                        vmax=pressurechange.vmax,  &
                                        val=level )
       if ( level >= 0 ) then
-        call vv_sketch.group_push  ! line color depends on level
+        call vv_sketch.group_push( line_color=gray )
           call vv_scalar.vis_contour( vv_sketch,         &
                                       level,             &
-                                      line_color=color )
+                                      fill_color=color )
         call vv_sketch.group_pop
       else 
-        call vv_sketch.group_push( line_color=brown ) !fixed.
-          call vv_scalar.vis_contour( vv_sketch,  &
-                                      level,      &
-                                      line_dash_array="10, 5" )
+        call vv_sketch.group_push( line_color=brown )
+          call vv_scalar.vis_contour( vv_sketch,               &
+                                      level,                   &
+                                      line_dash_array="3, 3" )
         call vv_sketch.group_pop
       end if
     end do
@@ -179,15 +227,15 @@ contains
 
   subroutine iSketch_initialize
     call vv_sketch.initialize( ll, ur, &
-                               screen_width_in_pixel=1200.0,  &
+                               screen_width_in_pixel=800.0,  &
                                title='Pressure Change',  &
-                               filename='example02_contour_dashed.svg' )
+                               filename='example03_contour_triangle.svg' )
   end subroutine iSketch_initialize
 
   subroutine iSketch_message_header( string )
     char(len=*) <in> :: string
     call vv_sketch.text( (ll.u+ur.u)/2,  &
-                         (ur.v*1.1),  &
+                         (ur.v*1.05),  &
                          string,  &
                          font_size_in_pixel=30.0,  &
                          text_anchor='middle', &
@@ -201,7 +249,7 @@ contains
     real :: text_v_pos_in_physical_unit
     real :: tsep ! text v position separation betwen lines
 
-    tsep = (ur.v-ll.v)*0.06
+    tsep = (ur.v-ll.v)*0.04
     text_v_pos_in_physical_unit = ll.v - tsep
 
     vmin = pressurechange.vmin
@@ -231,7 +279,7 @@ contains
   subroutine iSketch_boundary
     call vv_scalar.mesh.draw( vv_sketch, &
                               line_color=VV_COLOR__CONST.black, &
-                              width_in_pixels=2.0 )
+                              width_in_pixels=1.0 )
   end subroutine iSketch_boundary
 
-end program example02_contour_dashed
+end program example03_contour_triangle
