@@ -1,7 +1,6 @@
 module vv_svglib_m
   use vv_m
   use vv_color_m
-  use const_base_m
   implicit none
   private
   public :: VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
@@ -27,11 +26,95 @@ module vv_svglib_m
     procedure :: path => vv_svglib__path
   end type vv_svglib_t
 
+  interface vv_svglib__text_line
+     module procedure text_line_str_i,                  &
+                      text_line_str_str,                &
+                      text_line_str_r,                  &
+                      text_line_r1_comma_r2,            &
+                      text_line_s1_r1_s2_r2,            &
+                      text_line_str_r1_r2_r3_r4,        &
+                      text_line_s1_r1_s2_r2_s3_r3_s4_r4
+  end interface vv_svglib__text_line
+
   character <const> :: QUOTE = '"'
   character <const> :: SPACE = ' '
   character <const> :: COMMA = ','
 
 contains
+  
+  
+  function text_line_str_r( string, r ) result(line)
+    char(len=*) <in> :: string
+    real <in> :: r  ! real value
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(string)//QUOTE//trim(r2s(r))//QUOTE
+  end function text_line_str_r
+
+
+  function text_line_r1_comma_r2( r1, r2 ) result(line)
+    real <in> :: r1, r2  ! real value
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(r2s(r1)) // COMMA // SPACE // trim(r2s(r2))
+  end function text_line_r1_comma_r2
+  
+  
+  function text_line_str_str( string, str ) result(line)
+    char(len=*) <in> :: string
+    char(len=*) <in> :: str
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(string)//QUOTE//trim(str)//QUOTE
+  end function text_line_str_str
+  
+  function text_line_s1_r1_s2_r2( s1, r1,   &
+                                  s2, r2) result(line)
+    char(len=*) <in> :: s1, s2
+    real <in> :: r1, r2
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
+              //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE
+  end function text_line_s1_r1_s2_r2
+
+  
+  function text_line_s1_r1_s2_r2_s3_r3_s4_r4( s1, r1,   &
+                                              s2, r2,   &
+                                              s3, r3,   &
+                                              s4, r4 ) result(line)
+    char(len=*) <in> :: s1, s2, s3, s4
+    real <in> :: r1, r2, r3, r4
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
+              //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE   &
+              //SPACE//trim(s3)//QUOTE//trim(r2s(r3))//QUOTE   &
+              //SPACE//trim(s4)//QUOTE//trim(r2s(r4))//QUOTE
+  end function text_line_s1_r1_s2_r2_s3_r3_s4_r4
+
+
+
+  function text_line_str_r1_r2_r3_r4( string, r1, r2, r3, r4 ) result(line)
+    char(len=*) <in> :: string
+    real <in> :: r1, r2, r3, r4
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(string)//QUOTE//trim(r2s(r1))   &
+                                   //SPACE//trim(r2s(r2))   &
+                                   //SPACE//trim(r2s(r3))   &
+                                   //SPACE//trim(r2s(r4))   &
+                                   //QUOTE
+  end function text_line_str_r1_r2_r3_r4
+
+  
+  function text_line_str_i( string, val ) result(line)
+    char(len=*) <in> :: string
+    integer <in> :: val
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a,a,i0,a)") trim(string), QUOTE, val, QUOTE
+  end function text_line_str_i
 
 
   subroutine indent_pop( this )
@@ -306,7 +389,7 @@ contains
     vx_norm = vx / vector_amp
     vy_norm = vy / vector_amp
 
-    angle_from_x_axis = atan2_in_degree( vy, vx )
+    angle_from_x_axis = vv__atan2_in_degree( vy, vx )
 
     amp_factor = vector_amp / VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
 
@@ -610,7 +693,7 @@ contains
               call write_out( this, directive )
               ! No need to write coords
             case default
-              call vv_svglib__fatal( "__MODULE__(__LINE__): case error." )
+              call vv__fatal( "__MODULE__(__LINE__): case error." )
           end select
         end do
       call indent_pop( this )

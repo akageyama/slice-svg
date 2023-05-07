@@ -126,11 +126,10 @@ install: $(vv_lib)
 $(vv_lib): $(vv_objlist)
 	ar r $(vv_lib) $(vv_objlist)
 
-test_program: test_program.o ut.o const_base.o $(vv_lib)
+test_program: test_program.o $(vv_lib)
 	gfortran -o test_program  \
-                 test_program.o   \
-                 ut.o             \
-                 const_base.o -L. -l$(vv_basename)
+                 *.o   \
+                 -I. -L. -l$(vv_basename)
 
 fig: runme
 	./runme 

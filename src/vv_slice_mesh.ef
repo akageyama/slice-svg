@@ -154,7 +154,6 @@
 !!<
 
 module vv_slice_mesh_m
-  use const_base_m
   use vv_m
   use vv_color_m
   use vv_sketch_m
