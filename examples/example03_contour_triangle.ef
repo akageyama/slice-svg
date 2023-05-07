@@ -159,7 +159,7 @@ program example03_contour_triangle
   use simulation_region_m
   use grid_m
   use pressurechange_m
-  use ut_m
+  use vv_m
   use vv_color_m
   use vv_sketch_m
   use vv_slice_scalar_m
@@ -254,8 +254,8 @@ contains
 
     vmin = pressurechange.vmin
     vmax = pressurechange.vmax
-    string = ' vmin = ' // ut__real_to_str10(vmin) //  &
-             ' vmax = ' // ut__real_to_str10(vmax)
+    string = ' vmin = ' // vv__real_to_str13(vmin) //  &
+             ' vmax = ' // vv__real_to_str13(vmax)
     call vv_sketch.text( (ll.u+ur.u)/2,  &
                          text_v_pos_in_physical_unit,  &
                          string,  &
