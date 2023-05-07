@@ -1,12 +1,11 @@
 module vv_svglib_m
+  use vv_m
   use vv_color_m
-  use ut_m
   use const_base_m
   implicit none
   private
-  public :: vv_svglib__text_line
-  public :: VV_SVGLIB__BSL
   public :: VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
+  public :: vv_svglib__text_line
 
   real <const> :: VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT = 20.0
 
@@ -28,144 +27,11 @@ module vv_svglib_m
     procedure :: path => vv_svglib__path
   end type vv_svglib_t
 
-
-
-  interface vv_svglib__text_line
-     module procedure text_line_str_i,                  &
-                      text_line_str_str,                &
-                      text_line_str_r,                  &
-                      text_line_r1_comma_r2,            &
-                      text_line_s1_r1_s2_r2,            &
-                      text_line_str_r1_r2_r3_r4,        &
-                      text_line_s1_r1_s2_r2_s3_r3_s4_r4
-  end interface vv_svglib__text_line
-
   character <const> :: QUOTE = '"'
   character <const> :: SPACE = ' '
   character <const> :: COMMA = ','
-  integer <const> :: VV_SVGLIB__BSL = 100  ! Basic text string length
-                                           ! e.g., '<line = "... >'
 
 contains
-
-
-  subroutine assert( condition, lastwill )
-    logical <in> :: condition
-    char(len=*) <in> :: lastwill
-    if ( .not. condition ) then
-      print *, "__MODULE__: "//trim(lastwill)
-      stop
-    end if
-  end subroutine assert
-
-
-  function atan2_in_degree( y, x ) result(degree)
-    real <in> :: y, x
-    real :: degree
-
-    real <const> :: RADIAN_TO_DEGREE = 180.0 / 3.14159265
-
-    degree = atan2(y,x) * RADIAN_TO_DEGREE
-  end function atan2_in_degree
-  
-  
-  function text_line_str_r( string, r ) result(line)
-    char(len=*) <in> :: string
-    real <in> :: r  ! real value
-    char(len=VV_SVGLIB__BSL) :: line
-
-    write(line, "(a)") trim(string)//QUOTE//trim(r2s(r))//QUOTE
-  end function text_line_str_r
-
-
-  function text_line_r1_comma_r2( r1, r2 ) result(line)
-    real <in> :: r1, r2  ! real value
-    char(len=VV_SVGLIB__BSL) :: line
-
-    write(line, "(a)") trim(r2s(r1)) // COMMA // SPACE // trim(r2s(r2))
-  end function text_line_r1_comma_r2
-  
-  
-  function text_line_str_str( string, str ) result(line)
-    char(len=*) <in> :: string
-    char(len=*) <in> :: str
-    char(len=VV_SVGLIB__BSL) :: line
-
-    write(line, "(a)") trim(string)//QUOTE//trim(str)//QUOTE
-  end function text_line_str_str
-  
-  function text_line_s1_r1_s2_r2( s1, r1,   &
-                                  s2, r2) result(line)
-    char(len=*) <in> :: s1, s2
-    real <in> :: r1, r2
-    char(len=VV_SVGLIB__BSL) :: line
-
-    write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
-              //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE
-  end function text_line_s1_r1_s2_r2
-
-  
-  function text_line_s1_r1_s2_r2_s3_r3_s4_r4( s1, r1,   &
-                                              s2, r2,   &
-                                              s3, r3,   &
-                                              s4, r4 ) result(line)
-    char(len=*) <in> :: s1, s2, s3, s4
-    real <in> :: r1, r2, r3, r4
-    char(len=VV_SVGLIB__BSL) :: line
-
-    write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
-              //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE   &
-              //SPACE//trim(s3)//QUOTE//trim(r2s(r3))//QUOTE   &
-              //SPACE//trim(s4)//QUOTE//trim(r2s(r4))//QUOTE
-  end function text_line_s1_r1_s2_r2_s3_r3_s4_r4
-
-
-
-  function text_line_str_r1_r2_r3_r4( string, r1, r2, r3, r4 ) result(line)
-    char(len=*) <in> :: string
-    real <in> :: r1, r2, r3, r4
-    char(len=VV_SVGLIB__BSL) :: line
-
-    write(line, "(a)") trim(string)//QUOTE//trim(r2s(r1))   &
-                                   //SPACE//trim(r2s(r2))   &
-                                   //SPACE//trim(r2s(r3))   &
-                                   //SPACE//trim(r2s(r4))   &
-                                   //QUOTE
-  end function text_line_str_r1_r2_r3_r4
-
-  
-  function text_line_str_i( string, val ) result(line)
-    char(len=*) <in> :: string
-    integer <in> :: val
-    char(len=VV_SVGLIB__BSL) :: line
-
-    write(line, "(a,a,i0,a)") trim(string), QUOTE, val, QUOTE
-  end function text_line_str_i
-
-
-  function get_date_and_time() result(string)
-    ! copied from ut.ef
-    char(len=8)  :: date   ! e.g., "20221126"
-    char(len=10) :: time   ! "HHMMSS.sss"
-    char(len=4)  :: year
-    char(len=2)  :: month, day, hour, minute, second
-    char(len=10) :: year_month_day     ! e.g., "2022.07.09"
-    char(len=8)  :: hour_minute_second ! e.g., "16:56:00"
-    char(len=19) :: string ! e.g., "2022.07.09/16:56:00"
-
-    call date_and_time(date, time)
-
-    year   = date(1:4)
-    month  = date(5:6)
-    day    = date(7:8)
-    hour   = time(1:2)
-    minute = time(3:4)
-    second = time(5:6)
-
-    year_month_day     = year // '.' // month // '.' // day
-    hour_minute_second = hour // ':' // minute // ':' // second
-    string = year_month_day // '/' // hour_minute_second
-  end function get_date_and_time
 
 
   subroutine indent_pop( this )
@@ -201,7 +67,7 @@ contains
 
     char(len=*) <const> :: STR_XMLNS = 'xmlns="http://www.w3.org/2000/svg"'
     char(len=*) <const> :: STR_XMLNS2 = 'xmlns:xlink="http://www.w3.org/1999/xlink"'
-    char(len=VV_SVGLIB__BSL) :: str_width,   &
+    char(len=VV__STRLEN_MAX) :: str_width,   &
                                 str_height,  &
                                 str_viewbox
 
@@ -210,7 +76,7 @@ contains
     str_viewbox = vv_svglib__text_line( 'viewBox=', 0.0, 0.0, width, height )
 
     call write_decorated_comment( this, 'SVG Generated by VV_SVGLIB on '  &
-                                         // get_date_and_time() )
+                                         // vv__get_date_and_time() )
     call write_out( this, '<svg ' // STR_XMLNS          &
                          // SPACE // STR_XMLNS2         &
                          // SPACE // trim(str_width)    &
@@ -243,7 +109,7 @@ contains
                 <!-- Comment text -->
                 <!-- ============ -->       
     !!<
-    char(len=VV_SVGLIB__BSL) :: str_deco
+    char(len=VV__STRLEN_MAX) :: str_deco
     str_deco = repeat('=', len_trim(adjustl(message)))
     call write_a_comment( this, str_deco )
     call write_a_comment( this, message )
@@ -322,8 +188,8 @@ contains
 
     integer :: nop  ! number of options
     integer <const> :: MAX_NOP = 20
-    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
+    char(len=VV__STRLEN_MAX*MAX_NOP) :: str_all
 
     px = -2.0*scale
     py = 0.0
@@ -431,8 +297,8 @@ contains
 
     integer :: nop  ! number of options
     integer <const> :: MAX_NOP = 20
-    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
+    char(len=VV__STRLEN_MAX*MAX_NOP) :: str_all
 
     vector_amp = sqrt(vx**2+vy**2)
     if ( vector_amp < TOO_SMALL ) return
@@ -474,7 +340,7 @@ contains
     class(vv_svglib_t) <io> :: this
     char(len=*) <in> :: attribute
 
-    char(len=VV_SVGLIB__BSL) :: str
+    char(len=VV__STRLEN_MAX) :: str
 
     str = '<g' // SPACE // trim(attribute) // ' >'
     call write_out( this, str )
@@ -506,8 +372,8 @@ contains
 
     integer :: n, nopt  ! number of options
     integer <const> :: MAX_NOP = 10
-    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
+    char(len=VV__STRLEN_MAX*MAX_NOP) :: str_all
     integer :: unit
 
     unit = this.file_unit
@@ -596,8 +462,8 @@ contains
 
     integer :: nopt   ! number of options
     integer <const> :: MAX_NOP = 10  ! max
-    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
+    char(len=VV__STRLEN_MAX*MAX_NOP) :: str_all
 
     str(1) = vv_svglib__text_line( 'x=', x, 'y=', y )
     str(2) = vv_svglib__text_line( 'font-size=',       &
@@ -642,9 +508,9 @@ contains
 
     integer :: n, nopt   ! number of options
     integer <const> :: MAX_NOP = 10  ! max
-    char(len=VV_SVGLIB__BSL) :: str_coords
-    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV__STRLEN_MAX) :: str_coords
+    char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
+    char(len=VV__STRLEN_MAX*MAX_NOP) :: str_all
 
     str(1) = '<polygon' 
     str(2) = vv_svglib__text_line( 'stroke-width=', line_width )
@@ -698,9 +564,9 @@ contains
 
     integer :: n, nopt   ! number of options
     integer <const> :: MAX_NOP = 10  ! max
-    char(len=VV_SVGLIB__BSL) :: str_coords
-    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_all
+    char(len=VV__STRLEN_MAX) :: str_coords
+    char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
+    char(len=VV__STRLEN_MAX*MAX_NOP) :: str_all
     character :: directive
 
     str(1) = '<path' 
@@ -744,7 +610,7 @@ contains
               call write_out( this, directive )
               ! No need to write coords
             case default
-              call ut__fatal( "__MODULE__(__LINE__): case error." )
+              call vv_svglib__fatal( "__MODULE__(__LINE__): case error." )
           end select
         end do
       call indent_pop( this )

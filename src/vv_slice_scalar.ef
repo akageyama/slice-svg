@@ -14,8 +14,8 @@ module vv_slice_scalar_m
       such as meters.
 
   !!< 
+  use vv_m
   use vv_color_m
-  use ut_m
   use vv_slice_mesh_m
   use vv_slice_isoline_m
   use vv_sketch_m
@@ -59,7 +59,7 @@ contains
       line = '' ! reset
       line(1:2) = 'j='
       cc = 3
-      str4_int = ut__i2c4( j )
+      str4_int = vv__int_to_char4( j )
       line(cc:cc+3) = str4_int
       cc += 4
       line(cc:cc+1) = ' |'
@@ -67,7 +67,7 @@ contains
       do i = ifrom, ito
         line(cc:cc) = ' '
         cc += 1
-        str13_val = ut__real_to_str13( scalar.val_vert(i,j) )
+        str13_val = vv__real_to_str13( scalar.val_vert(i,j) )
         line(cc:cc+12) = str13_val(1:13)
         cc += 13
       end do
@@ -79,7 +79,7 @@ contains
     cc = 9
     !           'j=0003 |'
     do i = ifrom, ito
-      str4_int = ut__i2c4( i )
+      str4_int = vv__int_to_char4( i )
       line(cc:cc+13) = '    i=' // str4_int // '    '
       cc += 14
     end do
@@ -150,7 +150,7 @@ contains
       call vv_slice_isoline.trace_and_erase( scalar.mesh.vert,    &
                                              scalar.mesh.edge,    &
                                              scalar.mesh.boundary )
-      call  ut__assert( vv_slice_isoline.num >= 2,  &
+      call  vv__assert( vv_slice_isoline.num >= 2,  &
                         "__MODULE__(__LINE__): Path too short." )
         
       do i = 1, vv_slice_isoline.num
@@ -214,7 +214,7 @@ contains
 
     scalar.tag = tag
 
-    call ut__assert( size(grid_pos_u,dim=1) == nu .and. &
+    call vv__assert( size(grid_pos_u,dim=1) == nu .and. &
                      size(grid_pos_v,dim=1) == nv,      &
                      "__MODULE__(__LINE__): " //        &
                      "grid size inconsistent." )

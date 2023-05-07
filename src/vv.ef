@@ -1,0 +1,248 @@
+module vv_m
+  implicit none
+  private
+  public :: PI, TWOPI
+  public :: VV__STRLEN_MAX
+  public :: vv__assert,             &
+            vv__atan2_in_degree,    &
+            vv__fatal,              &
+            vv__get_date_and_time,  &
+            vv__int_to_char1,       &
+            vv__int_to_char4,       &
+            vv__real_to_str13,      &
+            vv__text_line,          &
+
+
+  real <const> :: PI = atan(1.0)*4
+  real <const> :: TWOPI = PI*2
+
+  integer <const> :: NIL = -huge(1)
+  real    <const> :: NAN = huge(1.0)
+
+  integer <const> :: VV__STRLEN_MAX = 200  ! Basic text string length
+                                           ! e.g., '<line = "... >'
+
+  interface vv__text_line
+     module procedure text_line_str_i,                  &
+                      text_line_str_str,                &
+                      text_line_str_r,                  &
+                      text_line_r1_comma_r2,            &
+                      text_line_s1_r1_s2_r2,            &
+                      text_line_str_r1_r2_r3_r4,        &
+                      text_line_s1_r1_s2_r2_s3_r3_s4_r4
+  end interface vv__text_line
+
+  interface vv__message
+     module procedure message_str,          &
+                      message_str_i,        &
+                      message_str_logical,  &
+                      message_str_r
+  end interface
+
+  character <const> :: QUOTE = '"'
+  character <const> :: SPACE = ' '
+  character <const> :: COMMA = ','
+
+
+contains
+
+
+  function vv__int_to_char1( i ) result(char)
+    integer <in> :: i
+    character :: char
+    ! Convert an integer into a character.
+
+    if ( i < 0 ) then
+       char = '?'
+    else if ( i > 9 ) then
+       char = '?'
+    else
+       write(char,'(i1.1)') i
+    end if
+  end function vv__int_to_char1
+
+
+  function vv__int_to_char4( i ) result(char4)
+    integer <in> :: i
+    char(len=4) :: char4
+    ! Convert an integer into 4 characters.
+    !             e.g., i=10 --> str4="0010"
+
+    if ( i < 0 ) then
+       char4 = '????'
+    else if ( i > 9999 ) then
+       char4 = '????'
+    else
+       write(char4,'(i4.4)') i
+    end if
+  end function vv__int_to_char4
+
+
+  function vv__real_to_str13( f ) result(str)
+    real(SR) <in> :: f
+    char(len=13)  :: str
+    !!>
+      real to character string, 
+        e.g., f=0.123456789 ==> str="+1.234567E-01"
+    !!<
+    write(str,'(1pe13.6)') f
+    if(str(1:1)==' ') str(1:1) = '+'  ! to avoid a space in filename.
+  end function vv__real_to_str13
+
+
+  subroutine vv__fatal( last_will )
+    char(len=*) <in> :: lastwill
+
+    print *, repeat('!', 50)
+    print *, trim(lastwill)
+    print *, repeat('!', 50)
+    stop
+  end subroutine vv__fatal
+
+
+  subroutine vv__assert( condition, last_will )
+    logical <in> :: condition
+    char(len=*) <in> :: last_will
+
+    if ( .not. condition ) then
+      call vv_svglib__fatal( last_will )
+    end if
+  end subroutine vv__assert
+
+
+  subroutine message_str( string )
+    char(len=*) <in> :: string
+    print *,  string
+  end subroutine message_str
+
+
+  subroutine message_str_i( string, int )
+    char(len=*) <in> :: string
+    integer <in> :: int
+    print *,  string, int
+  end subroutine message_str_i
+
+
+  subroutine message_str_r( string, real )
+    char(len=*) <in> :: string
+    real <in> :: real
+    print *, string, real
+  end subroutine message_str_r
+
+
+  subroutine message_str_logical( string, logical )
+    char(len=*) <in> :: string
+    logical <in> :: logical
+    print *,  string, logical
+  end subroutine message_str_logical
+  
+  
+  function text_line_str_r( string, r ) result(line)
+    char(len=*) <in> :: string
+    real <in> :: r  ! real value
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(string)//QUOTE//trim(r2s(r))//QUOTE
+  end function text_line_str_r
+
+
+  function text_line_r1_comma_r2( r1, r2 ) result(line)
+    real <in> :: r1, r2  ! real value
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(r2s(r1)) // COMMA // SPACE // trim(r2s(r2))
+  end function text_line_r1_comma_r2
+  
+  
+  function text_line_str_str( string, str ) result(line)
+    char(len=*) <in> :: string
+    char(len=*) <in> :: str
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(string)//QUOTE//trim(str)//QUOTE
+  end function text_line_str_str
+  
+  function text_line_s1_r1_s2_r2( s1, r1,   &
+                                  s2, r2) result(line)
+    char(len=*) <in> :: s1, s2
+    real <in> :: r1, r2
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
+              //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE
+  end function text_line_s1_r1_s2_r2
+
+  
+  function text_line_s1_r1_s2_r2_s3_r3_s4_r4( s1, r1,   &
+                                              s2, r2,   &
+                                              s3, r3,   &
+                                              s4, r4 ) result(line)
+    char(len=*) <in> :: s1, s2, s3, s4
+    real <in> :: r1, r2, r3, r4
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(s1)//QUOTE//trim(r2s(r1))//QUOTE   &
+              //SPACE//trim(s2)//QUOTE//trim(r2s(r2))//QUOTE   &
+              //SPACE//trim(s3)//QUOTE//trim(r2s(r3))//QUOTE   &
+              //SPACE//trim(s4)//QUOTE//trim(r2s(r4))//QUOTE
+  end function text_line_s1_r1_s2_r2_s3_r3_s4_r4
+
+
+
+  function text_line_str_r1_r2_r3_r4( string, r1, r2, r3, r4 ) result(line)
+    char(len=*) <in> :: string
+    real <in> :: r1, r2, r3, r4
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a)") trim(string)//QUOTE//trim(r2s(r1))   &
+                                   //SPACE//trim(r2s(r2))   &
+                                   //SPACE//trim(r2s(r3))   &
+                                   //SPACE//trim(r2s(r4))   &
+                                   //QUOTE
+  end function text_line_str_r1_r2_r3_r4
+
+  
+  function text_line_str_i( string, val ) result(line)
+    char(len=*) <in> :: string
+    integer <in> :: val
+    char(len=VV__STRLEN_MAX) :: line
+
+    write(line, "(a,a,i0,a)") trim(string), QUOTE, val, QUOTE
+  end function text_line_str_i
+
+
+  function vv__atan2_in_degree( y, x ) result(degree)
+    real <in> :: y, x
+    real :: degree
+
+    real <const> :: RADIAN_TO_DEGREE = 180.0 / PI
+
+    degree = atan2(y,x) * RADIAN_TO_DEGREE
+  end function vv__atan2_in_degree
+
+
+  function vv__get_date_and_time() result(string)
+    ! copied from ut.ef
+    char(len=8)  :: date   ! e.g., "20221126"
+    char(len=10) :: time   ! "HHMMSS.sss"
+    char(len=4)  :: year
+    char(len=2)  :: month, day, hour, minute, second
+    char(len=10) :: year_month_day     ! e.g., "2022.07.09"
+    char(len=8)  :: hour_minute_second ! e.g., "16:56:00"
+    char(len=19) :: string ! e.g., "2022.07.09/16:56:00"
+
+    call date_and_time(date, time)
+
+    year   = date(1:4)
+    month  = date(5:6)
+    day    = date(7:8)
+    hour   = time(1:2)
+    minute = time(3:4)
+    second = time(5:6)
+
+    year_month_day     = year // '.' // month // '.' // day
+    hour_minute_second = hour // ':' // minute // ':' // second
+    string = year_month_day // '/' // hour_minute_second
+  end function vv__get_date_and_time
+
+end module vv_m

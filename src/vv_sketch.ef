@@ -1,7 +1,7 @@
 module vv_sketch_m
+  use vv_m
   use vv_color_m
   use vv_svglib_m
-  use ut_m
   implicit none
   private
 
@@ -157,8 +157,8 @@ contains
 
     integer :: nop ! number of options
     integer <const> :: MAX_NOP = 20
-    char(len=VV_SVGLIB__BSL), dimension(MAX_NOP) :: str
-    char(len=VV_SVGLIB__BSL*MAX_NOP) :: str_long
+    char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
+    char(len=VV__STRLEN_MAX*MAX_NOP) :: str_long
     integer :: n
 
     call iClear_str
@@ -208,7 +208,7 @@ contains
         case ('dashed')
           str(nop) = 'stroke-dasharray="10 5"'
         case default
-          call ut__fatal( '__MODULE__(__LINE__): case error.' )
+          call vv__fatal( '__MODULE__(__LINE__): case error.' )
       end select
     end if    
 
@@ -255,7 +255,7 @@ contains
     type(screen_pos_t) :: pos
     char(len=7) :: color_code
 
-    call ut__assert( text_anchor == 'start'  .or.     &
+    call vv__assert( text_anchor == 'start'  .or.     &
                      text_anchor == 'middle' .or.     &
                      text_anchor == 'end',            &
                      '__MODULE__(__LINE__): text_anchor error.' )
@@ -338,7 +338,7 @@ contains
     sketch.v_max = upper_right_in_phys.v
     sketch.v_min =  lower_left_in_phys.v
 
-    call ut__assert( sketch.u_max > sketch.u_min .and.  &
+    call vv__assert( sketch.u_max > sketch.u_min .and.  &
                      sketch.v_max > sketch.v_min,       &
                      '__MODULE__(__LINE__): size error.' )
 
@@ -391,7 +391,7 @@ contains
     sketch.dxdu = draw_area_width_in_pixel / draw_area_width_in_phys
     sketch.dydv = sketch.dxdu
 
-    call ut__assert( sketch.dxdu > 0.0 .and. &
+    call vv__assert( sketch.dxdu > 0.0 .and. &
                      sketch.dydv > 0.0,      &
                      '__MODULE__(__LINE__): Something is strange.' )
 
@@ -560,4 +560,5 @@ contains
                                    line_color_code,      &
                                    fill_color_code )
   end subroutine vv_sketch__rectangle
+
 end module vv_sketch_m

@@ -1,5 +1,5 @@
 module vv_slice_isoline_m
-  use ut_m
+  use vv_m
   use const_base_m
   use vv_slice_mesh_m
   implicit none
@@ -185,7 +185,7 @@ contains
         case (7)  
           this.head = vv_slice_isoline__element_t( 'd', 'on', vi-1,   vj, 'N' )
         case default
-          call ut__fatal( '__MODULE__(__LINE__): case error.' )
+          call vv__fatal( '__MODULE__(__LINE__): case error.' )
       end select
     else if ( cruising_lane == 'in' ) then
       select case ( octa_direct )
@@ -206,10 +206,10 @@ contains
         case (7)  
           this.head = vv_slice_isoline__element_t( 'd', 'in', vi-1,   vj, 'S' )
         case default
-          call ut__fatal( '__MODULE__(__LINE__): case error.' )
+          call vv__fatal( '__MODULE__(__LINE__): case error.' )
       end select
     else
-      call ut__fatal( '__MODULE__(__LINE__): cruising_lane error.' )
+      call vv__fatal( '__MODULE__(__LINE__): cruising_lane error.' )
     end if
 
   end subroutine vv_slice_isoline__replace_head_by_vert
@@ -240,7 +240,7 @@ contains
 
     integer :: n
     n = this.num + 1
-    call ut__assert( n <= size(this.list_u,dim=1),  &
+    call vv__assert( n <= size(this.list_u,dim=1),  &
                     '__MODULE__(__LINE__): Increase array size of path_vert.' )
 
     this.list_u(n) = u
@@ -278,7 +278,7 @@ contains
       jumped = .true.
       u = edge.u_cross_coord(ei,ej)
       v = vert.pos_v(vj)
-      call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+      call vv__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v )
 
       if ( edge.u_is_boundary(ei,ej) ) then
@@ -287,7 +287,7 @@ contains
         !          .   *   .
         !          .     * .
         octa_direct_along_border = vert.octa_direct(vi_left,vj)
-        call ut__assert( octa_direct_along_border >= 0 .and. &
+        call vv__assert( octa_direct_along_border >= 0 .and. &
                          octa_direct_along_border <= 7,      &
                          "__MODULE__(__LINE__): " //         &
                          "Not a border vert?" )
@@ -330,7 +330,7 @@ contains
       jumped = .true.
       u = edge.u_cross_coord(ei,ej)
       v = vert.pos_v(vj)
-      call ut__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+      call vv__assert( u /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v )
       if ( edge.u_is_boundary(ei,ej) ) then
         !
@@ -339,7 +339,7 @@ contains
         !    - - M - * * P n n n
         !
         octa_direct_along_border = vert.octa_direct(vi_right,vj)
-        call ut__assert( octa_direct_along_border >= 0 .and. &
+        call vv__assert( octa_direct_along_border >= 0 .and. &
                          octa_direct_along_border <= 7,      &
                          "__MODULE__(__LINE__): " //         &
                          "Not a border vert?" )
@@ -394,19 +394,19 @@ contains
     vi_ul = ei
     vj_ul = ej + 1
 
-    call ut__assert( edge.d_is_boundary(ei,ej), &
+    call vv__assert( edge.d_is_boundary(ei,ej), &
                      "assuming now d_edge is boundary." )
          
     if ( edge.d_quarter(ei,ej) == VV_SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = edge.d_cross_coord_u(ei,ej)
       v = edge.d_cross_coord_v(ei,ej)
-      call ut__assert( u /= NAN .and. v /= NAN,     &
+      call vv__assert( u /= NAN .and. v /= NAN,     &
                        "__MODULE__(__LINE__): " //  &
                        "Invalid cross coord." )
       call path.register_new_vert( u, v )
       octa_direct_along_border = vert.octa_direct(vi_ul,vj_ul)
-      call ut__assert( octa_direct_along_border >= 0 .and. &
+      call vv__assert( octa_direct_along_border >= 0 .and. &
                        octa_direct_along_border <= 7,      &
                        "__MODULE__(__LINE__): " //         &
                        "Not a border vert?" )
@@ -448,7 +448,7 @@ contains
                             \____ vert(vi+1,vj)
     !!<
 
-    call ut__assert( edge.d_is_boundary(ei,ej), &
+    call vv__assert( edge.d_is_boundary(ei,ej), &
                      "__MODULE__(__LINE__): " //  &
                      "assuming now d_edge is boundary." )
     vi_lr = ei + 1
@@ -458,12 +458,12 @@ contains
       jumped = .true.
       u = edge.d_cross_coord_u(ei,ej)
       v = edge.d_cross_coord_v(ei,ej)
-      call ut__assert( u /= NAN .and. v /= NAN,     &
+      call vv__assert( u /= NAN .and. v /= NAN,     &
                        "__MODULE__(__LINE__): " //  &
                        "Invalid cross coord." )
       call path.register_new_vert( u, v )
       octa_direct_along_border = vert.octa_direct(vi_lr,vj_lr)
-        call ut__assert( octa_direct_along_border >= 0 .and. &
+        call vv__assert( octa_direct_along_border >= 0 .and. &
                          octa_direct_along_border <= 7,      &
                          "__MODULE__(__LINE__): " //         &
                          "Not a border vert?" )
@@ -506,19 +506,19 @@ contains
     vi_ll = ei
     vj_ll = ej
 
-    call ut__assert( edge.a_is_boundary(ei,ej), &
+    call vv__assert( edge.a_is_boundary(ei,ej), &
                      "assuming now a_edge is boundary." )
          
     if ( edge.a_quarter(ei,ej) == VV_SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = edge.a_cross_coord_u(ei,ej)
       v = edge.a_cross_coord_v(ei,ej)
-      call ut__assert( u /= NAN .and. v /= NAN,     &
+      call vv__assert( u /= NAN .and. v /= NAN,     &
                        "__MODULE__(__LINE__): " //  &
                        "Invalid cross coord." )
       call path.register_new_vert( u, v )
       octa_direct_along_border = vert.octa_direct(vi_ll,vj_ll)
-        call ut__assert( octa_direct_along_border >= 0 .and. &
+        call vv__assert( octa_direct_along_border >= 0 .and. &
                          octa_direct_along_border <= 7,      &
                          "__MODULE__(__LINE__): " //         &
                          "Not a border vert?" )
@@ -561,19 +561,19 @@ contains
     vi_ur = ei + 1
     vj_ur = ej + 1
 
-    call ut__assert( edge.a_is_boundary(ei,ej), &
+    call vv__assert( edge.a_is_boundary(ei,ej), &
                      "assuming now a_edge is boundary." )
          
     if ( edge.a_quarter(ei,ej) == VV_SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = edge.a_cross_coord_u(ei,ej)
       v = edge.a_cross_coord_v(ei,ej)
-      call ut__assert( u /= NAN .and. v /= NAN,     &
+      call vv__assert( u /= NAN .and. v /= NAN,     &
                        "__MODULE__(__LINE__): " //  &
                        "Invalid cross coord." )
       call path.register_new_vert( u, v )
       octa_direct_along_border = vert.octa_direct(vi_ur,vj_ur)
-        call ut__assert( octa_direct_along_border >= 0 .and. &
+        call vv__assert( octa_direct_along_border >= 0 .and. &
                          octa_direct_along_border <= 7,      &
                          "__MODULE__(__LINE__): " //         &
                          "Not a border vert?" )
@@ -606,7 +606,7 @@ contains
       jumped = .true.
       u = vert.pos_u(vi)
       v = edge.v_cross_coord(ei,ej)
-      call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+      call vv__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v )
 
       if ( edge.v_is_boundary(ei,ej) ) then
@@ -621,7 +621,7 @@ contains
         !      n       .
         !
         octa_direct_along_border = vert.octa_direct(vi,vj_lower)
-        call ut__assert( octa_direct_along_border >= 0 .and. &
+        call vv__assert( octa_direct_along_border >= 0 .and. &
                          octa_direct_along_border <= 7,      &
                          "__MODULE__(__LINE__): " //         &
                          "Not a border vert?" )
@@ -667,7 +667,7 @@ contains
       jumped = .true.
       u = vert.pos_u(vi)
       v = edge.v_cross_coord(ei,ej)
-      call ut__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
+      call vv__assert( v /= NAN, "__MODULE__(__LINE__): Invalid cross coord." )
       call path.register_new_vert( u, v ) 
       if ( edge.v_is_boundary(ei,ej) ) then
         !             
@@ -681,7 +681,7 @@ contains
         !   .  *    .       
         !
         octa_direct_along_border = vert.octa_direct(vi,vj_upper)
-        call ut__assert( octa_direct_along_border >= 0 .and. &
+        call vv__assert( octa_direct_along_border >= 0 .and. &
                          octa_direct_along_border <= 7,      &
                          "__MODULE__(__LINE__): " //         &
                          "Not a border vert?" )
@@ -760,7 +760,7 @@ contains
         ei = vi - 1
         ej = vj
       case default
-        call ut__fatal( "__MODULE__(__LINE__) " //  &
+        call vv__fatal( "__MODULE__(__LINE__) " //  &
                         "case error." )
     end select
     
@@ -784,7 +784,7 @@ contains
     character :: edge_type
     char(len=2) :: cruising_lane
 
-    call ut__assert( path.head.cruising_lane == 'on',  &
+    call vv__assert( path.head.cruising_lane == 'on',  &
                      "__MODULE__(__LINE__): The path should be on border." )
 
     !!>
@@ -799,7 +799,7 @@ contains
     ej = boundary.edge.ej(nth)
     edge_type = boundary.edge.type(nth)
 
-    call ut__assert(        ei == path.head.ei .and.    &
+    call vv__assert(        ei == path.head.ei .and.    &
                             ej == path.head.ej .and.    &
                      edge_type == path.head.edge_type,  &
                      "__MODULE__(__LINE__): " //        &
@@ -854,7 +854,7 @@ contains
       !!<
       u2 = boundary.edge.cross_coord_u(nth)
       v2 = boundary.edge.cross_coord_v(nth)
-      call ut__assert( u2 /= NAN .and. v2 /= NAN,   &
+      call vv__assert( u2 /= NAN .and. v2 /= NAN,   &
                        "__MODULE__(__LINE__): Invalid cross coord." )
 
       call path.register_new_vert( u2, v2 )
@@ -875,7 +875,7 @@ contains
                                    ej,             &
                                    path_go_toward )
     else
-      call ut__fatal( '__MODULE__(__LINE__): Strange. Path terminated?' )
+      call vv__fatal( '__MODULE__(__LINE__): Strange. Path terminated?' )
     end if
 
   end subroutine one_step_along_boundary
@@ -890,11 +890,11 @@ contains
 
     integer :: ei, ej
     logical :: jumped
-    call ut__assert( path.head.edge_type == 'u' .or.   &
+    call vv__assert( path.head.edge_type == 'u' .or.   &
                      path.head.edge_type == 'v',       &
                      "__MODULE__(__LINE__): " //       &
                      "head is to be u_ or v_edge." )
-    call ut__assert( path.head.cruising_lane == 'in',  &
+    call vv__assert( path.head.cruising_lane == 'in',  &
                      "__MODULE__(__LINE__): The path should be in the region." )
 
     jumped = .false.  ! Default.
@@ -921,7 +921,7 @@ contains
                         edge.u(ei,ej)
       !!<
       case ('N')
-        call ut__assert( path.head.edge_type == 'u',  &
+        call vv__assert( path.head.edge_type == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
 
         if ( edge.d_is_boundary(ei,ej) ) then
@@ -1001,7 +1001,7 @@ contains
                            !!<
         end if
       case ('W')
-        call ut__assert( path.head.edge_type == 'v',  &
+        call vv__assert( path.head.edge_type == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
 
         if ( edge.a_is_boundary(ei-1,ej) ) then
@@ -1079,7 +1079,7 @@ contains
                          !!<
         end if
       case ('S')
-        call ut__assert( path.head.edge_type == 'u',  &
+        call vv__assert( path.head.edge_type == 'u',  &
                          "__MODULE__(__LINE__): Must be edge-u here." )
 
         if ( edge.d_is_boundary(ei,ej-1) ) then
@@ -1161,7 +1161,7 @@ contains
                          !!<
         end if
       case ('E')
-        call ut__assert( path.head.edge_type == 'v',  &
+        call vv__assert( path.head.edge_type == 'v',  &
                          "__MODULE__(__LINE__): Must be edge-v here." )
 
         if ( edge.d_is_boundary(ei,ej) ) then
@@ -1238,10 +1238,10 @@ contains
                          !!<
         end if
       case default
-        call ut__fatal( '__MODULE__(__LINE__): case error.' )
+        call vv__fatal( '__MODULE__(__LINE__): case error.' )
     end select
 
-    call ut__assert( jumped,  &
+    call vv__assert( jumped,  &
                      "__MODULE__(__LINE__): Failed to find next path." )
   end subroutine jump_to_other_edge_from_edge_uv
 
@@ -1257,7 +1257,7 @@ contains
     integer :: ei, ej
     logical :: jumped
 
-    call ut__assert( path.head.cruising_lane == 'in',  &
+    call vv__assert( path.head.cruising_lane == 'in',  &
                      "__MODULE__(__LINE__): The path should be in the region." )
 
     jumped = .false.  ! Default.
@@ -1306,7 +1306,7 @@ contains
           call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei+1, ej )
         else 
-          call ut__fatal( "__MODULE__(__LINE__): arg error." )
+          call vv__fatal( "__MODULE__(__LINE__): arg error." )
         end if
       case ('d')
         if ( path.head.path_go_toward == 'N' ) then
@@ -1348,13 +1348,13 @@ contains
           call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei, ej )
         else 
-          call ut__fatal( "__MODULE__(__LINE__): arg error." )
+          call vv__fatal( "__MODULE__(__LINE__): arg error." )
         end if
       case default
-        call ut__fatal( "__MODULE__(__LINE__): case error." )
+        call vv__fatal( "__MODULE__(__LINE__): case error." )
     end select
 
-    call ut__assert( jumped,  &
+    call vv__assert( jumped,  &
                      "__MODULE__(__LINE__): Failed to find next path." )
   end subroutine jump_to_other_edge_from_edge_ad
 
@@ -1450,7 +1450,7 @@ contains
     character :: path_go_toward
     character :: edge_type
 
-    call ut__assert( path.num == 0,  &
+    call vv__assert( path.num == 0,  &
                     '__MODULE__(__LINE__): You forgot to reset vv_slice_isoline.' )
 
     do edge_index = 1, boundary.edge.num
@@ -1476,7 +1476,7 @@ contains
         else ! quarter == VV_SLICE_MESH__EDGE_PM
           u2 = boundary.edge.cross_coord_u(edge_index)
           v2 = boundary.edge.cross_coord_v(edge_index)
-          call ut__assert( u2 /= NAN .and. v2 /= NAN,  &
+          call vv__assert( u2 /= NAN .and. v2 /= NAN,  &
                            "__MODULE__(__LINE__): Invalid cross coord." )
           cruising_lane = 'in'
           call leave_from_boundary( boundary.vert.vi(vert_index1),          &
@@ -1539,7 +1539,7 @@ contains
     integer :: quarter
     real :: u, v
 
-    call ut__assert( path.num == 0,                     &
+    call vv__assert( path.num == 0,                     &
                     '__MODULE__(__LINE__): ' //         &
                     'Forgot to reset vv_slice_isoline.' )
 
@@ -1565,7 +1565,7 @@ contains
           status = 'have found'
           u = edge.u_cross_coord(ei,ej)
           v = vert.pos_v(vj)
-          call ut__assert( u /= NAN,                    &
+          call vv__assert( u /= NAN,                    &
                            "__MODULE__(__LINE__): " //  &
                            "Invalid cross coord." )
           call path.register_new_vert( u, v )
@@ -1650,12 +1650,12 @@ contains
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
           end if
         case default
-          call ut__fatal( "__MODULE__(__LINE__): case error." )
+          call vv__fatal( "__MODULE__(__LINE__): case error." )
       end select
 
       if ( path.is_closed() ) then
         if ( path.start_edge_is_on_boundary ) then
-          call ut__assert( nthbe_start_path /= NIL,  &
+          call vv__assert( nthbe_start_path /= NIL,  &
                            "__MODULE__(__LINE__): inconsistent." )
           call boundary.edge.erase( nthbe_start_path )
         end if

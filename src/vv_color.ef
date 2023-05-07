@@ -1,5 +1,5 @@
 module vv_color_m
-  use ut_m
+  use vv_m
   implicit none
   private
   public :: VV_COLOR__CONST
@@ -127,9 +127,9 @@ contains
 
     real :: val_norm
 
-    call ut__assert( vmax > vmin,  &
+    call vv__assert( vmax > vmin,  &
                     '__MODULE__(__LINE__): bad vmax/vmin. ' )
-    call ut__assert( vmax-vmin > 1.e-20,  &
+    call vv__assert( vmax-vmin > 1.e-20,  &
                     '__MODULE__(__LINE__): vmax,vmin too close.' )
 
     val_norm = (val-vmin)/(vmax-vmin)
@@ -143,7 +143,7 @@ contains
 
     type(vv_color__hsv_t) :: hsv
 
-    call ut__assert( val_norm >= 0.0 .and. val_norm <= 1.0,  &
+    call vv__assert( val_norm >= 0.0 .and. val_norm <= 1.0,  &
                     '__MODULE__(__LINE__): val_norm must be normalized.' )
 
     hsv.hue = 0.3 + 0.5 * val_norm
@@ -157,7 +157,7 @@ contains
 
     type(vv_color_t) :: gray_0p5, gray_0p8
 
-    call ut__message( '===<VV_COLOR__CONST available color list>===' )
+    call vv__message( '===<VV_COLOR__CONST available color list>===' )
     call iPrint( '        white', VV_COLOR__CONST.white   )
     call iPrint( '        black', VV_COLOR__CONST.black   )
     call iPrint( '          red', VV_COLOR__CONST.red     )
@@ -172,7 +172,7 @@ contains
 
     call iPrint( '    gray(0.5)', gray_0p5 )
     call iPrint( '    gray(0.8)', gray_0p8 )
-    call ut__message( '===</VV_COLOR__CONST available color list>===' )
+    call vv__message( '===</VV_COLOR__CONST available color list>===' )
 
 
   contains
@@ -184,7 +184,7 @@ contains
       char(len=7) :: code
 
       code = col.to_code()
-      call ut__message( trim(message) // ' (' // code // ')' )
+      call vv__message( trim(message) // ' (' // code // ')' )
     end subroutine iPrint        
 
   end subroutine vv_color__const__test_print
