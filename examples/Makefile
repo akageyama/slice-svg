@@ -55,3 +55,5 @@ clean:
 	rm -rf *.F90
 	rm -rf example01_contour_fullbox
 	rm -rf example02_contour_dashed
+	rm -rf example03_contour_triangle
+	rm -rf example04_vector_arrows

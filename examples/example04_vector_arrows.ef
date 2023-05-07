@@ -10,7 +10,7 @@ module simulation_region_m
   real <const> :: XMIN_ = -20.0 ! temporal, private
   real <const> :: XMAX_ =  80.0
   real <const> :: YMIN_ = -20.0
-  real <const> :: YMAX_ =  30.0
+  real <const> :: YMAX_ =  80.0
 
   type(simulation_region_t), public ::  &
     SIMULATION_REGION = simulation_region_t( XMIN_, XMAX_,  &
@@ -24,8 +24,8 @@ module grid_m
   private
   public :: GRID__NX, GRID__NY
 
-  integer <const> :: GRID__NX = 200
-  integer <const> :: GRID__NY = 100
+  integer <const> :: GRID__NX = 60
+  integer <const> :: GRID__NY = 60
 
   type, public :: grid_t
     real, dimension(GRID__NX) :: pos_x
@@ -81,24 +81,32 @@ contains
     real <const> :: PI = atan(1.0)*4
     integer :: i, j
     real :: x, y, x_, y_, r_
-    real :: scale
-    scale = max(SIMULATION_REGION.xmax,  &
-                SIMULATION_REGION.ymax )
+    real :: length_x, length_y
+
+    !!>
+         Periodic boundary condition. When Grid__NX = 8,
+              Grid.pos_x(1) = Grid.pos_x(7)
+
+                                         1---2---3-...
+                                         |   |
+                 1---2---3---4---5---6---7---8
+                 |   |                           
+         ...-6---7---8
+    !!<
+    length_x = Grid.pos_x(GRID__NX-1) - Grid.pos_x(2)
+    length_y = Grid.pos_y(GRID__NY-1) - Grid.pos_y(2)
 
     do j = 1, GRID__NY
       do i = 1, GRID__NX
         !! source 1
         x = Grid.pos_x(i)
         y = Grid.pos_y(j)
-        x_ = x / scale
-        y_ = y / scale
+        x_ = 2*(x-Grid.pos_x(2)) / length_x
+        y_ = 2*(y-Grid.pos_y(2)) / length_y
         r_ = sqrt(x_**2+y_**2)
-        pc.field2d(i,j) = cos(4*PI*r_)*exp(-(r_/4)**2)
-        !! source 2
-        x_ = (x-SIMULATION_REGION.xmax/2) / scale
-        y_ = (y-SIMULATION_REGION.ymax/2) / scale
-        r_ = sqrt(x_**2+y_**2)
-        pc.field2d(i,j) += 0.5*cos(8*PI*r_)*exp(-(r_/4)**2)
+        pc.field2d(i,j) = 0.5*cos(2*PI*x_+2*PI*y_)     &
+                        + 0.5*cos(3*PI*x_)             &
+                        + 0.5*sin(3*PI*y_)
       end do
     end do
 
@@ -219,16 +227,17 @@ contains
 
   subroutine iSketch_initialize
     call vv_sketch.initialize( ll, ur,                                 &
-                               screen_width_in_pixel=1200.0,           &
+                               screen_width_in_pixel=800.0,            &
                                title='Arrow glyphs of fector field',   &
                                filename='example04_vector_arrows.svg', &
+                               unit_arrow_in_pixel=100.0,              &
                                write_arrow_template=.true. )
   end subroutine iSketch_initialize
 
   subroutine iSketch_message_header( string )
     char(len=*) <in> :: string
     call vv_sketch.text( (ll.u+ur.u)/2,  &
-                         (ur.v*1.1),  &
+                         (ur.v*1.05),  &
                          string,  &
                          font_size_in_pixel=30.0,  &
                          text_anchor='middle', &
@@ -242,7 +251,7 @@ contains
     real :: text_v_pos_in_physical_unit
     real :: tsep ! text v position separation betwen lines
 
-    tsep = (ur.v-ll.v)*0.06
+    tsep = (ur.v-ll.v)*0.04
     text_v_pos_in_physical_unit = ll.v - tsep
 
     vmax = gradvector.amp_max

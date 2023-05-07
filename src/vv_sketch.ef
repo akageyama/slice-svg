@@ -125,7 +125,7 @@ contains
     vect_amp = sqrt( vect_u**2 + vect_v**2 )
     if ( vect_amp < TOO_SMALL ) return
 
-    factor = VV_SVGLIB__ARROW_LENGTH_PIXEL_FOR_UNIT_VECT
+    factor = vv_svglib__get_unit_arrow_length_in_pixel()
     screen_pos = sketch.to_screen_pos( vv_sketch__sim_pos_t(u,v) )
     screen_vec.x =  vect_u * factor
     screen_vec.y = -vect_v * factor
@@ -318,6 +318,7 @@ contains
                                     screen_width_in_pixel, &
                                     title,                 &
                                     filename,              &
+                                    unit_arrow_in_pixel,   &
                                     write_arrow_template )
     class(vv_sketch_t) <out> :: sketch
     type(vv_sketch__sim_pos_t) <in> :: lower_left_in_phys,  &
@@ -325,6 +326,7 @@ contains
     real <in> :: screen_width_in_pixel
     char(len=*) <in> :: title
     char(len=*) <in> :: filename
+    real <optin> :: unit_arrow_in_pixel
     logical <optin> :: write_arrow_template
 
     real :: draw_area_width_in_phys,   &
@@ -398,6 +400,10 @@ contains
     call sketch.vv_svglib.open( sketch.filename,           &
                                 sketch.screen_size.width,  &
                                 sketch.screen_size.height )
+
+    if ( present(unit_arrow_in_pixel) ) then
+      call vv_svglib__set_unit_arrow_length_in_pixel( unit_arrow_in_pixel )
+    end if
 
     if ( present(write_arrow_template) ) then
       if ( write_arrow_template ) then
