@@ -343,16 +343,27 @@ contains
 
     subroutine iWrite_template02
       call write_a_blank_line( this )
-      call write_a_comment( this, '<Arrow Template 02 (Animation)>' )
+      call write_a_comment( this, '<Arrow 02 (Animation)>' )
       call write_out( this, '<defs>' )
         call indent_push( this )
-          str_all = '<path id="animated-arrow-shaft"'        &
-                      // ' d="M ' // trim(r2s(px)) // COMMA  &
-                                  // trim(r2s(py)) // SPACE  &
-                         // ' L ' // trim(r2s(rx)) // COMMA  &
-                                  // trim(r2s(ry)) // '"'    &
-                                  // ' stroke="#000000"'     & ! black
-                                  // ' /> '
+          !str_all = '<path id="animated-arrow-shaft"'        &
+          !            // ' d="M ' // trim(r2s(px)) // COMMA  &
+          !                        // trim(r2s(py)) // SPACE  &
+          !               // ' L ' // trim(r2s(rx)) // COMMA  &
+          !                        // trim(r2s(ry)) // '"'    &
+          !                        // ' stroke="#000000"'     & ! black
+          !                        // ' /> '
+          str(1) = '<path id="animated-arrow-shaft"' 
+          str(2) = ' d="M ' // trim(r2s(px)) // COMMA  &
+                            // trim(r2s(py)) // SPACE  &
+                   // ' L ' // trim(r2s(rx)) // COMMA  &
+                            // trim(r2s(ry)) // '"'
+          ! str(3) = vv_svglib__text_line( 'stroke-width=',  &
+          !                         arrow_line_width_pixel_for_unit_vect )
+          str(3) = 'stroke-width="1"'
+          str(4) = '/> '
+          nop = 4
+          call string_concatenate( nop, str, str_all )
           call write_out( this, str_all )
           str_all = '<g id="arrow02" transform="scale(1.0)">'
           call write_out( this, str_all )
@@ -390,9 +401,10 @@ contains
   end subroutine vv_svglib__arrow_template
 
 
-  subroutine vv_svglib__arrow( this, x, y, vx, vy )
+  subroutine vv_svglib__arrow( this, x, y, vx, vy, arrow_template )
     class(vv_svglib_t) <io> :: this
     real <in> :: x, y, vx, vy
+    char(len=*) <optin> :: arrow_template ! "#arrow01" or "#arrow02"
 
     real <const> :: TOO_SMALL = 1.e-20    ! to skip drawing tiny glyphs.
     real <const> :: ALMOST_ZERO = 1.e-40  ! to avoid zero division.
@@ -403,12 +415,24 @@ contains
     integer <const> :: MAX_NOP = 20
     char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
     char(len=VV__STRLEN_MAX*MAX_NOP) :: str_all
+    char(len=8) :: arrow_template_name ! "#arrow01" or "#arrow02"
 
     vector_amp = sqrt(vx**2+vy**2)
     if ( vector_amp < TOO_SMALL ) return
 
     vx_norm = vx / vector_amp
     vy_norm = vy / vector_amp
+
+    arrow_template_name = "#arrow01"   ! default
+    if ( present(arrow_template) ) then
+      select case (arrow_template)
+        case ("#arrow02")
+          arrow_template_name = "#arrow02"  ! animated arrow
+        case default
+          call vv__fatal( "__MODULE__(__LINE__): " //  &
+                          "case error." )
+      end select
+    end if
 
     angle_from_x_axis = vv__atan2_in_degree( vy, vx )
 
@@ -418,7 +442,7 @@ contains
 
     amp_factor = vector_amp / Unit_arrow_length_in_pixel
 
-    str(1) = '<use xlink:href="#arrow02"' // SPACE
+    str(1) = '<use xlink:href="' // arrow_template_name // '"' // SPACE
     str(2) = 'transform=' // QUOTE // 'rotate('
     str(3) = trim(r2s(angle_from_x_axis)) // COMMA  &
              // trim(r2s(x)) // COMMA  &

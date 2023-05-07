@@ -105,9 +105,11 @@ contains
   end subroutine vv_slice_vector__set_val
 
 
-  subroutine vv_slice_vector__vis_arrows( vector, vv_sketch )
+  subroutine vv_slice_vector__vis_arrows( vector, vv_sketch,      &
+                                                  arrow_template )
     class(vv_slice_vector_t) <io> :: vector
     type(vv_sketch_t) <io> :: vv_sketch
+    char(len=*) <optin> :: arrow_template
     !!>
         o--o--o--o--o--o--o--o--o <== Original (=finest) grid
         |  |  |  |  |  |  |  |  |
@@ -144,7 +146,8 @@ contains
               v = vector.mesh.vert.pos_v(j)
               call vv_sketch.arrow( u, v, &
                                     vector.comp_u(i,j), &
-                                    vector.comp_v(i,j) )
+                                    vector.comp_v(i,j), &
+                                    arrow_template )
               pass_to_sketch_flag(i,j) = .true.
             end if
           end do

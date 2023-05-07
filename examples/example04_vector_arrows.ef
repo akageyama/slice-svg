@@ -217,7 +217,10 @@ program example04_vector_arrows
   call iSketch_message_header( 'Contouring with color and dash' )
   call iSketch_boundary
 
-  call vv_vector.vis_arrows( vv_sketch )
+  call vv_sketch.group_push( line_color=VV_COLOR__CONST.black,  &
+                             fill_color=VV_COLOR__CONST.blue )
+    call vv_vector.vis_arrows( vv_sketch )
+  call vv_sketch.group_pop
 
   call iSketch_message_footer
   call vv_vector.finalize

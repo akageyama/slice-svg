@@ -110,10 +110,11 @@ contains
   end subroutine line_pos2
 
 
-  subroutine vv_sketch__arrow( sketch, u,        &
-                                       v,        &
-                                       vect_u,   &
-                                       vect_v )
+  subroutine vv_sketch__arrow( sketch, u,                &
+                                       v,                &
+                                       vect_u,           &
+                                       vect_v,           &
+                                       arrow_template )
     class(vv_sketch_t) <io> :: sketch
     real <in> :: u, v   ! position of the arrow in sim coords
     real <in> :: vect_u, vect_v  ! vector components in sim 
@@ -121,6 +122,7 @@ contains
     type(screen_pos_t) screen_pos, screen_vec
     real :: vect_amp, factor
     real <const> :: TOO_SMALL = 1.e-10  ! a tiny value.
+    char(len=*) <optin> :: arrow_template
 
     vect_amp = sqrt( vect_u**2 + vect_v**2 )
     if ( vect_amp < TOO_SMALL ) return
@@ -129,10 +131,11 @@ contains
     screen_pos = sketch.to_screen_pos( vv_sketch__sim_pos_t(u,v) )
     screen_vec.x =  vect_u * factor
     screen_vec.y = -vect_v * factor
-    call sketch.vv_svglib.arrow( screen_pos.x,     &
-                                 screen_pos.y,     &
-                                 screen_vec.x,     &
-                                 screen_vec.y )
+    call sketch.vv_svglib.arrow( screen_pos.x,    &
+                                 screen_pos.y,    &
+                                 screen_vec.x,    &
+                                 screen_vec.y,    &
+                                 arrow_template )
   end subroutine vv_sketch__arrow
 
 

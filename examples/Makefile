@@ -39,6 +39,12 @@ example04_vector_arrows: example04_vector_arrows.ef
 	$(FC) $(FFLAGS) -o $@ *.o
 	./$@
 
+example05_vector_arrows_animation: example05_vector_arrows_animation.ef
+	$(EFPP) $@.ef > $@.F90
+	$(FC) $(FFLAGS) -c $@.F90
+	$(FC) $(FFLAGS) -o $@ *.o
+	./$@
+
 constants.o: constants.ef
 	$(EFPP) constants.ef > constants.F90
 	$(FC) $(FFLAGS) -c constants.F90
@@ -57,3 +63,4 @@ clean:
 	rm -rf example02_contour_dashed
 	rm -rf example03_contour_triangle
 	rm -rf example04_vector_arrows
+	rm -rf example05_vector_arrows_animation
