@@ -1,0 +1,288 @@
+module simulation_region_m
+  implicit none
+  private
+
+  type, private :: simulation_region_t
+    real :: xmin, xmax
+    real :: ymin, ymax
+  end type simulation_region_t
+   
+  real <const> :: XMIN_ = -20.0 ! temporal, private
+  real <const> :: XMAX_ =  80.0
+  real <const> :: YMIN_ = -20.0
+  real <const> :: YMAX_ =  80.0
+
+  type(simulation_region_t), public ::  &
+    SIMULATION_REGION = simulation_region_t( XMIN_, XMAX_,  &
+                                             YMIN_, YMAX_ )
+end module simulation_region_m
+
+
+module grid_m
+  use simulation_region_m
+  implicit none
+  private
+  public :: GRID__NX, GRID__NY
+
+  integer <const> :: GRID__NX = 60
+  integer <const> :: GRID__NY = 60
+
+  type, public :: grid_t
+    real, dimension(GRID__NX) :: pos_x
+    real, dimension(GRID__NX) :: pos_y
+  contains
+    procedure :: initialize => grid__initialize
+  end type grid_t
+
+  type(grid_t), public :: Grid
+
+contains
+
+  subroutine grid__initialize( grid )
+    class(grid_t) <out> :: grid
+
+    integer :: i, j
+    real :: dx, dy
+
+    associate( SREG => SIMULATION_REGION )
+      dx = (SREG.xmax-SREG.xmin)/(GRID__NX-1)
+      do i = 1, GRID__NX
+        grid.pos_x(i) = SREG.xmin + dx*(i-1)
+      end do
+
+      dy = (SREG.ymax-SREG.ymin)/(GRID__NY-1)
+      do j = 1, GRID__NY
+        grid.pos_y(j) = SREG.ymin + dy*(j-1)
+      end do
+    end associate
+  end subroutine grid__initialize
+
+end module grid_m
+
+
+module pressurechange_m
+  use grid_m
+  use simulation_region_m
+  implicit none
+  private
+
+  type, public :: pressurechange_t
+    real :: vmax, vmin ! max and mini values
+    real, dimension(GRID__NX,GRID__NY) :: field2d
+  contains
+    procedure :: set => pressurechange__set
+  end type pressurechange_t
+
+contains
+ 
+  subroutine pressurechange__set( pc )
+    class(pressurechange_t) <out> :: pc
+
+    real <const> :: PI = atan(1.0)*4
+    integer :: i, j
+    real :: x, y, x_, y_, r_
+    real :: length_x, length_y
+
+    !!>
+         Periodic boundary condition. When Grid__NX = 8,
+              Grid.pos_x(1) = Grid.pos_x(7)
+
+                                         1---2---3-...
+                                         |   |
+                 1---2---3---4---5---6---7---8
+                 |   |                           
+         ...-6---7---8
+    !!<
+    length_x = Grid.pos_x(GRID__NX-1) - Grid.pos_x(2)
+    length_y = Grid.pos_y(GRID__NY-1) - Grid.pos_y(2)
+
+    do j = 1, GRID__NY
+      do i = 1, GRID__NX
+        !! source 1
+        x = Grid.pos_x(i)
+        y = Grid.pos_y(j)
+        x_ = 2*(x-Grid.pos_x(2)) / length_x
+        y_ = 2*(y-Grid.pos_y(2)) / length_y
+        r_ = sqrt(x_**2+y_**2)
+        pc.field2d(i,j) = 0.5*cos(2*PI*x_+2*PI*y_)     &
+                        + 0.5*cos(3*PI*x_)             &
+                        + 0.5*sin(3*PI*y_)
+      end do
+    end do
+
+    pc.vmax = maxval( pc.field2d(:,:) )
+    pc.vmin = minval( pc.field2d(:,:) )
+  end subroutine pressurechange__set
+
+end module pressurechange_m
+
+
+module gradvector_m
+  use simulation_region_m
+  use grid_m
+  implicit none
+  private
+
+  type, public :: gradvector_t
+    real :: amp_max ! amplitude max
+    real, dimension(GRID__NX,GRID__NY) :: comp_x ! component x
+    real, dimension(GRID__NX,GRID__NY) :: comp_y
+  contains
+    procedure :: set => gradvector__set
+  end type gradvector_t
+
+contains
+
+  subroutine gradvector__set( gvector, scalar )
+    class(gradvector_t) <out> :: gvector
+    real, dimension(GRID__NX,GRID__NY) <in> :: scalar
+
+    integer :: i, j
+    real :: dx, dy    ! grid spacings
+    real :: ddx, ddy  ! finite difference factor
+
+    dx = ( SIMULATION_REGION.xmax                      &
+         - SIMULATION_REGION.xmin ) / ( GRID__NX - 1 )
+    dy = ( SIMULATION_REGION.ymax                      &
+         - SIMULATION_REGION.ymin ) / ( GRID__NY - 1 )
+    ddx = 1.0 / (2*dx)
+    ddy = 1.0 / (2*dy)
+    
+    do j = 2, GRID__NY-1
+      do i = 2, GRID__NX-1
+        gvector.comp_x(i,j) = ( scalar(i+1,j)-scalar(i-1,j) ) * ddx
+        gvector.comp_y(i,j) = ( scalar(i,j+1)-scalar(i,j-1) ) * ddy
+      end do
+    end do
+
+    call iPeriodic_boundary_condition( gvector.comp_x )
+    call iPeriodic_boundary_condition( gvector.comp_y )
+
+    gvector.amp_max = sqrt( maxval( gvector.comp_x(:,:)**2  &
+                                  + gvector.comp_y(:,:)**2 ) )
+
+  contains
+    
+    subroutine iPeriodic_boundary_condition( field2d )
+      real, dimension(GRID__NX,GRID__NY) <io> :: field2d
+
+      ! Top and bottom boundaries
+      field2d(:,       1) = field2d(:,GRID__NY-1)
+      field2d(:,GRID__NY) = field2d(:,         2)
+
+      ! Right and left boundaries
+      field2d(       1,:) = field2d(GRID__NX-1,:)
+      field2d(GRID__NX,:) = field2d(         2,:)
+    end subroutine iPeriodic_boundary_condition
+
+  end subroutine gradvector__set
+  
+end module gradvector_m
+
+
+program example04_vector_arrows
+  use simulation_region_m
+  use grid_m
+  use pressurechange_m
+  use gradvector_m
+  use vv_m
+  use vv_color_m
+  use vv_sketch_m
+  use vv_slice_vector_m
+  implicit none
+
+  type(pressurechange_t) :: pressurechange
+  type(gradvector_t) :: gradvector
+
+  type(vv_sketch__sim_pos_t) :: ll ! lower-left corner of sketch
+  type(vv_sketch__sim_pos_t) :: ur ! upper-right corner of sketch
+  type(vv_sketch_t) :: vv_sketch
+  type(vv_slice_vector_t) :: vv_vector
+
+  call Grid.initialize
+  call pressurechange.set
+  call gradvector.set( pressurechange.field2d )
+  call vv_vector.initialize( 'grad pressure',    &
+                             GRID__NX,           &
+                             GRID__NY,           &
+                             Grid.pos_x,         &
+                             Grid.pos_y,         &
+                             gradvector.comp_x,  &
+                             gradvector.comp_y )
+  ll = vv_sketch__sim_pos_t(SIMULATION_REGION.xmin,  &
+                            SIMULATION_REGION.ymin)
+  ur = vv_sketch__sim_pos_t(SIMULATION_REGION.xmax,  &
+                            SIMULATION_REGION.ymax)
+  call iSketch_initialize
+  call iSketch_message_header( 'Contouring with color and dash' )
+  call iSketch_boundary
+
+  call vv_sketch.group_push( line_color=VV_COLOR__CONST.black,  &
+                             fill_color=VV_COLOR__CONST.blue )
+    call vv_vector.vis_arrows( vv_sketch, arrow_template="#arrow02" )
+  call vv_sketch.group_pop
+
+  call iSketch_message_footer
+  call vv_vector.finalize
+  call iSketch_finalize
+
+contains
+
+  subroutine iSketch_initialize
+    call vv_sketch.initialize( ll, ur,                                 &
+                               screen_width_in_pixel=800.0,            &
+                               title='Arrow glyphs of fector field',   &
+                               filename='example05_vector_arrows_animation.svg', &
+                               unit_arrow_in_pixel=100.0,              &
+                               write_arrow_template=.true. )
+  end subroutine iSketch_initialize
+
+  subroutine iSketch_message_header( string )
+    char(len=*) <in> :: string
+    call vv_sketch.text( (ll.u+ur.u)/2,  &
+                         (ur.v*1.05),  &
+                         string,  &
+                         font_size_in_pixel=30.0,  &
+                         text_anchor='middle', &
+                         color=VV_COLOR__CONST.black )
+  end subroutine iSketch_message_header
+
+  subroutine iSketch_message_footer
+    real :: vmax
+    char(len=200) :: string
+
+    real :: text_v_pos_in_physical_unit
+    real :: tsep ! text v position separation betwen lines
+
+    tsep = (ur.v-ll.v)*0.04
+    text_v_pos_in_physical_unit = ll.v - tsep
+
+    vmax = gradvector.amp_max
+    string = ' vector amp max = ' // vv__real_to_str13(vmax)
+    call vv_sketch.text( (ll.u+ur.u)/2,  &
+                         text_v_pos_in_physical_unit,  &
+                         string,  &
+                         font_size_in_pixel=20.0,  &
+                         text_anchor='middle', &
+                         color=VV_COLOR__CONST.black )
+    text_v_pos_in_physical_unit -= tsep
+    string = trim(vv_sketch.filename)
+    call vv_sketch.text( (ll.u+ur.u)/2,  &
+                         text_v_pos_in_physical_unit,  &
+                         string,  &
+                         font_size_in_pixel=20.0,  &
+                         text_anchor='middle', &
+                         color=VV_COLOR__CONST.black )
+  end subroutine iSketch_message_footer
+
+  subroutine iSketch_finalize
+    call vv_sketch.finalize                 
+  end subroutine iSketch_finalize
+
+  subroutine iSketch_boundary
+    call vv_vector.mesh.draw( vv_sketch, &
+                              line_color=VV_COLOR__CONST.black, &
+                              width_in_pixels=2.0 )
+  end subroutine iSketch_boundary
+
+end program example04_vector_arrows
