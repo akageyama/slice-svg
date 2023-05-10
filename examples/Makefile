@@ -6,7 +6,7 @@
 EFPP = ../bin/efpp.py
 
 VIS2DLIB_NAME = vv  # <= libvv.a 
-VIS2DLIB_DIR  = ../../slice-svg/lib
+VIS2DLIB_DIR  = ../lib
 
 FLIBS := -I$(VIS2DLIB_DIR) -L$(VIS2DLIB_DIR) -l$(VIS2DLIB_NAME)
 

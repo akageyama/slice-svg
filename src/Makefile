@@ -126,10 +126,10 @@ svglist := sample_line.svg \
 
 install: $(vv_lib)
 	mkdir -p ../lib
-	cp $(vv_lib) ../lib
+	cp $(vv_lib) vv*.mod ../lib
 
-$(vv_lib): $(vv_objlist) $(vv_modlist)
-	ar r $(vv_lib) $(vv_objlist) $(vv_modlist)
+$(vv_lib): $(vv_objlist) 
+	ar r $(vv_lib) $(vv_objlist) 
 
 test_program: test_program.o $(vv_lib)
 	$(FC) -o test_program  \
