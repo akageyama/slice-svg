@@ -29,40 +29,40 @@ vv_lib := lib$(vv_basename).a
 .PHONY: clean line list runmne view fig
 
 
-%.F90: %.ef
-	$(EFPP) $< > $@
 
-%.o: %.F90
-	$(FC) $(FFLAGS) -o $@ -c $<
-
-
-FC = gfortran
-FFLAGS := 
-# FFLAGS += -fopenmp
-# FFLAGS += -fcheck=all
-# FFLAGS += -Wall
-# FFLAGS += -fbounds-check
-# FFLAGS += -fcheck-array-temporaries
-# FFLAGS += -O0
-# FFLAGS += -Wuninitialized
-# FFLAGS += -ffpe-trap=invalid,zero,overflow
-# FFLAGS += -g
-# FFLAGS += -fbacktrace
-
-
+this_host = default
 this_host := $(shell hostname | cut -c1-3)
 
-this_host = mac
-
+ifeq ($(this_host),default)  # Default
+        EFPP = ../bin/efpp.py
+        FC = gfortran
+        FFLAGS := 
+        # FFLAGS += -fopenmp
+        FFLAGS += -fcheck=all
+        FFLAGS += -Wall
+        FFLAGS += -fbounds-check
+        FFLAGS += -fcheck-array-temporaries
+        FFLAGS += -O0
+        FFLAGS += -Wuninitialized
+        FFLAGS += -ffpe-trap=invalid,zero,overflow
+        FFLAGS += -g
+        FFLAGS += -fbacktrace
+endif
 ifeq ($(this_host),alf)  # Alfven
         EFPP = ../bin/efpp.py2
         FC = mpinfort
         FFLAGS = 
 endif
-ifeq ($(this_host),pif)  # Kobe
+ifeq ($(this_host),pif)  # Pi-computer
         EFPP = ../bin/efpp.py
         FC = gfortran
-        FFLAGS = 
+	FC = mpifc
+	FC = mpif90
+	FC = mpiifort
+        FC = ifort
+        FFLAGS = -xAVX
+        FFLAGS = -O0
+        FFLAGS += -check all -traceback -debug
 endif
 ifeq ($(this_host),mac)  # Mac
         EFPP = ../bin/efpp.py
@@ -111,23 +111,28 @@ ifeq ($(HOME),$(ES3_HOME)) # JAMSTEC
          #FFLAGS += -eR
 endif
 
+%.F90: %.ef
+	$(EFPP) $< > $@
+
+%.o: %.F90
+	$(FC) $(FFLAGS) -o $@ -c $<
+
 svglist := sample_line.svg \
            sample_scalar.svg \
            sample_text_color.svg \
            sample_vector.svg
 
 # default target
-#
 
 install: $(vv_lib)
 	mkdir -p ../lib
-	cp $(vv_lib) $(vv_modlist) ../lib
+	cp $(vv_lib) ../lib
 
-$(vv_lib): $(vv_objlist)
-	ar r $(vv_lib) $(vv_objlist)
+$(vv_lib): $(vv_objlist) $(vv_modlist)
+	ar r $(vv_lib) $(vv_objlist) $(vv_modlist)
 
 test_program: test_program.o $(vv_lib)
-	gfortran -o test_program  \
+	$(FC) -o test_program  \
                  *.o   \
                  -I. -L. -l$(vv_basename)
 
