@@ -22,8 +22,8 @@ module vv_sketch_m
     type(screen_size_t) :: screen_size
     real :: u_max, u_min, v_max, v_min
     real :: dxdu, dydv
-    char(len=300) :: title
-    char(len=300) :: filename
+    char(len=VV__STRLEN_MAX) :: title
+    char(len=VV__STRLEN_MAX) :: filename
     type(vv_svglib_t) :: vv_svglib
   contains
     procedure :: initialize => vv_sketch__initialize
