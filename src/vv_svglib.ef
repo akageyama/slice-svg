@@ -701,16 +701,14 @@ contains
     char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
     char(len=VV__STRLEN_MAX*MAX_NOP) :: str_all
     character :: directive
-    real :: line_width
 
+    nopt = 1
+    str(nopt) = '<path' 
     if ( present(line_width_in_pixels) ) then
-      line_width = line_width_in_pixels
-    else
-      line_width = 1.0
+      nopt += 1
+      str(nopt) = vv_svglib__text_line( 'stroke-width=',  &
+                                         line_width_in_pixels )
     end if
-    str(1) = '<path' 
-    str(2) = vv_svglib__text_line( 'stroke-width=', line_width )
-    nopt = 2
 
     if ( present(line_color) ) then
       nopt += 1
@@ -731,7 +729,6 @@ contains
     str(nopt) = 'd=' // QUOTE
 
     call string_concatenate( nopt, str, str_all )
-
     call write_out( this, trim(adjustl(str_all)) )
       call indent_push( this )
         do n = 1, nverts

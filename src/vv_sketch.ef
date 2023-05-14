@@ -505,24 +505,51 @@ contains
 
     if ( present(line_color) ) then 
       line_color_code = line_color.to_code()
-    else 
-      line_color_code = ''
+      if ( present(fill_color) ) then
+        fill_color_code = fill_color.to_code()
+        call sketch.vv_svglib.path( nverts,                       &
+                                    path_directive,               &
+                                    verts_screen_x,               &
+                                    verts_screen_y,               &
+                                    line_width_in_pixels          &
+                                      =width_in_pixels,           &
+                                    line_color=line_color_code,   &
+                                    fill_color=fill_color_code,   &
+                                    line_dash_array=line_dash_array )
+      else !  No fill_color 
+        call sketch.vv_svglib.path( nverts,                       &
+                                    path_directive,               &
+                                    verts_screen_x,               &
+                                    verts_screen_y,               &
+                                    line_width_in_pixels          &
+                                      =width_in_pixels,           &
+                                    line_color=line_color_code,   &
+                                    fill_color='none',            &
+                                    line_dash_array=line_dash_array )
+      end if
+    else  ! No line_color
+      if ( present(fill_color) ) then
+        fill_color_code = fill_color.to_code()
+        call sketch.vv_svglib.path( nverts,                       &
+                                    path_directive,               &
+                                    verts_screen_x,               &
+                                    verts_screen_y,               &
+                                    line_width_in_pixels          &
+                                      =width_in_pixels,           &
+                                    fill_color=fill_color_code,   &
+                                    line_dash_array=line_dash_array )
+      else !  No fill_color 
+        call sketch.vv_svglib.path( nverts,                       &
+                                    path_directive,               &
+                                    verts_screen_x,               &
+                                    verts_screen_y,               &
+                                    line_width_in_pixels          &
+                                      =width_in_pixels,           &
+                                    fill_color='none',            &
+                                    line_dash_array=line_dash_array )
+      end if
     end if
 
-    if ( present(fill_color) ) then
-      fill_color_code = fill_color.to_code()
-    else
-      fill_color_code = 'none'
-    end if
-
-    call sketch.vv_svglib.path( nverts,                       &
-                                path_directive,               &
-                                verts_screen_x,               &
-                                verts_screen_y,               &
-                                width_in_pixels,              &
-                                line_color=line_color_code,   &
-                                fill_color=fill_color_code,   &
-                                line_dash_array=line_dash_array )
   end subroutine vv_sketch__path
 
 

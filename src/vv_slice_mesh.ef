@@ -425,7 +425,6 @@ contains
       path_directive(counter) = 'Z' ! Close the sub-path.
       dummy = 0.0  ! any number
       verts_sim(counter) = vv_sketch__sim_pos_t( dummy, dummy )
-
       call vv_sketch.path( counter,         &
                            path_directive,  &
                            verts_sim,       &
