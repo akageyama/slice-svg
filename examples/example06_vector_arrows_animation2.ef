@@ -1,0 +1,268 @@
+module base_m
+  implicit none
+  private
+  public :: NX, NY, PI
+  public :: XMIN, XMAX
+  public :: YMIN, YMAX
+  public :: base__initialize
+  public :: grid_position
+
+  integer <const> :: NX = 60
+  integer <const> :: NY = 60
+
+  real <const> :: PI = atan(1.0)*4
+
+  real <const> :: XMIN = -2*PI
+  real <const> :: XMAX =  2*PI
+  real <const> :: YMIN = -PI
+  real <const> :: YMAX =  PI
+
+  type, public :: grid_position_t
+    real, dimension(NX) :: x
+    real, dimension(NX) :: y
+  end type grid_position_t
+
+  type(grid_position_t) :: grid_position
+
+contains
+
+  subroutine base__initialize
+    integer :: i, j
+    real :: dx, dy
+
+    dx = (XMAX-XMIN)/(NX-1)
+    do i = 1, NX
+      grid_position.x(i) = XMIN + dx*(i-1)
+    end do
+
+    dy = (YMAX-YMIN)/(NY-1)
+    do j = 1, NY
+      grid_position.y(j) = YMIN + dy*(j-1)
+    end do
+  end subroutine base__initialize
+
+end module base_m
+
+
+module vfield_m
+  use base_m
+  implicit none
+  private
+  public :: vfield__initialize
+  public :: vfield
+
+  type, public :: vfield_t
+    real :: amp_max ! amplitude max
+    real, dimension(NX,NY) :: x ! component x
+    real, dimension(NX,NY) :: y
+  end type vfield_t
+
+  type(vfield_t) :: vfield
+
+contains
+
+  subroutine vfield__initialize
+    integer :: i, j
+    real :: dx, dy
+    real :: x, y
+    real :: r, r_sq, r_cubed
+    real :: p_dot_r, factor
+    real :: monopole_charge_qa
+    real :: dipole_moment_angle_from_y_axis 
+    real :: voi_radius_a, voi_radius_a_cubed
+    real :: voi_radius_b0
+    real :: voi_radius_b1
+    real :: attenuation
+    real :: dipole_moment_p_amp
+    real :: dipole_moment_angle_from_v_axis
+    real :: dipole_moment_p_x, dipole_moment_p_y
+    real :: vector_normalization_factor
+
+    monopole_charge_qa = 1.0
+
+    voi_radius_a = (YMAX-YMIN)/6
+    voi_radius_a_cubed = voi_radius_a**3
+    voi_radius_b0 = 2.0**(1.0/3.0) * voi_radius_a
+    voi_radius_b1 = 2.0**(1.0/2.0) * voi_radius_a
+
+    !   monopole_charge_qa/(4*pi*a_cubed) = dipole_moment/(4*pi*b1_cubed))
+    !   dipole_moment = monopole_charge_qa * (b1/a)**3
+
+    dipole_moment_p_amp = monopole_charge_qa * (voi_radius_b1/voi_radius_a)**3
+    dipole_moment_angle_from_v_axis = PI/6
+      !   dipole_moment = (pu, pv)
+    dipole_moment_p_x = dipole_moment_p_amp * sin(dipole_moment_angle_from_v_axis)
+    dipole_moment_p_y = dipole_moment_p_amp * cos(dipole_moment_angle_from_v_axis)
+
+    dx = (XMAX-XMIN)/(NX-1)
+    dy = (YMAX-YMIN)/(NY-1)  
+
+    do j = 1, NY
+      do i = 1, NX
+        x = XMIN + dx*(i-1)
+        y = YMIN + dy*(j-1)
+        r_sq = x**2+y**2
+        r = sqrt(r_sq)
+        r_cubed = r**3
+        p_dot_r = dipole_moment_p_x*x   &
+                + dipole_moment_p_y*y
+
+        if ( r < voi_radius_a ) then
+          factor = - monopole_charge_qa / (4*PI*voi_radius_a_cubed)
+          vfield.x(i,j) = factor * x
+          vfield.y(i,j) = factor * y
+        else if ( r <= voi_radius_b0 ) then
+          factor = monopole_charge_qa / (4*PI*voi_radius_a_cubed) &
+                 * ( 1.0 - 2*voi_radius_a_cubed/r_cubed )
+          vfield.x(i,j) = factor * x
+          vfield.y(i,j) = factor * y
+        else if ( r <= voi_radius_b1 ) then
+          factor = - 1.0/(4*PI*r_sq)
+          attenuation = ( r - voi_radius_b0 ) / ( voi_radius_b1 - voi_radius_b0 )
+          vfield.x(i,j) = attenuation * factor * ( dipole_moment_p_x - 2*(p_dot_r/r_sq)*x )
+          vfield.y(i,j) = attenuation * factor * ( dipole_moment_p_y - 2*(p_dot_r/r_sq)*y )
+        else 
+          factor = - 1.0/(4*PI*r_sq)
+          vfield.x(i,j) = factor * ( dipole_moment_p_x - 2*(p_dot_r/r_sq)*x )
+          vfield.y(i,j) = factor * ( dipole_moment_p_y - 2*(p_dot_r/r_sq)*y )
+        end if  
+
+      end do
+    end do
+
+    call iScale_vects_by_log( NX, NY, vfield.x, vfield.y )
+
+    vector_normalization_factor = maxval( sqrt( vfield.x**2 + vfield.y**2 ) )
+    vfield.x(:,:) = vfield.x(:,:) / vector_normalization_factor
+    vfield.y(:,:) = vfield.y(:,:) / vector_normalization_factor
+
+    vfield.amp_max = sqrt( maxval( vfield.x(:,:)**2  &
+                                 + vfield.y(:,:)**2 ) )
+
+  contains
+
+    subroutine iScale_vects_by_log( nx, ny, vec_x, vec_y )
+      integer <in> :: nx, ny
+      real, dimension(nx,ny) <io> :: vec_x, vec_y
+
+      real :: vec_amp_original
+      real :: amp_factor = 1000.0
+      real :: norm_factor
+
+      do j = 1, NY
+        do i = 1, NX
+          vec_amp_original = sqrt( vec_x(i,j)**2  &
+                                 + vec_y(i,j)**2 )
+          norm_factor = log(1.0+amp_factor*vec_amp_original)  &
+                                         / vec_amp_original
+          vec_x(i,j) *= norm_factor
+          vec_y(i,j) *= norm_factor
+        end do
+      end do
+    end subroutine iScale_vects_by_log
+    
+  end subroutine vfield__initialize
+
+end module vfield_m
+
+
+program main
+  use base_m
+  use vfield_m
+  use vv_m
+  use vv_color_m
+  use vv_sketch_m
+  use vv_slice_vector_m
+  implicit none
+
+  type(vv_sketch__sim_pos_t) :: ll ! lower-left corner of sketch
+  type(vv_sketch__sim_pos_t) :: ur ! upper-right corner of sketch
+  type(vv_sketch_t) :: vv_sketch
+  type(vv_slice_vector_t) :: vv_vector
+
+  call base__initialize
+  call vfield__initialize
+
+  call vv_vector.initialize( 'sample vector',    &
+                             NX,           &
+                             NY,           &
+                             grid_position.x,         &
+                             grid_position.y,         &
+                             vfield.x,  &
+                             vfield.y )
+  ll = vv_sketch__sim_pos_t(XMIN,YMIN)
+  ur = vv_sketch__sim_pos_t(XMAX,YMAX)
+
+  call iSketch_initialize
+  call iSketch_message_header( 'Sample vector' )
+  call iSketch_boundary
+
+  call vv_sketch.group_push( line_color=VV_COLOR__CONST.black,  &
+                             fill_color=VV_COLOR__CONST.blue )
+    call vv_vector.vis_arrows( vv_sketch, arrow_template="#arrow02" )
+  call vv_sketch.group_pop
+
+  call iSketch_message_footer
+  call vv_vector.finalize
+  call iSketch_finalize
+
+contains
+
+  subroutine iSketch_initialize
+    call vv_sketch.initialize( ll, ur,                                 &
+                               screen_width_in_pixel=800.0,            &
+                               title='Arrow glyphs of fector field',   &
+                               filename='example06_vector_arrows_animation2.svg', &
+                               unit_arrow_in_pixel=10.0,              &
+                               write_arrow_template=.true. )
+  end subroutine iSketch_initialize
+
+  subroutine iSketch_message_header( string )
+    char(len=*) <in> :: string
+    call vv_sketch.text( (ll.u+ur.u)/2,  &
+                         (ur.v*1.05),  &
+                         string,  &
+                         font_size_in_pixel=30.0,  &
+                         text_anchor='middle', &
+                         color=VV_COLOR__CONST.black )
+  end subroutine iSketch_message_header
+
+  subroutine iSketch_message_footer
+    real :: vmax
+    char(len=200) :: string
+
+    real :: text_v_pos_in_physical_unit
+    real :: tsep ! text v position separation betwen lines
+
+    tsep = (ur.v-ll.v)*0.1
+    text_v_pos_in_physical_unit = ll.v - tsep
+
+    vmax = vfield.amp_max
+    string = ' vector amp max = ' // vv__real_to_str13(vmax)
+    call vv_sketch.text( (ll.u+ur.u)/2,  &
+                         text_v_pos_in_physical_unit,  &
+                         string,  &
+                         font_size_in_pixel=20.0,  &
+                         text_anchor='middle', &
+                         color=VV_COLOR__CONST.black )
+    text_v_pos_in_physical_unit -= tsep
+    string = trim(vv_sketch.filename)
+    call vv_sketch.text( (ll.u+ur.u)/2,  &
+                         text_v_pos_in_physical_unit,  &
+                         string,  &
+                         font_size_in_pixel=20.0,  &
+                         text_anchor='middle', &
+                         color=VV_COLOR__CONST.black )
+  end subroutine iSketch_message_footer
+
+  subroutine iSketch_finalize
+    call vv_sketch.finalize                 
+  end subroutine iSketch_finalize
+
+  subroutine iSketch_boundary
+    call vv_vector.mesh.draw( vv_sketch, &
+                              line_color=VV_COLOR__CONST.black, &
+                              width_in_pixels=2.0 )
+  end subroutine iSketch_boundary
+
+end program main

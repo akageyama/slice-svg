@@ -96,16 +96,18 @@ example02 = example02_contour_dashed
 example03 = example03_contour_triangle
 example04 = example04_vector_arrows
 example05 = example05_vector_arrows_animation
+example06 = example06_vector_arrows_animation2
 
 fig01 := $(example01).svg
 fig02 := $(example02).svg
 fig03 := $(example03).svg
 fig04 := $(example04).svg
 fig05 := $(example05).svg
+fig06 := $(example06).svg
 
 
 
-figs: $(fig01) $(fig02) $(fig03) $(fig04) $(fig05)
+figs: $(fig01) $(fig02) $(fig03) $(fig04) $(fig05) $(fig06)
 
 $(fig01): $(example01)
 	./$(example01)
@@ -117,6 +119,8 @@ $(fig04): $(example04)
 	./$(example04)
 $(fig05): $(example05)
 	./$(example05)
+$(fig06): $(example06)
+	./$(example06)
 
 $(example01): $(example01).ef
 	rm -f *.o
@@ -148,6 +152,12 @@ $(example05): $(example05).ef
 	$(FC) $(FFLAGS) -c $@.F90 $(FLIBS)
 	$(FC) $(FFLAGS) -o $@ *.o $(FLIBS)
 
+$(example06): $(example06).ef
+	rm -f *.o
+	$(EFPP) $@.ef > $@.F90
+	$(FC) $(FFLAGS) -c $@.F90 $(FLIBS)
+	$(FC) $(FFLAGS) -o $@ *.o $(FLIBS)
+
 line:
 	@echo "="{1..100} | sed 's/[ 0-9]//g' # bash one-liner for a line
 
@@ -160,3 +170,4 @@ clean:
 	rm -f $(example03)
 	rm -f $(example04)
 	rm -f $(example05)
+	rm -f $(example06)

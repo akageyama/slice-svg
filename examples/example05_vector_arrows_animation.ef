@@ -180,7 +180,7 @@ contains
 end module gradvector_m
 
 
-program example04_vector_arrows
+program main
   use simulation_region_m
   use grid_m
   use pressurechange_m
@@ -285,4 +285,4 @@ contains
                               width_in_pixels=2.0 )
   end subroutine iSketch_boundary
 
-end program example04_vector_arrows
+end program main

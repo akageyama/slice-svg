@@ -423,15 +423,18 @@ contains
     vx_norm = vx / vector_amp
     vy_norm = vy / vector_amp
 
-    arrow_template_name = "#arrow01"   ! default
     if ( present(arrow_template) ) then
       select case (arrow_template)
+        case ("#arrow01")
+          arrow_template_name = "#arrow01"  ! basic arrow
         case ("#arrow02")
           arrow_template_name = "#arrow02"  ! animated arrow
         case default
           call vv__fatal( "__MODULE__(__LINE__): " //  &
                           "case error." )
       end select
+    else 
+      arrow_template_name = "#arrow01"  ! basic arrow
     end if
 
     angle_from_x_axis = vv__atan2_in_degree( vy, vx )
