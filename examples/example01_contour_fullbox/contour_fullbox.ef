@@ -101,7 +101,7 @@ contains
 end module temperature_m
 
 
-program example01_contour_fullbox
+program main
   use simulation_region_m
   use grid_m
   use temperature_m
@@ -216,4 +216,4 @@ contains
                               width_in_pixels=2.0 )
   end subroutine iSketch_boundary
 
-end program example01_contour_fullbox
+end program main

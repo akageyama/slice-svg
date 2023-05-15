@@ -7,8 +7,8 @@ module base_m
   public :: base__initialize
   public :: grid_position
 
-  integer <const> :: NX = 60
-  integer <const> :: NY = 60
+  integer <const> :: NX = 40
+  integer <const> :: NY = 40
 
   real <const> :: PI = atan(1.0)*4
 
@@ -197,7 +197,7 @@ program main
   call iSketch_message_header( 'Sample vector' )
   call iSketch_boundary
 
-  call vv_sketch.group_push( line_color=VV_COLOR__CONST.black,  &
+  call vv_sketch.group_push( line_color=VV_COLOR__CONST.darkgreen,  &
                              fill_color=VV_COLOR__CONST.blue )
     call vv_vector.vis_arrows( vv_sketch, arrow_template="#arrow02" )
   call vv_sketch.group_pop
@@ -213,7 +213,7 @@ contains
                                screen_width_in_pixel=800.0,            &
                                title='Arrow glyphs of fector field',   &
                                filename='example06_vector_arrows_animation2.svg', &
-                               unit_arrow_in_pixel=10.0,              &
+                               unit_arrow_in_pixel=20.0,              &
                                write_arrow_template=.true. )
   end subroutine iSketch_initialize
 

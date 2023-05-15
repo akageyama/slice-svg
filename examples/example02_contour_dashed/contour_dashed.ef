@@ -109,7 +109,7 @@ contains
 end module pressurechange_m
 
 
-program example02_contour_dashed
+program main
   use simulation_region_m
   use grid_m
   use pressurechange_m
@@ -234,4 +234,4 @@ contains
                               width_in_pixels=2.0 )
   end subroutine iSketch_boundary
 
-end program example02_contour_dashed
+end program main
