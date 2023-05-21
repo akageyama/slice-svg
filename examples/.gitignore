@@ -2,9 +2,3 @@
 *.o
 *.mod
 *.svg
-example01_contour_fullbox
-example02_contour_dashed
-example03_contour_triangle
-example04_vector_arrows
-example05_vector_arrows_animation
-example06_vector_arrows_animation2
