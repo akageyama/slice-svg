@@ -26,7 +26,10 @@ module vv_sketch_m
     char(len=VV__STRLEN_MAX) :: filename
     type(vv_svglib_t) :: vv_svglib
   contains
-    procedure :: initialize => vv_sketch__initialize
+    procedure, private :: initialize_short_args
+    procedure, private :: initialize_long_args
+    generic :: initialize => initialize_short_args,  &
+                             initialize_long_args  
     procedure :: finalize => vv_sketch__finalize
     procedure :: to_screen_pos => vv_sketch__to_screen_pos
     procedure :: group_push => vv_sketch__group_push
@@ -315,7 +318,7 @@ contains
   end function vv_sketch__to_screen_pos
 
 
-  subroutine vv_sketch__initialize( sketch,                &
+  subroutine initialize_short_args( sketch,                &
                                     lower_left_in_phys,    &
                                     upper_right_in_phys,   &
                                     screen_width_in_pixel, &
@@ -332,16 +335,61 @@ contains
     real <optin> :: unit_arrow_in_pixel
     logical <optin> :: write_arrow_template
 
+    real :: lower_left_in_phys_coord_u,  &
+            lower_left_in_phys_coord_v,  &
+            upper_right_in_phys_coord_u, &
+            upper_right_in_phys_coord_v
+
+    lower_left_in_phys_coord_u = lower_left_in_phys.u
+    lower_left_in_phys_coord_v = lower_left_in_phys.v
+    upper_right_in_phys_coord_u = upper_right_in_phys.u
+    upper_right_in_phys_coord_v = upper_right_in_phys.v
+
+    call initialize_long_args( sketch,                      &
+                               lower_left_in_phys_coord_u,  &
+                               lower_left_in_phys_coord_v,  &
+                               upper_right_in_phys_coord_u, &
+                               upper_right_in_phys_coord_v, &
+                               screen_width_in_pixel,       &
+                               title,                       &
+                               filename,                    &
+                               unit_arrow_in_pixel,         &
+                               write_arrow_template )
+
+  end subroutine initialize_short_args
+
+
+  subroutine initialize_long_args( sketch,                      &
+                                   lower_left_in_phys_coord_u,  &
+                                   lower_left_in_phys_coord_v,  &
+                                   upper_right_in_phys_coord_u, &
+                                   upper_right_in_phys_coord_v, &
+                                   screen_width_in_pixel,       &
+                                   title,                       &
+                                   filename,                    &
+                                   unit_arrow_in_pixel,         &
+                                   write_arrow_template )
+    class(vv_sketch_t) <out> :: sketch
+    real <in> :: lower_left_in_phys_coord_u,  &
+                 lower_left_in_phys_coord_v,  &
+                 upper_right_in_phys_coord_u, &
+                 upper_right_in_phys_coord_v
+    real <in> :: screen_width_in_pixel
+    char(len=*) <in> :: title
+    char(len=*) <in> :: filename
+    real <optin> :: unit_arrow_in_pixel
+    logical <optin> :: write_arrow_template
+
     real :: draw_area_width_in_phys,   &
             draw_area_height_in_phys
     real :: draw_area_width_in_pixel,  &
             draw_area_height_in_pixel
     real :: aspect_ratio
 
-    sketch.u_max = upper_right_in_phys.u
-    sketch.u_min =  lower_left_in_phys.u
-    sketch.v_max = upper_right_in_phys.v
-    sketch.v_min =  lower_left_in_phys.v
+    sketch.u_max = upper_right_in_phys_coord_u
+    sketch.u_min = lower_left_in_phys_coord_u
+    sketch.v_max = upper_right_in_phys_coord_v
+    sketch.v_min = lower_left_in_phys_coord_v
 
     call vv__assert( sketch.u_max > sketch.u_min .and.  &
                      sketch.v_max > sketch.v_min,       &
@@ -413,7 +461,7 @@ contains
         call sketch.vv_svglib.arrow_template
       end if
     end if
-  end subroutine vv_sketch__initialize
+  end subroutine initialize_long_args
 
 
   subroutine vv_sketch__finalize( sketch )
