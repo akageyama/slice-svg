@@ -175,8 +175,6 @@ program main
   use vv_slice_vector_m
   implicit none
 
-  type(vv_sketch__sim_pos_t) :: ll ! lower-left corner of sketch
-  type(vv_sketch__sim_pos_t) :: ur ! upper-right corner of sketch
   type(vv_sketch_t) :: vv_sketch
   type(vv_slice_vector_t) :: vv_vector
 
@@ -190,8 +188,6 @@ program main
                              grid_position.y,         &
                              vfield.x,  &
                              vfield.y )
-  ll = vv_sketch__sim_pos_t(XMIN,YMIN)
-  ur = vv_sketch__sim_pos_t(XMAX,YMAX)
 
   call iSketch_initialize
   call iSketch_message_header( 'Sample vector' )
@@ -209,7 +205,10 @@ program main
 contains
 
   subroutine iSketch_initialize
-    call vv_sketch.initialize( ll, ur,                                 &
+    call vv_sketch.initialize( XMIN,  &
+                               YMIN,  &
+                               XMAX,  &
+                               YMAX,  &
                                screen_width_in_pixel=800.0,            &
                                title='Arrow glyphs of fector field',   &
                                filename='example06_vector_arrows_animation2.svg', &
@@ -219,8 +218,8 @@ contains
 
   subroutine iSketch_message_header( string )
     char(len=*) <in> :: string
-    call vv_sketch.text( (ll.u+ur.u)/2,  &
-                         (ur.v*1.05),  &
+    call vv_sketch.text( ( XMIN + XMAX ) / 2,  &
+                         YMAX * 1.05,    &
                          string,  &
                          font_size_in_pixel=30.0,  &
                          text_anchor='middle', &
@@ -234,12 +233,12 @@ contains
     real :: text_v_pos_in_physical_unit
     real :: tsep ! text v position separation betwen lines
 
-    tsep = (ur.v-ll.v)*0.1
-    text_v_pos_in_physical_unit = ll.v - tsep
+    tsep = ( YMAX - YMIN ) * 0.1
+    text_v_pos_in_physical_unit = YMIN - tsep
 
     vmax = vfield.amp_max
     string = ' vector amp max = ' // vv__real_to_str13(vmax)
-    call vv_sketch.text( (ll.u+ur.u)/2,  &
+    call vv_sketch.text( ( XMIN + XMAX ) / 2,  &
                          text_v_pos_in_physical_unit,  &
                          string,  &
                          font_size_in_pixel=20.0,  &
@@ -247,7 +246,7 @@ contains
                          color=VV_COLOR__CONST.black )
     text_v_pos_in_physical_unit -= tsep
     string = trim(vv_sketch.filename)
-    call vv_sketch.text( (ll.u+ur.u)/2,  &
+    call vv_sketch.text( ( XMIN + XMAX ) / 2,  &
                          text_v_pos_in_physical_unit,  &
                          string,  &
                          font_size_in_pixel=20.0,  &

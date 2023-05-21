@@ -194,8 +194,6 @@ program example04_vector_arrows
   type(pressurechange_t) :: pressurechange
   type(gradvector_t) :: gradvector
 
-  type(vv_sketch__sim_pos_t) :: ll ! lower-left corner of sketch
-  type(vv_sketch__sim_pos_t) :: ur ! upper-right corner of sketch
   type(vv_sketch_t) :: vv_sketch
   type(vv_slice_vector_t) :: vv_vector
 
@@ -209,10 +207,6 @@ program example04_vector_arrows
                              Grid.pos_y,         &
                              gradvector.comp_x,  &
                              gradvector.comp_y )
-  ll = vv_sketch__sim_pos_t(SIMULATION_REGION.xmin,  &
-                            SIMULATION_REGION.ymin)
-  ur = vv_sketch__sim_pos_t(SIMULATION_REGION.xmax,  &
-                            SIMULATION_REGION.ymax)
   call iSketch_initialize
   call iSketch_message_header( 'Contouring with color and dash' )
   call iSketch_boundary
@@ -229,7 +223,10 @@ program example04_vector_arrows
 contains
 
   subroutine iSketch_initialize
-    call vv_sketch.initialize( ll, ur,                                 &
+    call vv_sketch.initialize( SIMULATION_REGION.xmin,  &
+                               SIMULATION_REGION.ymin,  &
+                               SIMULATION_REGION.xmax,  &
+                               SIMULATION_REGION.ymax,  &
                                screen_width_in_pixel=800.0,            &
                                title='Arrow glyphs of fector field',   &
                                filename='example04_vector_arrows.svg', &
@@ -239,8 +236,9 @@ contains
 
   subroutine iSketch_message_header( string )
     char(len=*) <in> :: string
-    call vv_sketch.text( (ll.u+ur.u)/2,  &
-                         (ur.v*1.05),  &
+    call vv_sketch.text( ( SIMULATION_REGION.xmin         &
+                         + SIMULATION_REGION.xmax ) / 2,  &
+                         SIMULATION_REGION.ymax * 1.05,   &
                          string,  &
                          font_size_in_pixel=30.0,  &
                          text_anchor='middle', &
@@ -254,12 +252,15 @@ contains
     real :: text_v_pos_in_physical_unit
     real :: tsep ! text v position separation betwen lines
 
-    tsep = (ur.v-ll.v)*0.04
-    text_v_pos_in_physical_unit = ll.v - tsep
+    tsep = ( SIMULATION_REGION.ymax  &
+           - SIMULATION_REGION.ymin ) * 0.04
+    text_v_pos_in_physical_unit = SIMULATION_REGION.ymin  &
+                                - tsep
 
     vmax = gradvector.amp_max
     string = ' vector amp max = ' // vv__real_to_str13(vmax)
-    call vv_sketch.text( (ll.u+ur.u)/2,  &
+    call vv_sketch.text( ( SIMULATION_REGION.xmin         &
+                         + SIMULATION_REGION.xmax ) / 2,  &
                          text_v_pos_in_physical_unit,  &
                          string,  &
                          font_size_in_pixel=20.0,  &
@@ -267,7 +268,8 @@ contains
                          color=VV_COLOR__CONST.black )
     text_v_pos_in_physical_unit -= tsep
     string = trim(vv_sketch.filename)
-    call vv_sketch.text( (ll.u+ur.u)/2,  &
+    call vv_sketch.text( ( SIMULATION_REGION.xmin         &
+                         + SIMULATION_REGION.xmax ) / 2,  &
                          text_v_pos_in_physical_unit,  &
                          string,  &
                          font_size_in_pixel=20.0,  &
