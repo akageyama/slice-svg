@@ -26,8 +26,8 @@ module grid_m
   private
   public :: GRID__NX, GRID__NY
 
-  integer <const> :: GRID__NX = 600
-  integer <const> :: GRID__NY = 600
+  integer <const> :: GRID__NX = 1000
+  integer <const> :: GRID__NY = 1000
 
   type, public :: grid_t
     real(DR), dimension(GRID__NX) :: pos_x
