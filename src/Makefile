@@ -30,7 +30,7 @@ vv_lib := lib$(vv_basename).a
 
 EFPP = ../bin/efpp.py
 FC = gfortran
-FFLAGS := 
+FFLAGS := -O5
 #> # FFLAGS += -fopenmp
 #> FFLAGS += -fcheck=all
 #> FFLAGS += -Wall
