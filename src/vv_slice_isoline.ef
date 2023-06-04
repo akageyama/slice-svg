@@ -787,11 +787,11 @@ contains
                      "__MODULE__(__LINE__): The path should be on border." )
 
     !!>
-               v1--[e1]--v2--[e2]--v3
+              v6--[e5]--v5--[e4]--v4
               /                    /
             [e6]                 [e3]
             /                    /
-           v6--[e5]--v5--[e4]--v4
+           v1--[e1]--v2--[e2]--v3
     !!<
 
     ei = boundary.edge.ei(nth)
