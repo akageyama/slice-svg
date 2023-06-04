@@ -7,7 +7,7 @@ EFPP = ../../bin/efpp.py
 FC = gfortran
 FLIBS := -I$(VIS2DLIB_DIR) -L$(VIS2DLIB_DIR) -l$(VIS2DLIB_NAME)
 
-sample = contour_triangle
+sample = contour_diagonal_border
 fig = $(sample).svg
 
 $(fig): $(sample)
