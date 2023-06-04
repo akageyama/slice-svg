@@ -781,7 +781,6 @@ contains
     call vv__assert( flag(i,j) == 'b',            &
                      "__MODULE__(__LINE__): " //  &
                      "This vert is not a border. Inconsistent..." )
-
     call shift_vert_position_in_octa_direct( octa_direct, i, j )
 
     call vv__assert( i >= 1 .and. i <= nu,  &
@@ -922,16 +921,11 @@ contains
     boundary.edge.ej(counter) = ej
     boundary.edge.type(counter) = edge_type
     call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
-    do counter = 2, num_of_boundary_vert + 1
-      ! the last "+1" is necesary to close the path
-      call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
-                                          vi, vj,           &
-                                          octa_direct,      &
-                                          vert.flag )
-      if ( vi == start_vi .and. vj == start_vj ) then
-        ! have returned back to the start vert
-        return
-      end if
+    call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
+                                        vi, vj,           &
+                                        octa_direct,      &
+                                        vert.flag )
+    do counter = 2, num_of_boundary_vert
       vert.octa_direct(vi,vj) = octa_direct
       boundary.vert.octa_direct(counter) = octa_direct
       boundary.vert.vi(counter) = vi
@@ -941,9 +935,14 @@ contains
       boundary.edge.ej(counter) = ej
       boundary.edge.type(counter) = edge_type
       call iSet_boundary_mark_on_mesh_edge( edge, edge_type, ei, ej )
+      call get_next_octa_direct_and_vert( vert.nu, vert.nv, &
+                                          vi, vj,           &
+                                          octa_direct,      &
+                                          vert.flag )
     end do
 
-    call vv__fatal( "__MODULE__(__LINE__): Failed to close boundary." )
+    call vv__assert( vi == start_vi .and. vj == start_vj,  &
+                     "__MODULE__(__LINE__): Failed to close boundary." )
 
   contains
 
@@ -1609,11 +1608,11 @@ contains
     boundary.edge.quarter(:) = -999  ! Any negative (anomourous) number.
 
     !!>
-              v7--[e6]--v6--[e5]--v5
+              v6--[e5]--v5--[e4]--v4
               /                    /
-            [e7]                 [e4]
+            [e6]                 [e3]
             /                    /
-           v1--[e2]--v2--[e3]--v3
+           v1--[e1]--v2--[e2]--v3
     !!<
 
     do index_e = 1, boundary.vert.num ! boundary verts num (= edge num)
