@@ -25,24 +25,25 @@ module vv_color_m
   end type vv_color__hsv_t
 
   type, public :: vv_color__const_t
-    type(vv_color_t) :: white       = vv_color_t(1.0,   1.0,   1.0)
-    type(vv_color_t) :: black       = vv_color_t(0.0,   0.0,   0.0)
-    type(vv_color_t) :: red         = vv_color_t(1.0,   0.0,   0.0)
+    type(vv_color_t) :: white        = vv_color_t(1.0,   1.0,   1.0)
+    type(vv_color_t) :: black        = vv_color_t(0.0,   0.0,   0.0)
+    type(vv_color_t) :: red          = vv_color_t(1.0,   0.0,   0.0)
     !
-    type(vv_color_t) :: green       = vv_color_t(0.0,   1.0,   0.0)
-    type(vv_color_t) :: limegreen   = vv_color_t(0.196, 0.804, 0.196)
-    type(vv_color_t) :: darkgreen   = vv_color_t(0.0,   0.392, 0.0)
+    type(vv_color_t) :: green        = vv_color_t(0.0,   1.0,   0.0)
+    type(vv_color_t) :: limegreen    = vv_color_t(0.196, 0.804, 0.196)
+    type(vv_color_t) :: darkgreen    = vv_color_t(0.0,   0.392, 0.0)
     !
-    type(vv_color_t) :: blue        = vv_color_t(0.0,   0.0,   1.0)
+    type(vv_color_t) :: blue         = vv_color_t(0.0,   0.0,   1.0)
     !
-    type(vv_color_t) :: brown       = vv_color_t(0.647, 0.165, 0.165)
-    type(vv_color_t) :: sandybrown  = vv_color_t(0.957, 0.643, 0.376)
-    type(vv_color_t) :: wheatbrown  = vv_color_t(0.961, 0.871, 0.702)
-    type(vv_color_t) :: bisquebrown = vv_color_t(1.0,   0.894, 0.769)
+    type(vv_color_t) :: brown        = vv_color_t(0.647, 0.165, 0.165)
+    type(vv_color_t) :: sandybrown   = vv_color_t(0.957, 0.643, 0.376)
+    type(vv_color_t) :: wheatbrown   = vv_color_t(0.961, 0.871, 0.702)
+    type(vv_color_t) :: bisquebrown  = vv_color_t(1.0,   0.894, 0.769)
+    type(vv_color_t) :: hankyumaroon = vv_color_t(0.502, 0.000, 0.000)
     !
-    type(vv_color_t) :: magenta     = vv_color_t(1.0,   0.0,   1.0)
-    type(vv_color_t) :: yellow      = vv_color_t(1.0,   1.0,   0.0)
-    type(vv_color_t) :: cyan        = vv_color_t(0.0,   1.0,   1.0)
+    type(vv_color_t) :: magenta      = vv_color_t(1.0,   0.0,   1.0)
+    type(vv_color_t) :: yellow       = vv_color_t(1.0,   1.0,   0.0)
+    type(vv_color_t) :: cyan         = vv_color_t(0.0,   1.0,   1.0)
   contains
     procedure, nopass :: gray => vv_color_const__gray
     procedure, nopass :: test_print => vv_color__const__test_print
@@ -60,7 +61,7 @@ contains
     real :: h, s, v
     real :: r, g, b
     integer :: hue6
-    real    :: f, p, q, t
+    real :: f, p, q, t
   
     h = this.hue
     s = this.sat
@@ -128,9 +129,9 @@ contains
     real :: val_norm
 
     call vv__assert( vmax > vmin,  &
-                    '__MODULE__(__LINE__): bad vmax/vmin. ' )
+                    '__MODLINE__: bad vmax/vmin. ' )
     call vv__assert( vmax-vmin > 1.e-20,  &
-                    '__MODULE__(__LINE__): vmax,vmin too close.' )
+                    '__MODLINE__: vmax,vmin too close.' )
 
     val_norm = (val-vmin)/(vmax-vmin)
     col = vv_color__normalized_real_to_color( val_norm )
@@ -144,7 +145,7 @@ contains
     type(vv_color__hsv_t) :: hsv
 
     call vv__assert( val_norm >= 0.0 .and. val_norm <= 1.0,  &
-                    '__MODULE__(__LINE__): val_norm must be normalized.' )
+                    '__MODLINE__: val_norm must be normalized.' )
 
     hsv.hue = 0.3 + 0.5 * val_norm
     hsv.sat = 0.7
@@ -158,14 +159,21 @@ contains
     type(vv_color_t) :: gray_0p5, gray_0p8
 
     call vv__message( '===<VV_COLOR__CONST available color list>===' )
-    call iPrint( '        white', VV_COLOR__CONST.white   )
-    call iPrint( '        black', VV_COLOR__CONST.black   )
-    call iPrint( '          red', VV_COLOR__CONST.red     )
-    call iPrint( '        green', VV_COLOR__CONST.green   )
-    call iPrint( '         blue', VV_COLOR__CONST.blue    )
-    call iPrint( '      magenta', VV_COLOR__CONST.magenta )
-    call iPrint( '       yellow', VV_COLOR__CONST.yellow  )
-    call iPrint( '         cyan', VV_COLOR__CONST.cyan    )
+    call iPrint( '           white', VV_COLOR__CONST.white   )
+    call iPrint( '           black', VV_COLOR__CONST.black   )
+    call iPrint( '             red', VV_COLOR__CONST.red     )
+    call iPrint( '           green', VV_COLOR__CONST.green   )
+    call iPrint( '       limegreen', VV_COLOR__CONST.limegreen )
+    call iPrint( '       darkgreen', VV_COLOR__CONST.darkgreen )
+    call iPrint( '           brown', VV_COLOR__CONST.brown )
+    call iPrint( '      sandybrown', VV_COLOR__CONST.sandybrown )
+    call iPrint( '      wheatbrown', VV_COLOR__CONST.wheatbrown )
+    call iPrint( '     bisquebrown', VV_COLOR__CONST.bisquebrown )
+    call iPrint( '    hankyumaroon', VV_COLOR__CONST.hankyumaroon )
+    call iPrint( '            blue', VV_COLOR__CONST.blue    )
+    call iPrint( '         magenta', VV_COLOR__CONST.magenta )
+    call iPrint( '          yellow', VV_COLOR__CONST.yellow  )
+    call iPrint( '            cyan', VV_COLOR__CONST.cyan    )
 
     gray_0p5 = VV_COLOR__CONST.gray( 0.5 )
     gray_0p8 = VV_COLOR__CONST.gray( 0.8 )
@@ -203,7 +211,7 @@ contains
 
   function vv_color__to_code( rgb ) result(code) 
     class(vv_color_t) <in> :: rgb ! e.g., rgb=(1.0, 0.0, 0.0)
-    char(len=7) :: code        !          ==> '#FF0000'
+    char(len=7) :: code           !          ==> '#FF0000'
 
     type(vv_color__byte_t) :: byte
 
@@ -214,7 +222,7 @@ contains
 
 
   function vv_color__to_byte( rgb ) result(rgb_byte)
-    class(vv_color_t) <in> :: rgb     ! e.g., rgb=(1.0, 0.0, 0.0)
+    class(vv_color_t) <in> :: rgb      ! e.g., rgb=(1.0, 0.0, 0.0)
     type(vv_color__byte_t) :: rgb_byte !            ==>(255, 0, 0)
 
     integer :: r, g, b
