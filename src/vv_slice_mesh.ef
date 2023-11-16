@@ -1133,12 +1133,14 @@ contains
                                                    nv,          &
                                                    grid_pos_u,  &
                                                    grid_pos_v,  &
-                                                   vert_flag )
+                                                   vert_flag,   &
+                                                   debug_print_flag )
     class(vv_slice_mesh_vert_t) <out> :: vert
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
     real, dimension(nv) <in> :: grid_pos_v
     character, dimension(nu,nv) <optin> :: vert_flag
+    logical <optin> :: debug_print_flag
                        ! 'i' : inside the boundary
                        ! 'o' : outside the boundary
                        ! 'b' : boundary
@@ -1210,10 +1212,14 @@ contains
     if ( present(vert_flag) ) then
       vert.flag(:,:) = vert_flag(:,:)
       call vert.grid_flag_check
-      call vert.debug_print_flag
     else
       call set_default_vert_flag( nu, nv, vert.flag )      
-      ! call vert.debug_print_flag
+    end if
+
+    if ( present(debug_print_flag) ) then
+      if ( debug_print_flag ) then
+        call vert.debug_print_flag
+      end if
     end if
   end subroutine vv_slice_mesh__vert_initialize
 
