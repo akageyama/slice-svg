@@ -214,7 +214,7 @@ contains
         case ('dashed')
           str(nop) = 'stroke-dasharray="10 5"'
         case default
-          call vv__fatal( '__MODULE__(__LINE__): case error.' )
+          call vv__fatal( '__MODLINE__: case error.' )
       end select
     end if    
 
@@ -264,7 +264,7 @@ contains
     call vv__assert( text_anchor == 'start'  .or.     &
                      text_anchor == 'middle' .or.     &
                      text_anchor == 'end',            &
-                     '__MODULE__(__LINE__): text_anchor error.' )
+                     '__MODLINE__: text_anchor error.' )
 
     pos = sketch.to_screen_pos( vv_sketch__sim_pos_t(u,v) )
    
@@ -393,7 +393,7 @@ contains
 
     call vv__assert( sketch.u_max > sketch.u_min .and.  &
                      sketch.v_max > sketch.v_min,       &
-                     '__MODULE__(__LINE__): size error.' )
+                     '__MODLINE__: size error.' )
 
     sketch.title = title
     sketch.filename = filename
@@ -446,7 +446,7 @@ contains
 
     call vv__assert( sketch.dxdu > 0.0 .and. &
                      sketch.dydv > 0.0,      &
-                     '__MODULE__(__LINE__): Something is strange.' )
+                     '__MODLINE__: Something is strange.' )
 
     call sketch.vv_svglib.open( sketch.filename,           &
                                 sketch.screen_size.width,  &
