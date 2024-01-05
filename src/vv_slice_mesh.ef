@@ -452,6 +452,13 @@ contains
                                grid_pos_u,  &
                                grid_pos_v,  &
                                grid_flag )
+    !!>
+    call mesh.vert.initialize( nu, nv,      &
+                               grid_pos_u,  &
+                               grid_pos_v,  &
+                               grid_flag,   &
+                               debug_print_flag=.true. )
+    !!<
     call mesh.edge.initialize( mesh.vert )
     call mesh.boundary.initialize( mesh.vert,  &
                                    mesh.edge )
