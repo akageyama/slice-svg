@@ -20,6 +20,9 @@ module vv_svglib_m
     procedure :: open => vv_svglib__open
     procedure :: close => vv_svglib__close
     procedure :: line => vv_svglib__line
+    procedure :: circle => vv_svglib__circle !追加
+    procedure :: streamline_style => vv_svglib__streamline_style !追加
+    procedure :: streamline_write => vv_svglib__streamline_write !追加
     procedure :: arrow => vv_svglib__arrow
     procedure :: arrow_template => vv_svglib__arrow_template
     procedure :: text => vv_svglib__text
@@ -462,7 +465,6 @@ contains
 
   end subroutine vv_svglib__arrow  
 
-
   subroutine vv_svglib__close( this )
     class(vv_svglib_t) <in> :: this
 
@@ -561,6 +563,47 @@ contains
     call write_out( this, '<line ' // trim(str_all) // '/>' )
 
   end subroutine vv_svglib__line
+
+  subroutine vv_svglib__circle( this,       & !追加
+                                cx, cy, r,  &
+                                line_color, &
+                                fill_color )
+    class(vv_svglib_t) <io> :: this
+    real <in> :: cx, cy, r
+    char(len=*) <optin> :: line_color
+    char(len=*) <optin> :: fill_color
+
+    integer :: n, nopt  ! number of options
+    integer <const> :: MAX_NOP = 10
+    char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
+    char(len=VV__STRLEN_MAX*MAX_NOP) :: str_all
+    integer :: unit
+
+    unit = this.file_unit
+
+    str(1) = vv_svglib__text_line( 'cx=', cx,  &
+                                   'cy=', cy )
+    str(2) = vv_svglib__text_line( 'r=', r )
+    nopt = 2
+    
+    if ( present(line_color) ) then
+      nopt += 1
+      str(nopt) = vv_svglib__text_line( 'stroke=', line_color )
+    end if
+
+    if ( present(fill_color) ) then
+      nopt += 1
+      str(nopt) = vv_svglib__text_line( 'fill=', fill_color )
+    end if
+
+    str_all = ''
+    do n = 1, nopt
+      str_all = trim(str_all) // SPACE // str(n)
+    end do
+
+    call write_out( this, '<circle ' // trim(str_all) // '/>' )
+
+  end subroutine vv_svglib__circle
 
 
   subroutine vv_svglib__open( this, file_name, width, height )
@@ -687,7 +730,8 @@ contains
                               line_width_in_pixels, &
                               line_color,           &
                               fill_color,           &
-                              line_dash_array )
+                              line_dash_array,      &
+                              id )  !追加
     class(vv_svglib_t) <io> :: this
     integer <in> :: nverts
     character, dimension(nverts) <in> :: path_directive 
@@ -697,6 +741,7 @@ contains
     char(len=*) <optin> :: line_color
     char(len=*) <optin> :: fill_color
     char(len=*) <optin> :: line_dash_array
+    char(len=*) <optin> :: id   !追加
 
     integer :: n, nopt   ! number of options
     integer <const> :: MAX_NOP = 10  ! max
@@ -728,6 +773,11 @@ contains
       str(nopt) = vv_svglib__text_line( 'stroke-dasharray=', line_dash_array )
     end if
 
+    if( index(id,"!") == 0 ) then !追加
+      nopt += 1
+      str(nopt) = vv_svglib__text_line( 'id=', id )
+    end if
+
     nopt += 1
     str(nopt) = 'd=' // QUOTE
 
@@ -757,4 +807,71 @@ contains
 
   end subroutine vv_svglib__path 
 
+  !追加
+  subroutine vv_svglib__streamline_style( this,          &
+                                          base_color,    &
+                                          stream_color,  &
+                                          dur,           &
+                                          dasharray,     &
+                                          dashoffset )
+    class(vv_svglib_t) <io> :: this
+    char(len=*) <in> :: base_color
+    char(len=*) <in> :: stream_color
+    char(len=*) <in> :: dur
+    char(len=*) <in> :: dasharray
+    char(len=*) <in> :: dashoffset
+
+    integer :: n, nopt   ! number of options
+    integer <const> :: MAX_NOP = 10  ! max
+    char(len=VV__STRLEN_MAX), dimension(MAX_NOP) :: str
+    char(len=VV__STRLEN_MAX*MAX_NOP) :: str_all
+    
+    call write_out( this, '<style>')
+
+    !write base-streamline class
+    call write_out( this, '.line-base {')
+    call indent_push( this )
+      call write_out( this, 'stroke: ' // trim(base_color) // ';')
+    call indent_pop( this )
+    call write_out( this, '}')
+
+    !write moving streamline class
+    call write_out( this, '.line-stream {')
+    call indent_push( this )
+      call write_out( this, 'stroke: ' // trim( stream_color) // ';')
+      call write_out( this, 'stroke-dasharray: ' // trim(dasharray) // ';')
+      call write_out( this, 'animation: key-line ' //  trim(dur) // &
+                            's linear 0s infinite')
+    call indent_pop( this )
+    call write_out( this, '}')
+
+    !write keyframes
+    call write_out( this, '@keyframes key-line {')
+    call indent_push( this )
+      call write_out( this, '0% {' )
+      call indent_push( this )
+        call write_out(this, 'stroke-dashoffset: ' // trim(dashoffset) // ';')
+      call indent_pop( this )
+      call write_out( this, '}')
+
+      call write_out( this, '100% {' )
+      call indent_push( this )
+        call write_out( this, 'stroke-dashoffset: 0;')
+      call indent_pop( this )
+      call write_out( this, '}')
+    
+    call indent_pop( this )
+    call write_out( this, '}')
+
+    call write_out( this, '</style>')
+    
+  end subroutine vv_svglib__streamline_style
+
+  subroutine vv_svglib__streamline_write( this, id ) !追加
+    class(vv_svglib_t) <io> :: this
+    char(len=*) <in> :: id
+
+    call write_out( this, '<use href="#' // id // '" class="line-base"/>')
+    call write_out( this, '<use href="#' // id // '" class="line-stream"/>')
+  end subroutine
 end module vv_svglib_m

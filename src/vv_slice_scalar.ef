@@ -116,6 +116,10 @@ contains
     integer :: i, counter
     real :: u_sim, v_sim, dummy
 
+    !追加
+    character(20) :: level_str
+    write (level_str,*) level
+
     nu = scalar.mesh.vert.nu
     nv = scalar.mesh.vert.nv
 
@@ -189,7 +193,8 @@ contains
                            width_in_pixels,     &
                            line_color,          &
                            fill_color,          &
-                           line_dash_array )      
+                           line_dash_array,     &
+                           trim(adjustl(level_str)) ) !追加      
     end if
 
   end subroutine vv_slice_scalar__vis_contour

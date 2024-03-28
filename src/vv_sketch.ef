@@ -38,7 +38,10 @@ module vv_sketch_m
     procedure :: polygon => vv_sketch__polygon
     procedure :: path => vv_sketch__path
     procedure :: rectangle => vv_sketch__rectangle
-    procedure :: arrow => vv_sketch__arrow
+    procedure :: arrow => vv_sketch__arrow 
+    procedure :: streamline => vv_sketch__streamline !追加
+    procedure :: streamline_style => vv_sketch__streamline_style !追加
+    procedure :: circle => vv_sketch__circle
     ! line
     procedure, private :: line_r4
     procedure, private :: line_pos2
@@ -140,6 +143,44 @@ contains
                                  screen_vec.y,    &
                                  arrow_template )
   end subroutine vv_sketch__arrow
+
+  subroutine vv_sketch__circle( sketch,      & !追加
+                                u, v, r,     &
+                                line_color,  &
+                                fill_color)
+    class(vv_sketch_t) <io> :: sketch
+    real <in> :: u, v, r
+    type(vv_color_t) <optin> :: line_color
+    type(vv_color_t) <optin> :: fill_color
+
+    char(len=7) :: line_color_code, fill_color_code
+
+    type(screen_pos_t) :: pos
+
+    pos = sketch.to_screen_pos( vv_sketch__sim_pos_t(u,v) )
+
+    if ( present(line_color) ) then 
+      line_color_code = line_color.to_code()
+      if ( present(fill_color) ) then
+        fill_color_code = fill_color.to_code()
+        call sketch.vv_svglib.circle( pos.x, pos.y, r,                  &
+                                      line_color=line_color_code,   &
+                                      fill_color=fill_color_code )
+      else !  No fill_color 
+        call sketch.vv_svglib.circle( pos.x, pos.y, r,                       &
+                                      line_color=line_color_code )
+      end if
+    else  ! No line_color
+      if ( present(fill_color) ) then
+        fill_color_code = fill_color.to_code()
+        call sketch.vv_svglib.circle( pos.x, pos.y, r,                     &
+                                      fill_color=fill_color_code )
+      else !  No fill_color 
+        call sketch.vv_svglib.circle( pos.x, pos.y, r )
+      end if
+    end if
+
+  end subroutine vv_sketch__circle
 
 
   subroutine vv_sketch__group_push( sketch, id,                   &
@@ -529,7 +570,8 @@ contains
                                       width_in_pixels, &
                                       line_color,      &
                                       fill_color,      &
-                                      line_dash_array )
+                                      line_dash_array, &
+                                      id )
     class(vv_sketch_t) <io> :: sketch
     integer <in> :: nverts
     type(vv_sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
@@ -538,6 +580,7 @@ contains
     type(vv_color_t) <optin> :: line_color
     type(vv_color_t) <optin> :: fill_color
     char(len=*) <optin> :: line_dash_array
+    char(len=*) <optin> :: id !追加
 
     type(screen_pos_t) :: vert_on_screen
     real, dimension(nverts) :: verts_screen_x,  &
@@ -545,11 +588,19 @@ contains
     char(len=7) :: line_color_code , fill_color_code
     integer :: i
 
+    char(len=100) :: id_str !追加
+
     do i = 1, nverts
       vert_on_screen = sketch.to_screen_pos( verts_sim(i) )
       verts_screen_x(i) = vert_on_screen.x
       verts_screen_y(i) = vert_on_screen.y
     end do
+
+    if(present(id) ) then !追加
+      id_str = id
+    else
+      id_str = "!"
+    end if
 
     if ( present(line_color) ) then 
       line_color_code = line_color.to_code()
@@ -563,7 +614,8 @@ contains
                                       =width_in_pixels,           &
                                     line_color=line_color_code,   &
                                     fill_color=fill_color_code,   &
-                                    line_dash_array=line_dash_array )
+                                    line_dash_array=line_dash_array, &
+                                    id=trim(id_str) )
       else !  No fill_color 
         call sketch.vv_svglib.path( nverts,                       &
                                     path_directive,               &
@@ -573,7 +625,8 @@ contains
                                       =width_in_pixels,           &
                                     line_color=line_color_code,   &
                                     fill_color='none',            &
-                                    line_dash_array=line_dash_array )
+                                    line_dash_array=line_dash_array, &
+                                    id=trim(id_str) )
       end if
     else  ! No line_color
       if ( present(fill_color) ) then
@@ -585,7 +638,8 @@ contains
                                     line_width_in_pixels          &
                                       =width_in_pixels,           &
                                     fill_color=fill_color_code,   &
-                                    line_dash_array=line_dash_array )
+                                    line_dash_array=line_dash_array, &
+                                    id=trim(id_str) )
       else !  No fill_color 
         call sketch.vv_svglib.path( nverts,                       &
                                     path_directive,               &
@@ -594,7 +648,8 @@ contains
                                     line_width_in_pixels          &
                                       =width_in_pixels,           &
                                     fill_color='none',            &
-                                    line_dash_array=line_dash_array )
+                                    line_dash_array=line_dash_array, &
+                                    id=trim(id_str) )
       end if
     end if
 
@@ -644,5 +699,59 @@ contains
                                    line_color_code,      &
                                    fill_color_code )
   end subroutine vv_sketch__rectangle
+
+
+  subroutine vv_sketch__streamline( sketch, nverts,      &
+                                    path_directive,      &
+                                    verts_sim,           &
+                                    width_in_pixels,     &
+                                    id)
+    class(vv_sketch_t) <io> :: sketch
+    integer <in> :: nverts
+    type(vv_sketch__sim_pos_t), dimension(nverts) <in> :: verts_sim
+    character, dimension(nverts) <in> :: path_directive
+    real <in> :: width_in_pixels
+    char(len=*) <in> :: id !追加
+
+    call sketch.path( nverts, path_directive, verts_sim,  &
+                      width_in_pixels = width_in_pixels,  &
+                      id = id)
+
+    call sketch.vv_svglib.streamline_write( id )
+
+  end subroutine vv_sketch__streamline
+
+  subroutine vv_sketch__streamline_style( sketch,         &
+                                         base_color,     &
+                                         stream_color,   &
+                                         dur,            &
+                                         dasharray,      &
+                                         dashoffset )
+  
+    class(vv_sketch_t) <io> :: sketch
+
+    type(vv_color_t) <in> :: base_color
+    type(vv_color_t) <in> :: stream_color
+    real <in> :: dur
+    integer <in> :: dasharray
+    integer <in> :: dashoffset
+
+    char(len=7) :: base_colorcode, stream_colorcode
+    char(len=20) :: dur_str, dasharray_str, dashoffset_str
+
+    base_colorcode = base_color.to_code()
+    stream_colorcode = stream_color.to_code()
+
+    write( dur_str,        *) dur
+    write( dasharray_str,  *) dasharray
+    write( dashoffset_str, *) dashoffset
+
+    call sketch.vv_svglib.streamline_style( base_colorcode,     &
+                                            stream_colorcode,   &
+                                            dur_str,            &
+                                            dasharray_str,      &
+                                            dashoffset_str)
+
+  end subroutine vv_sketch__streamline_style
 
 end module vv_sketch_m

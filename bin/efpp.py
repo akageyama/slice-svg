@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!python
 #
 #  efpp.py:
 #    Preprocessor for eFortran, a dialect of Modern Fortran.
@@ -762,7 +762,7 @@ def efpp(filename_in):
          input: filename_in (e.g., 'main.e03')
         output: standard out
     """
-    with open(filename_in,'r') as f:
+    with open(filename_in,'r',encoding="utf-8") as f:
         lines = f.readlines()
         # In the followings, we apply multiple docoders
         # to 'lines. Their call-order is basically arbitrary.

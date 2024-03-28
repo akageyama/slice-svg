@@ -1,0 +1,418 @@
+module vv_slice_streamline
+   !!>
+   vv_slice_streamline.ef
+
+   流線の描画
+   vv_slice_vectorにセットされたベクトル情報と
+   vv_sketchにセットされたposition情報を使って流線を描画
+   !!<
+   use vv_m
+   use vv_color_m
+   use vv_slice_mesh_m
+   use vv_slice_isoline_m
+   use vv_sketch_m
+   use vv_slice_vector_m
+   implicit none
+   private
+
+   integer, parameter :: allocation_num = 1000 !パス配列を1000ずつ確保していく
+   real, parameter :: vector_limit = 1e-5 !ベクトルの長さの2乗がこれより小さければ計算を打ち切る
+
+   type, public :: vv_slice_streamline_t
+      real :: start_u, start_v
+      real :: du, dv                   !シミュレーション空間の格子間隔
+      real :: h                        !積分の刻み幅
+      real :: c                        !ベクトルの長さを調整する v = cv
+      type(vv_slice_vector_t) :: slice_vector !パスを書くのに使う空間情報
+      real :: stroke_width             !パスを描く関数の引数として使う
+      type(vv_color_t) :: base_color   !パスの色
+      type(vv_color_t) :: stream_color !動いていく色
+      real :: dur !色が流れる速さをdur, dashoffsetの調整で決める
+      integer :: dasharray, dashoffset !流れる色の長さ
+      integer :: count
+   contains
+      procedure :: initialize => vv_slice_streamline__initialize
+      procedure :: setvector => vv_slice_streamline__setvector
+      procedure :: setstroke_width => vv_slice_streamline__setstroke_width
+      procedure :: setcolor => vv_slice_streamline__setcolor
+      procedure :: reset_count => vv_slice_streamline__reset_count
+      procedure :: vis_streamline => vv_slice_streamline__vis_streamline
+   end type vv_slice_streamline_t
+
+contains
+   subroutine vv_slice_streamline__initialize( streamline , vv_sketch,      &
+                                               slice_vector, stroke_width,  &
+                                               base_color, stream_color,    &
+                                               dur, dasharray, dashoffset)
+      class(vv_slice_streamline_t) <io> :: streamline
+      class(vv_sketch_t) <io> :: vv_sketch
+      class(vv_slice_vector_t) <in> :: slice_vector
+      real <optin> :: stroke_width
+      class(vv_color_t) <optin> :: base_color
+      class(vv_color_t) <optin> :: stream_color
+      real <optin> :: dur
+      integer <optin> :: dasharray
+      integer <optin> :: dashoffset
+
+      !流線を計算するためのベクトル情報をセット
+      call streamline.setvector(slice_vector)
+
+      if(present( stroke_width )) then
+         call streamline.setstroke_width(stroke_width)
+      else
+         streamline.stroke_width = 2.5 !デフォルトの太さ
+      end if
+
+      if(present( base_color )) then
+         streamline.base_color = base_color
+      else
+         streamline.base_color = VV_COLOR__CONST.sandybrown !デフォルトカラー
+      end if
+
+      if(present( stream_color )) then
+         streamline.stream_color = stream_color
+      else
+         streamline.stream_color = VV_COLOR__CONST.red ! 流れる色のデフォルトカラー
+      end if
+
+      if(present( dur )) then
+         streamline.dur = dur
+      else
+         streamline.dur = 5.0
+      end if
+
+      if(present( dasharray)) then
+         streamline.dasharray = dasharray
+      else
+         streamline.dasharray = 30 !この長さを長くすると点線の幅が長くなる
+      end if
+
+      !!>
+      dashoffsetをdasharrayの偶数倍にするとアニメーションがループしても
+      色がスムーズに流れ続ける.
+      デフォルトではdashoffsetをdasharrayの10倍にしている.
+      !!<
+      if( present( dashoffset )) then
+         streamline.dashoffset = dashoffset
+      else
+         streamline.dashoffset = streamline.dasharray * 10
+      end if
+      
+      call vv_sketch.streamline_style(streamline.base_color,    &
+                                      streamline.stream_color,  &
+                                      streamline.dur,           &
+                                      streamline.dasharray,     &
+                                      streamline.dashoffset)
+
+      streamline.count = 0
+
+   end subroutine vv_slice_streamline__initialize
+
+   subroutine vv_slice_streamline__setvector(streamline, slice_vector)
+      class(vv_slice_streamline_t) <io> :: streamline
+      class(vv_slice_vector_t) <in> :: slice_vector
+
+      real :: max_veclen_square
+
+      streamline.slice_vector = slice_vector
+      streamline.du = abs(streamline.slice_vector.mesh.vert.pos_u(2) - streamline.slice_vector.mesh.vert.pos_u(1))
+      streamline.dv = abs(streamline.slice_vector.mesh.vert.pos_v(2) - streamline.slice_vector.mesh.vert.pos_v(1))
+
+      ! !刻み幅は最小の格子間隔の10分の1
+      ! if( streamline.du <= streamline.dv ) then
+      !    streamline.h = streamline.du * 0.1
+      ! else
+      !    streamline.h = streamline.dv * 0.1
+      ! end if
+
+      !ベクトルの長さが最大で１付近になるようにcを設定する
+      max_veclen_square = maxval(slice_vector.comp_u **2 + slice_vector.comp_v **2 )
+      streamline.c =  1 / (sqrt(max_veclen_square) + 1e-7) !0除算を防ぐため
+      
+
+   end subroutine vv_slice_streamline__setvector
+
+   subroutine vv_slice_streamline__setstroke_width(streamline, stroke_width)
+      class(vv_slice_streamline_t) <io> :: streamline
+      real <in> :: stroke_width
+
+      streamline.stroke_width = stroke_width
+   end subroutine vv_slice_streamline__setstroke_width
+
+   subroutine vv_slice_streamline__setcolor(streamline, base_color, stream_color)
+      class(vv_slice_streamline_t) <io> :: streamline
+      class(vv_color_t) <optin> :: base_color
+      class(vv_color_t) <optin> :: stream_color
+
+      if(present(base_color)) then
+         streamline.base_color = base_color
+      end if
+
+      if(present(stream_color)) then
+         streamline.stream_color = stream_color
+      end if
+      
+   end subroutine vv_slice_streamline__setcolor
+
+   subroutine vv_slice_streamline__reset_count( streamline )
+      class(vv_slice_streamline_t) <io> :: streamline
+      streamline.count = 0
+   end subroutine vv_slice_streamline__reset_count
+
+
+   subroutine vv_slice_streamline__vis_streamline( streamline, vv_sketch, u, v, &
+                                                   h, len )
+      class(vv_slice_streamline_t) <io> :: streamline
+      class(vv_sketch_t) <io> :: vv_sketch
+      real <in> :: u, v
+      real <in> :: h, len !刻み幅と最大の長さ
+
+      character(20) :: count_str
+      character(len=100) :: id_str
+
+      !パスの長さが分からないためbufferも用意する
+      type(vv_sketch__sim_pos_t), dimension(:), allocatable :: verts_sim
+      type(vv_sketch__sim_pos_t), dimension(:), allocatable :: verts_sim_buf
+      character, dimension(:), allocatable :: path_directive
+
+      integer :: i
+      integer :: nverts !パスの頂点数
+      integer :: max_nverts !最大頂点数（len/h）
+
+      logical :: should_abort !何らかの理由で流線計算を打ち切るときにtrueにする
+      real :: u_min, u_max
+      real :: v_min, v_max
+      real, dimension(2) :: current_pos !現在地
+
+      streamline.start_u = u
+      streamline.start_v = v
+
+      streamline.h = h
+      max_nverts = int( len / h )
+
+      streamline.count += 1
+      write (count_str,*) streamline.count
+      id_str = "streamline" // trim(adjustl(count_str))
+
+      should_abort = .false.
+      current_pos(1) = streamline.start_u
+      current_pos(2) = streamline.start_v
+
+      allocate(verts_sim(allocation_num))
+
+      u_min = streamline.slice_vector.mesh.vert.u_min
+      u_max = streamline.slice_vector.mesh.vert.u_max
+      v_min = streamline.slice_vector.mesh.vert.v_min
+      v_max = streamline.slice_vector.mesh.vert.v_max      
+
+      nverts = 1
+      verts_sim(nverts).u = current_pos(1)
+      verts_sim(nverts).v = current_pos(2)
+
+      do while( .not. should_abort .and. nverts < max_nverts )
+
+         !流線を少し進める
+         call euler_integrate(streamline, current_pos, should_abort)
+         ! call runge_kutta_integrate(streamline, current_pos, should_abort)
+
+         !流線が領域の端に達した
+         if( current_pos(1) >= u_max .or. current_pos(1) <= u_min .or. &
+            current_pos(2) >= v_max .or. current_pos(2) <= v_min) then
+            should_abort = .true.
+         end if
+
+         if( should_abort ) exit
+
+         nverts = nverts + 1
+         verts_sim(nverts).u = current_pos(1)
+         verts_sim(nverts).v = current_pos(2)
+
+         !配列を全て使い切った場合新たに確保しなおす
+         if(nverts >= allocation_num) then
+            allocate(verts_sim_buf(nverts))
+            do i = 1, nverts
+               verts_sim_buf(i).u = verts_sim(i).u
+               verts_sim_buf(i).v = verts_sim(i).v
+            end do
+
+            deallocate(verts_sim)
+            allocate(verts_sim(nverts + allocation_num))
+            do i = 1, nverts
+               verts_sim(i).u = verts_sim_buf(i).u
+               verts_sim(i).v = verts_sim_buf(i).v
+            end do
+            deallocate(verts_sim_buf)
+         end if
+
+      end do
+
+      allocate(path_directive(nverts))
+      if(nverts >= 2) then
+
+         path_directive(1) = 'M'
+         path_directive(2) = 'L'
+
+         if(nverts >= 3) then
+            do i = 3, nverts
+               path_directive(i) = ' '
+            end do
+         end if 
+         ! if(present(count) ) then
+         !   call vv_sketch.path(nverts,path_directive,verts_sim(1:nverts), &
+         !                     width_in_pixels = streamline.stroke_width, &
+         !                     base_color = streamline.base_color, &
+         !                     id= count)
+         ! else
+         !   call vv_sketch.path(nverts,path_directive,verts_sim(1:nverts), &
+         !                     width_in_pixels = streamline.stroke_width, &
+         !                     base_color = streamline.base_color)
+         ! end if
+
+         call vv_sketch.streamline(nverts,path_directive,verts_sim(1:nverts), &
+                             width_in_pixels = streamline.stroke_width, &
+                             id= trim(id_str))
+      end if
+
+      deallocate(verts_sim)
+      deallocate(path_directive)
+      ! call vv_sketch.path_arrow(id=trim(id_str), dur=nverts * 0.01 )
+
+   end subroutine vv_slice_streamline__vis_streamline
+
+   ! !!>
+   ! private
+   ! !!<
+
+   !ベクトルの補間
+   subroutine bilinear_interpolation( streamline, pos, vec)
+      class(vv_slice_streamline_t) <in> :: streamline
+      real, dimension(2) <in> :: pos
+      real, dimension(2) <io> :: vec
+
+      integer :: u_idx, v_idx
+      real :: u_ratio, v_ratio
+
+      u_idx = ( (pos(1) - streamline.slice_vector.mesh.vert.u_min) / streamline.du ) + 1
+      v_idx = ( (pos(2) - streamline.slice_vector.mesh.vert.v_min) / streamline.dv ) + 1
+
+      u_ratio = mod(pos(1), streamline.du) / streamline.du
+      v_ratio = mod(pos(2), streamline.dv) / streamline.dv
+
+      vec(1) = streamline.slice_vector.comp_u(u_idx, v_idx)         * (1 - u_ratio) * (1 - v_ratio) &
+             + streamline.slice_vector.comp_u(u_idx + 1, v_idx)     * u_ratio       * (1 - v_ratio)       &
+             + streamline.slice_vector.comp_u(u_idx,     v_idx + 1) * (1 - u_ratio) * v_ratio       &
+             + streamline.slice_vector.comp_u(u_idx + 1, v_idx + 1) * u_ratio       * v_ratio
+
+      vec(2) = streamline.slice_vector.comp_v(u_idx,     v_idx)     * (1 - u_ratio) * (1 - v_ratio) &
+             + streamline.slice_vector.comp_v(u_idx + 1, v_idx)     * u_ratio       * (1 - v_ratio) &
+             + streamline.slice_vector.comp_v(u_idx,     v_idx + 1) * (1 - u_ratio) * v_ratio &
+             + streamline.slice_vector.comp_v(u_idx + 1, v_idx + 1) * u_ratio       * v_ratio
+
+   end subroutine bilinear_interpolation
+   
+
+   subroutine euler_integrate(streamline, pos, should_abort)
+      class(vv_slice_streamline_t) <in> :: streamline
+      real, dimension(2) <io> :: pos
+      logical <io> :: should_abort !ベクトルの大きさが小さすぎるときにtrue
+
+      real, dimension(2) :: vec
+
+      call bilinear_interpolation(streamline, pos, vec)
+
+      if(vec(1)**2 + vec(2)**2 <= vector_limit) then
+         should_abort = .true.
+         return
+      end if
+
+      !ベクトルを正規化して刻み幅分posを進める
+      vec(:) = vec(:) / sqrt((vec(1)**2 + vec(2)**2))
+      pos(:) = pos(:) + vec(:) * streamline.h
+      
+   end subroutine euler_integrate
+
+   subroutine runge_kutta_integrate(streamline, pos, should_abort)
+      class(vv_slice_streamline_t) <in> :: streamline
+      real, dimension(2) <io> :: pos
+      logical <io> :: should_abort !ベクトルの大きさが小さすぎるときにtrue
+
+      real, dimension(2) :: pos1, pos2, pos3
+      real, dimension(2) :: vec1, vec2, vec3, vec4 !ルンゲ・クッタ法の1~4段目に対応する
+      real, dimension(2) :: vec !重みも考慮した計算
+      real :: u_min, u_max
+      real :: v_min, v_max
+
+      u_min = streamline.slice_vector.mesh.vert.u_min
+      u_max = streamline.slice_vector.mesh.vert.u_max
+      v_min = streamline.slice_vector.mesh.vert.v_min
+      v_max = streamline.slice_vector.mesh.vert.v_max
+
+      !1段目
+      call bilinear_interpolation(streamline, pos, vec1)
+
+      if(vec1(1)**2 + vec1(2)**2 <= vector_limit) then
+         should_abort = .true.
+         return
+      end if
+
+      !ベクトルを正規化して刻み幅の半分posを進める
+      ! vec1(:) = vec1(:) / sqrt((vec1(1)**2 + vec1(2)**2))
+      pos1(:) = pos(:) + vec1(:) * streamline.h * 0.5
+
+      !流線が領域の端に達した
+      if( pos1(1) >= u_max .or. pos1(1) <= u_min .or. &
+         pos1(2) >= v_max .or. pos1(2) <= v_min) then
+         should_abort = .true.
+         return
+      end if
+
+      !2段目
+      call bilinear_interpolation(streamline, pos1, vec2)
+      if(vec2(1)**2 + vec2(2)**2 <= vector_limit) then
+         should_abort = .true.
+         return
+      end if
+
+      !ベクトルを正規化して刻み幅の半分posを進める
+      ! vec2(:) = vec2(:) / sqrt((vec2(1)**2 + vec2(2)**2))
+      pos2(:) = pos(:) + vec2(:) * streamline.h * 0.5
+
+      if( pos2(1) >= u_max .or. pos2(1) <= u_min .or. &
+         pos2(2) >= v_max .or. pos2(2) <= v_min) then
+         should_abort = .true.
+         return
+      end if
+
+      !3段目
+      call bilinear_interpolation(streamline, pos2, vec3)
+      if(vec3(1)**2 + vec3(2)**2 <= vector_limit) then
+         should_abort = .true.
+         return
+      end if
+
+      ! vec3(:) = vec3(:) / sqrt((vec3(1)**2 + vec3(2)**2))
+      pos3(:) = pos(:) + vec3(:) * streamline.h
+
+      if( pos3(1) >= u_max .or. pos3(1) <= u_min .or. &
+         pos3(2) >= v_max .or. pos3(2) <= v_min) then
+         should_abort = .true.
+         return
+      end if
+
+      !4段目
+      ! call bilinear_interpolation(streamline, pos3, vec4)
+      if(vec4(1)**2 + vec4(2)**2 <= vector_limit) then
+         should_abort = .true.
+         return
+      end if
+
+      ! vec4(:) = vec4(:) / sqrt((vec4(1)**2 + vec4(2)**2))
+
+      !数値解計算
+      vec = (vec1 + 2*vec2 + 2*vec3 + vec4) / 6.0
+      vec(:) = vec(:) / sqrt((vec(1)**2 + vec(2)**2))
+      pos = pos + vec * streamline.h
+
+   end subroutine runge_kutta_integrate
+
+   end module
