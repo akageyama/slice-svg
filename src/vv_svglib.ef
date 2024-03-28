@@ -247,7 +247,7 @@ contains
     real <const> :: ALMOST_ZERO = 1.e-40  ! a tiny value.
 
     call vv__assert( alp > ALMOST_ZERO,  &
-                     "__MODULE__(__LINE__): arg alp error." )
+                     "__MODLINE__: arg alp error." )
     Unit_arrow_length_in_pixel = alp
   end subroutine vv_svglib__set_unit_arrow_length_in_pixel
 
@@ -433,7 +433,7 @@ contains
         case ("#arrow02")
           arrow_template_name = "#arrow02"  ! animated arrow
         case default
-          call vv__fatal( "__MODULE__(__LINE__): " //  &
+          call vv__fatal( "__MODLINE__: " //  &
                           "case error." )
       end select
     else 
@@ -444,7 +444,7 @@ contains
 
     call vv__assert( Unit_arrow_length_in_pixel  &
                      > ALMOST_ZERO,  &
-                     "__MODULE__(__LINE__): reset default arrow length." )
+                     "__MODLINE__: reset default arrow length." )
 
     amp_factor = vector_amp / Unit_arrow_length_in_pixel
 
@@ -799,7 +799,7 @@ contains
               call write_out( this, directive )
               ! No need to write coords
             case default
-              call vv__fatal( "__MODULE__(__LINE__): case error." )
+              call vv__fatal( "__MODLINE__: case error." )
           end select
         end do
       call indent_pop( this )

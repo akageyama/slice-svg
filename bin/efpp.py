@@ -223,7 +223,7 @@ def remove_characters_in_comment(string_in):
 
 
 #=============================================
-def alias_decode(lines_in):
+def alias_decode(alias_list, lines_in):
 #=============================================
     """
     Converts strings. The rule is defined in alias_dict, which
@@ -313,7 +313,7 @@ def alias_decode(lines_in):
         }
 
     # Append user-defined macros
-    alias_dict.update(read_alias_list_and_make_dict('efpp_alias.list'))
+    alias_dict.update(read_alias_list_and_make_dict(alias_list))
 
     output = list()
     for line in lines_in:
@@ -500,6 +500,8 @@ def routine_name_macro(lines_in):
         if len(name)>0:
             progmodule_name = name[0]
             line = line.replace('__MODULE__', progmodule_name)
+            module_plus_linenum =  progmodule_name + '(' + str(lctr) + ')'
+            line = line.replace('__MODLINE__', module_plus_linenum )
         if len(name)==3:
             subroufunc_name = name[1] + '/' + name[2]
             line = line.replace('__FUNC__', subroufunc_name)
@@ -594,15 +596,15 @@ def kutimer_docode(lines_in):
      #
      # After...  (You should apply "subsidiary_caller" later.)
      #   ___________________________________________
-     #                          -call kutimer__start('  main')
-     #   call fluid%create(lat) -call kutimer__('  main','flu cr')
+     #                          -call Clock%start('  main')
+     #   call fluid%create(lat) -call Clock%lap  ('  main','flu cr')
      #   call fluid%set_initial(lat)
-     #                          -call kutimer__('  main','flu in')
-     #   do loop = 1 , loop_max -call kutimer__count
-     #     call pdf%shift(lat)  -call kutimer__('  main','pdfsht')
+     #                          -call Clock%lap  ('  main','flu in')
+     #   do loop = 1 , loop_max -call Clock%count
+     #     call pdf%shift(lat)  -call Clock%lap  ('  main','pdfsht')
      #   end do
-     #   call fluid%finalize    -call kutimer__end('  main')
-     #                          -call kutimer__print
+     #   call fluid%finalize    -call Clock%stop ('  main')
+     #                          -call Clock%print
      #
     """
     output = list()
@@ -620,23 +622,23 @@ def kutimer_docode(lines_in):
         match_pri = pat_pri.search(line)
         if match_stt:
             line = match_stt.group(1) + ' '
-            line += '-call kutimer__start(\'' + match_stt.group(2)
+            line += '-call Clock%start(\'' + match_stt.group(2)
             line += '\')' + '\n'
         if match_cal:
             line = match_cal.group(1) + ' '
-            line += '-call kutimer__(\'' + match_cal.group(2)
+            line += '-call Clock%lap  (\'' + match_cal.group(2)
             line += '\',\'' +  match_cal.group(3)
             line += '\')' + '\n'
         if match_cnt:
             line = match_cnt.group(1) + ' '
-            line += '-call kutimer__count\n'
+            line += '-call Clock%count\n'
         if match_end:
             line = match_end.group(1) + ' '
-            line += '-call kutimer__end(\'' + match_end.group(2)
+            line += '-call Clock%stop (\'' + match_end.group(2)
             line += '\')' + '\n'
         if match_pri:
             line = match_pri.group(1) + ' '
-            line += '-call kutimer__print' + match_pri.group(2) + '\n'
+            line += '-call Clock%print' + match_pri.group(2) + '\n'
         output.append(line)
 
     return output
@@ -754,7 +756,7 @@ def debugp_decode(lines_in):
 
 
 #=============================================
-def efpp(filename_in):
+def efpp(filename_in, alias_list):
 #=============================================
 
     """    A preprocessor for Fortran 2003.
@@ -780,7 +782,7 @@ def efpp(filename_in):
         lines = operator_decode(lines)
         lines = just_once_region(lines)
         lines = skip_counter(lines)
-        lines = alias_decode(lines)
+        lines = alias_decode(alias_list, lines)
         lines = debugp_decode(lines)
         lines = routine_name_macro(lines)
         lines = member_access_operator_macro(lines)
@@ -797,7 +799,12 @@ if __name__ == '__main__':
 
     if len(sys.argv)==1:
         filename_in = input('enter filename_in name > ')
+        filename_alias_list = 'efpp_alias.list'
+    elif len(sys.argv)==2:
+        filename_in = sys.argv[1]
+        filename_alias_list = 'efpp_alias.list'
     else:
         filename_in = sys.argv[1]
+        filename_alias_list = sys.argv[2]
 
-    efpp(filename_in)
+    efpp(filename_in, filename_alias_list)

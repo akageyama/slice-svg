@@ -30,13 +30,12 @@ vv_lib := lib$(vv_basename).a
 
 EFPP = ../bin/efpp.py
 FC = gfortran
-FFLAGS := -O5
-#> # FFLAGS += -fopenmp
+FLAGS := -O3
+FFLAGS += -fopenmp
 #> FFLAGS += -fcheck=all
 #> FFLAGS += -Wall
 #> FFLAGS += -fbounds-check
 #> FFLAGS += -fcheck-array-temporaries
-#> FFLAGS += -O0
 #> FFLAGS += -Wuninitialized
 #> FFLAGS += -ffpe-trap=invalid,zero,overflow
 #> FFLAGS += -g

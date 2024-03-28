@@ -452,6 +452,13 @@ contains
                                grid_pos_u,  &
                                grid_pos_v,  &
                                grid_flag )
+    !!>
+    call mesh.vert.initialize( nu, nv,      &
+                               grid_pos_u,  &
+                               grid_pos_v,  &
+                               grid_flag,   &
+                               debug_print_flag=.true. )
+    !!<
     call mesh.edge.initialize( mesh.vert )
     call mesh.boundary.initialize( mesh.vert,  &
                                    mesh.edge )
@@ -519,7 +526,7 @@ contains
             case ('o')
               num_o += 1
             case default
-              call vv__fatal( "__MODULE__(__LINE__) " //  &
+              call vv__fatal( "__MODLINE__ " //  &
                               "Grid flag char is not 'i'/'b'/'o'." )
           end select
         end do
@@ -531,14 +538,14 @@ contains
       call vv__message( '      inside boundary = ', num_i )
       call vv__message( '     outside boundary = ', num_o )
 
-      call vv__assert( num_b > 0,                   &
-                       "__MODULE__(__LINE__) " //   &
+      call vv__assert( num_b > 0,               &
+                       "__MODLINE__ " //        &
                        "No boundary point." )
-      call vv__assert( num_i > 0,  &
-                       "__MODULE__(__LINE__) " //   &
+      call vv__assert( num_i > 0,               &
+                       "__MODLINE__ " //        &
                        "No inner grid point. ")
       call vv__assert( num_i+num_b+num_o == nu*nv,  &
-                       "__MODULE__(__LINE__) " //   &
+                       "__MODLINE__ " //            &
                        "Something is very wrong." )
 
     end subroutine iCheck_flag_char
@@ -593,7 +600,7 @@ contains
         return
       end if
     end do
-    call vv__fatal( "__MODULE__(__LINE__): Not a boundary vert." )
+    call vv__fatal( "__MODLINE__: Not a boundary vert." )
   end function vv_slice_mesh__boundary_vert_vij_to_nth
 
 
@@ -620,7 +627,7 @@ contains
         return
       end if
     end do
-    call vv__fatal( "__MODULE__(__LINE__): Not a boundary vert." )
+    call vv__fatal( "__MODLINE__: Not a boundary vert." )
   end function vv_slice_mesh__boundary_edge_eij_to_nth
 
 
@@ -726,7 +733,7 @@ contains
       end if
     end do
 
-    call vv__fatal( "__MODULE__(__LINE__): " //           &
+    call vv__fatal( "__MODLINE__: " //           &
                     "Failed to find new octa_direct." )
 
   end function find_direct_for_next_border_vert
@@ -759,7 +766,7 @@ contains
         i -= 1
         j += 1
       case default
-        call vv__fatal( "__MODULE__(__LINE__): case error." )
+        call vv__fatal( "__MODLINE__: case error." )
     end select
   end subroutine shift_vert_position_in_octa_direct
 
@@ -778,15 +785,15 @@ contains
 
     integer :: octa_direct_in_previous_jump
 
-    call vv__assert( flag(i,j) == 'b',            &
-                     "__MODULE__(__LINE__): " //  &
+    call vv__assert( flag(i,j) == 'b',          &
+                     "__MODLINE__: " //         &
                      "This vert is not a border. Inconsistent..." )
     call shift_vert_position_in_octa_direct( octa_direct, i, j )
 
     call vv__assert( i >= 1 .and. i <= nu,  &
-                     "__MODULE__(__LINE__): i-range error." )
+                     "__MODLINE__: i-range error." )
     call vv__assert( j >= 1 .and. j <= nv,  &
-                     "__MODULE__(__LINE__): j-range error." )
+                     "__MODLINE__: j-range error." )
 
     octa_direct_in_previous_jump = octa_direct
 
@@ -876,7 +883,7 @@ contains
         ej = vj             !        * .
         edge_type = 'd'     !    . . . *
       case default
-        call vv__fatal( "__MODULE__(__LINE__): case error." )
+        call vv__fatal( "__MODLINE__: case error." )
     end select
 
   end subroutine get_edge_id
@@ -942,7 +949,7 @@ contains
     end do
 
     call vv__assert( vi == start_vi .and. vj == start_vj,  &
-                     "__MODULE__(__LINE__): Failed to close boundary." )
+                     "__MODLINE__: Failed to close boundary." )
 
   contains
 
@@ -961,7 +968,7 @@ contains
         case ('d')
           edge.d_is_boundary(ei,ej) = .true.
         case default
-          call vv__fatal( "__MODULE__(__LINE__): " //  &
+          call vv__fatal( "__MODLINE__: " //  &
                           "case error." )
       end select
     end subroutine iSet_boundary_mark_on_mesh_edge
@@ -1038,7 +1045,7 @@ contains
         end do
       end do
 
-      call vv__fatal( "__MODULE__(__LINE__): " //  &
+      call vv__fatal( "__MODLINE__: " //  &
                       "Failed to find a start vert." )
     end subroutine iFind_border_vert_and_its_direct
 
@@ -1068,7 +1075,7 @@ contains
     real :: weight1, weight2
 
     call vv__assert( diff1*diff2 >= 0.0,  &
-                     "__MODULE__(__LINE__): Cannot interpolate." )
+                     "__MODLINE__: Cannot interpolate." )
 
     if ( diff1+diff2 == 0.0  ) then
       ! which means diff1 = 0.0 & diff2 = 0.0
@@ -1081,7 +1088,7 @@ contains
       weight1 = diff2 / (diff1 + diff2)
       weight2 = 1.0 - weight1
       call vv__assert( weight1 >= 0.0 .and. weight1 <= 1.0,  &
-                       "__MODULE__(__LINE__): weight1 is out of range." )
+                       "__MODLINE__: weight1 is out of range." )
       xi = weight1 * x1 + weight2 * x2
     end if
   end function linear_interpol
@@ -1123,7 +1130,7 @@ contains
       case ('d') 
         edge.d_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
       case default
-        call vv__fatal( "__MODULE__(__LINE__): " //  &
+        call vv__fatal( "__MODLINE__: " //  &
                         "case error." )
     end select
   end subroutine vv_slice_mesh_edge__erase
@@ -1133,12 +1140,14 @@ contains
                                                    nv,          &
                                                    grid_pos_u,  &
                                                    grid_pos_v,  &
-                                                   vert_flag )
+                                                   vert_flag,   &
+                                                   debug_print_flag )
     class(vv_slice_mesh_vert_t) <out> :: vert
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
     real, dimension(nv) <in> :: grid_pos_v
     character, dimension(nu,nv) <optin> :: vert_flag
+    logical <optin> :: debug_print_flag
                        ! 'i' : inside the boundary
                        ! 'o' : outside the boundary
                        ! 'b' : boundary
@@ -1188,9 +1197,9 @@ contains
     v_max = grid_pos_v(nv)
 
     call vv__assert( u_max > u_min,       &
-                    '__MODULE__(__LINE__): Invalid coords u.' )
+                    '__MODLINE__: Invalid coords u.' )
     call vv__assert( v_max > v_min,       &
-                    '__MODULE__(__LINE__): Invalid coords v.' )
+                    '__MODLINE__: Invalid coords v.' )
 
     vert.nu = nu
     vert.nv = nv
@@ -1210,10 +1219,14 @@ contains
     if ( present(vert_flag) ) then
       vert.flag(:,:) = vert_flag(:,:)
       call vert.grid_flag_check
-      call vert.debug_print_flag
     else
       call set_default_vert_flag( nu, nv, vert.flag )      
-      ! call vert.debug_print_flag
+    end if
+
+    if ( present(debug_print_flag) ) then
+      if ( debug_print_flag ) then
+        call vert.debug_print_flag
+      end if
     end if
   end subroutine vv_slice_mesh__vert_initialize
 
@@ -1561,9 +1574,9 @@ contains
     call set_edge_quarter( vert, val_vert, level, edge )
     call set_edge_cross_coord( vert, val_vert, level, edge )
     call vv__assert( minval(edge.u_quarter) >= 0,  &
-                     "__MODULE__(__LINE__): You missed some edge_u.quarter" )
+                     "__MODLINE__: You missed some edge_u.quarter" )
     call vv__assert( minval(edge.v_quarter) >= 0,  &
-                     "__MODULE__(__LINE__): You missed some edge_v.quarter" )
+                     "__MODLINE__: You missed some edge_v.quarter" )
   end subroutine vv_slice_mesh__edge_set_quarter  
 
 
@@ -1650,12 +1663,12 @@ contains
           pm_define_direct_reversed = .true.
           quarter = edge.d_quarter(ei,ej)
         case default
-          call vv__fatal( "__MODULE__(__LINE__): " // &
+          call vv__fatal( "__MODLINE__: " // &
                           "case error." )
       end select
 
       call vv__assert( quarter >= 0,  &
-                       "__MODULE__(__LINE__): " //    &
+                       "__MODLINE__: " //    &
                        "Anomalous quarter value." )
 
       if ( pm_define_direct_reversed ) then
@@ -1671,57 +1684,57 @@ contains
           case (0)
             cross_u = u
             cross_v = edge.v_cross_coord(ei,ej)
-            call vv__assert( cross_v /= NAN,              &
-                             "__MODULE__(__LINE__): " //  &
+            call vv__assert( cross_v /= NAN,     &
+                             "__MODLINE__: " //  &
                              "not a PM edge?" )
           case (1)
             cross_u = edge.a_cross_coord_u(ei,ej)
             cross_v = edge.a_cross_coord_v(ei,ej)
-            call vv__assert( cross_u /= NAN .and.         &
-                             cross_v /= NAN,              &
-                             "__MODULE__(__LINE__): " //  &
+            call vv__assert( cross_u /= NAN .and.       &
+                             cross_v /= NAN,            &
+                             "__MODLINE__: " //         &
                              "not a PM edge?" )
           case (2)
             cross_u = edge.u_cross_coord(ei,ej)
             cross_v = v
-            call vv__assert( cross_u /= NAN,              &
-                             "__MODULE__(__LINE__): " //  &
+            call vv__assert( cross_u /= NAN,            &
+                             "__MODLINE__: " //         &
                              "not a PM edge?" )
           case (3)
             cross_u = edge.d_cross_coord_u(ei,ej)
             cross_v = edge.d_cross_coord_v(ei,ej)
-            call vv__assert( cross_u /= NAN .and.         &
-                             cross_v /= NAN,              &
-                             "__MODULE__(__LINE__): " //  &
+            call vv__assert( cross_u /= NAN .and.       &
+                             cross_v /= NAN,            &
+                             "__MODLINE__: " //         &
                              "not a PM edge?" )
           case (4)
             cross_u = u
             cross_v = edge.v_cross_coord(ei,ej)
-            call vv__assert( cross_v /= NAN,              &
-                             "__MODULE__(__LINE__): " //  &
+            call vv__assert( cross_v /= NAN,            &
+                             "__MODLINE__: " //         &
                              "not a PM edge?" )
           case (5)
             cross_u = edge.a_cross_coord_u(ei,ej)
             cross_v = edge.a_cross_coord_v(ei,ej)
-            call vv__assert( cross_u /= NAN .and.         &
-                             cross_v /= NAN,              &
-                             "__MODULE__(__LINE__): " //  &
+            call vv__assert( cross_u /= NAN .and.       &
+                             cross_v /= NAN,            &
+                             "__MODLINE__: " //         &
                              "not a PM edge?" )
           case (6)
             cross_u = edge.u_cross_coord(ei,ej)
             cross_v = v
-            call vv__assert( cross_u /= NAN,              &
-                             "__MODULE__(__LINE__): " //  &
+            call vv__assert( cross_u /= NAN,            &
+                             "__MODLINE__: " //         &
                              "not a PM edge?" )
           case (7)
             cross_u = edge.d_cross_coord_u(ei,ej)
             cross_v = edge.d_cross_coord_v(ei,ej)
-            call vv__assert( cross_u /= NAN .and.         &
-                             cross_v /= NAN,              &
-                             "__MODULE__(__LINE__): " //  &
+            call vv__assert( cross_u /= NAN .and.       &
+                             cross_v /= NAN,            &
+                             "__MODLINE__: " //         &
                              "not a PM edge?" )
           case default
-            call vv__fatal( "__MODULE__(__LINE__): " //   &
+            call vv__fatal( "__MODLINE__: " //          &
                             "case error." )
         end select
 
@@ -1788,12 +1801,12 @@ contains
           diff_left  = val_vert(vi_left,vj) - level
           diff_right = level - val_vert(vi_right,vj)
           call vv__assert( diff_left * diff_right >= 0.0,   &
-                           "__MODULE__(__LINE__): Not a PM/MP edge?" )
+                           "__MODLINE__: Not a PM/MP edge?" )
           ! The following linter interpol is valid both
           ! for diff_left > 0 and < 0 cases.
-          edge.u_cross_coord(ei,ej) = linear_interpol( u_left,     &
+          edge.u_cross_coord(ei,ej) = linear_interpol( u_left,      &
                                                        u_right,     &
-                                                       diff_left,  &
+                                                       diff_left,   &
                                                        diff_right )
         end if
       end do
@@ -1813,7 +1826,7 @@ contains
           diff_lower = val_vert(vi,vj_lower) - level
           diff_upper = level - val_vert(vi,vj_upper)
           call vv__assert( diff_lower * diff_upper >= 0.0,   &
-                           "__MODULE__(__LINE__): Not a PM/MP edge?" )
+                           "__MODLINE__: Not a PM/MP edge?" )
           edge.v_cross_coord(ei,ej) = linear_interpol( v_lower,    &
                                                        v_upper,    &
                                                        diff_lower, &
@@ -1839,7 +1852,7 @@ contains
           diff_ll = val_vert(vi_ll,vj_ll) - level
           diff_ur = level - val_vert(vi_ur,vj_ur)
           call vv__assert( diff_ll * diff_ur >= 0.0,   &
-                           "__MODULE__(__LINE__): Not a PM/MP edge?" )
+                           "__MODLINE__: Not a PM/MP edge?" )
           edge.a_cross_coord_u(ei,ej) = linear_interpol( u_ll,    &
                                                          u_ur,    &
                                                          diff_ll, &
@@ -1869,7 +1882,7 @@ contains
           diff_ul = val_vert(vi_ul,vj_ul) - level
           diff_lr = level - val_vert(vi_lr,vj_lr)
           call vv__assert( diff_ul * diff_lr >= 0.0,   &
-                           "__MODULE__(__LINE__): Not a PM/MP edge?" )
+                           "__MODLINE__: Not a PM/MP edge?" )
           edge.d_cross_coord_u(ei,ej) = linear_interpol( u_ul,    &
                                                          u_lr,    &
                                                          diff_ul, &
