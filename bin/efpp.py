@@ -1,4 +1,4 @@
-#!python
+#!/usr/local/bin/python3
 #
 #  efpp.py:
 #    Preprocessor for eFortran, a dialect of Modern Fortran.
