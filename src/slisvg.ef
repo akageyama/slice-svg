@@ -1,16 +1,16 @@
-module vv_m
+module slisvg_m
   implicit none
   private
   public :: PI, TWOPI, NIL, NAN
-  public :: VV__STRLEN_MAX
-  public :: vv__assert,             &
-            vv__atan2_in_degree,    &
-            vv__fatal,              &
-            vv__get_date_and_time,  &
-            vv__int_to_char1,       &
-            vv__int_to_char4,       &
-            vv__message,            &
-            vv__real_to_str13
+  public :: SLISVG__STRLEN_MAX
+  public :: slisvg__assert,             &
+            slisvg__atan2_in_degree,    &
+            slisvg__fatal,              &
+            slisvg__get_date_and_time,  &
+            slisvg__int_to_char1,       &
+            slisvg__int_to_char4,       &
+            slisvg__message,            &
+            slisvg__real_to_str13
 
 
   real <const> :: PI = atan(1.0)*4
@@ -19,10 +19,10 @@ module vv_m
   integer <const> :: NIL = -huge(1)
   real    <const> :: NAN = huge(1.0)
 
-  integer <const> :: VV__STRLEN_MAX = 200  ! Basic text string length
-                                           ! e.g., '<line = "... >'
+  integer <const> :: SLISVG__STRLEN_MAX = 200  ! Basic text string length
+                                               ! in, say, '<line = "... >'
 
-  interface vv__message
+  interface slisvg__message
      module procedure message_str,          &
                       message_str_i,        &
                       message_str_logical,  &
@@ -37,7 +37,7 @@ module vv_m
 contains
 
 
-  function vv__int_to_char1( i ) result(char)
+  function slisvg__int_to_char1( i ) result(char)
     integer <in> :: i
     character :: char
     ! Convert an integer into a character.
@@ -49,10 +49,10 @@ contains
     else
        write(char,'(i1.1)') i
     end if
-  end function vv__int_to_char1
+  end function slisvg__int_to_char1
 
 
-  function vv__int_to_char4( i ) result(char4)
+  function slisvg__int_to_char4( i ) result(char4)
     integer <in> :: i
     char(len=4) :: char4
     ! Convert an integer into 4 characters.
@@ -65,10 +65,10 @@ contains
     else
        write(char4,'(i4.4)') i
     end if
-  end function vv__int_to_char4
+  end function slisvg__int_to_char4
 
 
-  function vv__real_to_str13( f ) result(str)
+  function slisvg__real_to_str13( f ) result(str)
     real <in> :: f
     char(len=13)  :: str
     !!>
@@ -77,27 +77,27 @@ contains
     !!<
     write(str,'(1pe13.6)') f
     if(str(1:1)==' ') str(1:1) = '+'  ! to avoid a space in filename.
-  end function vv__real_to_str13
+  end function slisvg__real_to_str13
 
 
-  subroutine vv__fatal( last_will )
+  subroutine slisvg__fatal( last_will )
     char(len=*) <in> :: last_will
 
     print *, repeat('!', 50)
     print *, trim(last_will)
     print *, repeat('!', 50)
     stop
-  end subroutine vv__fatal
+  end subroutine slisvg__fatal
 
 
-  subroutine vv__assert( condition, last_will )
+  subroutine slisvg__assert( condition, last_will )
     logical <in> :: condition
     char(len=*) <in> :: last_will
 
     if ( .not. condition ) then
-      call vv__fatal( last_will )
+      call slisvg__fatal( last_will )
     end if
-  end subroutine vv__assert
+  end subroutine slisvg__assert
 
 
   subroutine message_str( string )
@@ -127,17 +127,17 @@ contains
   end subroutine message_str_logical
 
 
-  function vv__atan2_in_degree( y, x ) result(degree)
+  function slisvg__atan2_in_degree( y, x ) result(degree)
     real <in> :: y, x
     real :: degree
 
     real <const> :: RADIAN_TO_DEGREE = 180.0 / PI
 
     degree = atan2(y,x) * RADIAN_TO_DEGREE
-  end function vv__atan2_in_degree
+  end function slisvg__atan2_in_degree
 
 
-  function vv__get_date_and_time() result(string)
+  function slisvg__get_date_and_time() result(string)
     ! copied from ut.ef
     char(len=8)  :: date   ! e.g., "20221126"
     char(len=10) :: time   ! "HHMMSS.sss"
@@ -159,6 +159,6 @@ contains
     year_month_day     = year // '.' // month // '.' // day
     hour_minute_second = hour // ':' // minute // ':' // second
     string = year_month_day // '/' // hour_minute_second
-  end function vv__get_date_and_time
+  end function slisvg__get_date_and_time
 
-end module vv_m
+end module slisvg_m

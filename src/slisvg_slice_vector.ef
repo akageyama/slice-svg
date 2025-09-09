@@ -1,6 +1,6 @@
-module vv_slice_vector_m
+module slisvg_slice_vector_m
   !!>
-      vv_slice: Visualize 2-dimensional cross sections 
+      slisvg_slice: Visualize 2-dimensional cross sections 
       of 3- (or more) dimensional simulation data.
 
       Draw vector arrow glyphs for vector fields.
@@ -10,41 +10,41 @@ module vv_slice_vector_m
       such as meters.
 
   !!< 
-  use vv_m
-  use vv_color_m
-  use vv_slice_mesh_m
-  use vv_slice_isoline_m
-  use vv_sketch_m
+  use slisvg_m
+  use slisvg_color_m
+  use slisvg_slice_mesh_m
+  use slisvg_slice_isoline_m
+  use slisvg_sketch_m
   implicit none
   private
 
   integer <const> :: TAG_NAME_MAX = 100
 
-  type, public :: vv_slice_vector_t
+  type, public :: slisvg_slice_vector_t
     char(len=TAG_NAME_MAX) :: tag
-    type(vv_slice_mesh_t) :: mesh
+    type(slisvg_slice_mesh_t) :: mesh
     real, dimension(:,:), allocatable :: comp_u
     real, dimension(:,:), allocatable :: comp_v
     real :: amp_max, amp_min
   contains
-    procedure :: initialize => vv_slice_vector__initialize
-    procedure :: finalize => vv_slice_vector__finalize    
-    procedure :: set_val => vv_slice_vector__set_val
-    procedure :: vis_arrows => vv_slice_vector__vis_arrows
-  end type vv_slice_vector_t
+    procedure :: initialize => slisvg_slice_vector__initialize
+    procedure ::   finalize => slisvg_slice_vector__finalize    
+    procedure ::    set_val => slisvg_slice_vector__set_val
+    procedure :: vis_arrows => slisvg_slice_vector__vis_arrows
+  end type slisvg_slice_vector_t
 
 
 contains
 
 
-  subroutine vv_slice_vector__initialize( vector, tag,        &
-                                                  nu, nv,     &
-                                                  grid_pos_u, &
-                                                  grid_pos_v, &
-                                                  comp_u,     &
-                                                  comp_v,     &
-                                                  grid_flag )
-    class(vv_slice_vector_t) <out> :: vector
+  subroutine slisvg_slice_vector__initialize( vector, tag,        &
+                                                      nu, nv,     &
+                                                      grid_pos_u, &
+                                                      grid_pos_v, &
+                                                      comp_u,     &
+                                                      comp_v,     &
+                                                      grid_flag )
+    class(slisvg_slice_vector_t) <out> :: vector
     char(len=*) <in> :: tag
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
@@ -77,20 +77,20 @@ contains
       vector.amp_min = 0.0
     end if
 
-  end subroutine vv_slice_vector__initialize
+  end subroutine slisvg_slice_vector__initialize
 
   
-  subroutine vv_slice_vector__finalize( vector )
-    class(vv_slice_vector_t) <io> :: vector
+  subroutine slisvg_slice_vector__finalize( vector )
+    class(slisvg_slice_vector_t) <io> :: vector
 
     deallocate(vector.comp_u)
     deallocate(vector.comp_v)
     call vector.mesh.finalize
-  end subroutine vv_slice_vector__finalize
+  end subroutine slisvg_slice_vector__finalize
 
 
-  subroutine vv_slice_vector__set_val( vector, comp_u, comp_v )
-    class(vv_slice_vector_t) <io> :: vector
+  subroutine slisvg_slice_vector__set_val( vector, comp_u, comp_v )
+    class(slisvg_slice_vector_t) <io> :: vector
     real, dimension(vector.mesh.vert.nu,  &
                     vector.mesh.vert.nv) <in> :: comp_u, comp_v
 
@@ -102,13 +102,13 @@ contains
     amp_vect = sqrt(comp_u**2+comp_v**2)
     vector.amp_max = maxval(amp_vect)
     vector.amp_min = minval(amp_vect)
-  end subroutine vv_slice_vector__set_val
+  end subroutine slisvg_slice_vector__set_val
 
 
-  subroutine vv_slice_vector__vis_arrows( vector, vv_sketch,      &
-                                                  arrow_template )
-    class(vv_slice_vector_t) <io> :: vector
-    type(vv_sketch_t) <io> :: vv_sketch
+  subroutine slisvg_slice_vector__vis_arrows( vector, slisvg_sketch,      &
+                                                      arrow_template )
+    class(slisvg_slice_vector_t) <io> :: vector
+    type(slisvg_sketch_t) <io> :: slisvg_sketch
     char(len=*) <optin> :: arrow_template
     !!>
         o--o--o--o--o--o--o--o--o <== Original (=finest) grid
@@ -136,26 +136,26 @@ contains
       stride = 2**skip
       write(tag_for_group,"(a,i1)") "arrow-skip", skip
         ! "arrow-skip4, arrow-skip3, ...
-      call vv_sketch.group_push( id=trim(tag_for_group),  &
-                                 visibility="visible" )
+      call slisvg_sketch.group_push( id=trim(tag_for_group),  &
+                                     visibility="visible" )
         do j = 1, vector.mesh.vert.nv, stride
           do i = 1, vector.mesh.vert.nu, stride
             if ( vector.mesh.vert.flag(i,j) == 'o' ) cycle
             if ( .not. pass_to_sketch_flag(i,j) ) then
               u = vector.mesh.vert.pos_u(i)
               v = vector.mesh.vert.pos_v(j)
-              call vv_sketch.arrow( u, v, &
-                                    vector.comp_u(i,j), &
-                                    vector.comp_v(i,j), &
-                                    arrow_template )
+              call slisvg_sketch.arrow( u, v, &
+                                        vector.comp_u(i,j), &
+                                        vector.comp_v(i,j), &
+                                        arrow_template )
               pass_to_sketch_flag(i,j) = .true.
             end if
           end do
         end do
-      call vv_sketch.group_pop()
+      call slisvg_sketch.group_pop()
     end do
 
     deallocate(pass_to_sketch_flag)
-  end subroutine vv_slice_vector__vis_arrows
+  end subroutine slisvg_slice_vector__vis_arrows
 
-end module vv_slice_vector_m
+end module slisvg_slice_vector_m

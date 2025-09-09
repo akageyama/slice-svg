@@ -1,0 +1,236 @@
+module slisvg_color_m
+  use slisvg_m
+  implicit none
+  private
+  public :: SLISVG_COLOR__CONST
+  public :: slisvg_color__real_to_color
+  public :: slisvg_color__normalized_real_to_color
+
+
+  type, public :: slisvg_color_t ! basic color type
+    real :: r, g, b              ! float 0.0 to 1.0
+  contains
+    procedure :: to_code => slisvg_color__to_code
+    procedure :: to_byte => slisvg_color__to_byte
+  end type slisvg_color_t
+
+  type, public :: slisvg_color__byte_t 
+    integer :: r, g, b   ! 0 to 255
+  end type slisvg_color__byte_t
+
+  type, public :: slisvg_color__hsv_t
+    real :: hue, sat, val
+  contains
+    procedure :: to_rgb => slisvg_color__hsv__to_rgb
+  end type slisvg_color__hsv_t
+
+  type, public :: slisvg_color__const_t
+    type(slisvg_color_t) :: white        = slisvg_color_t(1.0,   1.0,   1.0)
+    type(slisvg_color_t) :: black        = slisvg_color_t(0.0,   0.0,   0.0)
+    type(slisvg_color_t) :: red          = slisvg_color_t(1.0,   0.0,   0.0)
+    !
+    type(slisvg_color_t) :: green        = slisvg_color_t(0.0,   1.0,   0.0)
+    type(slisvg_color_t) :: limegreen    = slisvg_color_t(0.196, 0.804, 0.196)
+    type(slisvg_color_t) :: darkgreen    = slisvg_color_t(0.0,   0.392, 0.0)
+    !
+    type(slisvg_color_t) :: blue         = slisvg_color_t(0.0,   0.0,   1.0)
+    !
+    type(slisvg_color_t) :: brown        = slisvg_color_t(0.647, 0.165, 0.165)
+    type(slisvg_color_t) :: sandybrown   = slisvg_color_t(0.957, 0.643, 0.376)
+    type(slisvg_color_t) :: wheatbrown   = slisvg_color_t(0.961, 0.871, 0.702)
+    type(slisvg_color_t) :: bisquebrown  = slisvg_color_t(1.0,   0.894, 0.769)
+    type(slisvg_color_t) :: hankyumaroon = slisvg_color_t(0.502, 0.000, 0.000)
+    !
+    type(slisvg_color_t) :: magenta      = slisvg_color_t(1.0,   0.0,   1.0)
+    type(slisvg_color_t) :: yellow       = slisvg_color_t(1.0,   1.0,   0.0)
+    type(slisvg_color_t) :: cyan         = slisvg_color_t(0.0,   1.0,   1.0)
+  contains
+    procedure, nopass :: gray => slisvg_color_const__gray
+    procedure, nopass :: test_print => slisvg_color__const__test_print
+  end type slisvg_color__const_t
+
+  type(slisvg_color__const_t), protected :: SLISVG_COLOR__CONST
+
+
+contains
+
+  function slisvg_color__hsv__to_rgb( this ) result(rgb)  
+    class(slisvg_color__hsv_t) <in> :: this
+    type(slisvg_color_t) :: rgb
+
+    real :: h, s, v
+    real :: r, g, b
+    integer :: hue6
+    real :: f, p, q, t
+  
+    h = this.hue
+    s = this.sat
+    v = this.val
+
+    call iClip( h )
+    call iClip( s )
+    call iClip( v )
+  
+    if( s == 0.0 ) then
+      rgb.r = v
+      rgb.g = v
+      rgb.b = v
+      return
+    end if
+  
+    if( h == 1.0 ) then
+      h = 0.0
+    end if
+  
+    h *= 6.0
+    hue6 = int(h)
+    f = h - hue6
+    p = v*(1.0-s)
+    q = v*(1.0-(s*f))
+    t = v*(1.0-(s*(1-f)))
+  
+    select case (hue6)
+      case (0) 
+        r=v; g=t; b=p
+      case (1) 
+        r=q; g=v; b=p
+      case (2) 
+        r=p; g=v; b=t
+      case (3) 
+        r=p; g=q; b=v
+      case (4) 
+        r=t; g=p; b=v
+      case (5) 
+        r=v; g=p; b=q
+      case default
+    end select
+  
+    rgb.r = r
+    rgb.g = g
+    rgb.b = b
+
+  contains
+  
+    subroutine iClip( val )
+      real <io> :: val
+  
+      if ( val < 0.0 ) val = 0.0
+      if ( val > 1.0 ) val = 1.0
+    end subroutine iClip
+
+  end function slisvg_color__hsv__to_rgb
+
+
+  function slisvg_color__real_to_color( vmin, vmax, val ) result(col)
+    real <in> :: vmin, vmax
+    real <in> :: val
+    type(slisvg_color_t) :: col
+
+    real :: val_norm
+
+    call slisvg__assert( vmax > vmin,  &
+                        '__MODLINE__: bad vmax/vmin. ' )
+    call slisvg__assert( vmax-vmin > 1.e-20,  &
+                        '__MODLINE__: vmax,vmin too close.' )
+
+    val_norm = (val-vmin)/(vmax-vmin)
+    col = slisvg_color__normalized_real_to_color( val_norm )
+  end function slisvg_color__real_to_color
+
+
+  function slisvg_color__normalized_real_to_color( val_norm ) result(col)
+    real <in> :: val_norm
+    type(slisvg_color_t) :: col
+
+    type(slisvg_color__hsv_t) :: hsv
+
+    call slisvg__assert( val_norm >= 0.0 .and. val_norm <= 1.0,  &
+                    '__MODLINE__: val_norm must be normalized.' )
+
+    hsv.hue = 0.3 + 0.5 * val_norm
+    hsv.sat = 0.7
+    hsv.val = 0.6
+    col = hsv.to_rgb()
+  end function slisvg_color__normalized_real_to_color
+
+
+  subroutine slisvg_color__const__test_print
+
+    type(slisvg_color_t) :: gray_0p5, gray_0p8
+
+    call slisvg__message( '===<SLISVG_COLOR__CONST available color list>===' )
+    call iPrint( '           white', SLISVG_COLOR__CONST.white   )
+    call iPrint( '           black', SLISVG_COLOR__CONST.black   )
+    call iPrint( '             red', SLISVG_COLOR__CONST.red     )
+    call iPrint( '           green', SLISVG_COLOR__CONST.green   )
+    call iPrint( '       limegreen', SLISVG_COLOR__CONST.limegreen )
+    call iPrint( '       darkgreen', SLISVG_COLOR__CONST.darkgreen )
+    call iPrint( '           brown', SLISVG_COLOR__CONST.brown )
+    call iPrint( '      sandybrown', SLISVG_COLOR__CONST.sandybrown )
+    call iPrint( '      wheatbrown', SLISVG_COLOR__CONST.wheatbrown )
+    call iPrint( '     bisquebrown', SLISVG_COLOR__CONST.bisquebrown )
+    call iPrint( '    hankyumaroon', SLISVG_COLOR__CONST.hankyumaroon )
+    call iPrint( '            blue', SLISVG_COLOR__CONST.blue    )
+    call iPrint( '         magenta', SLISVG_COLOR__CONST.magenta )
+    call iPrint( '          yellow', SLISVG_COLOR__CONST.yellow  )
+    call iPrint( '            cyan', SLISVG_COLOR__CONST.cyan    )
+
+    gray_0p5 = SLISVG_COLOR__CONST.gray( 0.5 )
+    gray_0p8 = SLISVG_COLOR__CONST.gray( 0.8 )
+
+    call iPrint( '    gray(0.5)', gray_0p5 )
+    call iPrint( '    gray(0.8)', gray_0p8 )
+    call slisvg__message( '===</SLISVG_COLOR__CONST available color list>===' )
+
+
+  contains
+
+    subroutine iPrint( message, col )
+      char(len=*) <in> :: message
+      type(slisvg_color_t) <in> :: col
+
+      char(len=7) :: code
+
+      code = col.to_code()
+      call slisvg__message( trim(message) // ' (' // code // ')' )
+    end subroutine iPrint        
+
+  end subroutine slisvg_color__const__test_print
+
+
+  function slisvg_color_const__gray( whiteness ) result(gray)
+    real <in> :: whiteness
+    type(slisvg_color_t) :: gray
+
+    real :: w
+    w = max(0.0, whiteness)
+    w = min(1.0, w)
+    gray = slisvg_color_t(w, w, w)
+  end function slisvg_color_const__gray
+
+
+  function slisvg_color__to_code( rgb ) result(code) 
+    class(slisvg_color_t) <in> :: rgb ! e.g., rgb=(1.0, 0.0, 0.0)
+    char(len=7) :: code               !          ==> '#FF0000'
+
+    type(slisvg_color__byte_t) :: byte
+
+    byte = rgb.to_byte()
+
+    write(code,"('#'3(Z2.2))") byte.r, byte.g, byte.b
+  end function slisvg_color__to_code
+
+
+  function slisvg_color__to_byte( rgb ) result(rgb_byte)
+    class(slisvg_color_t) <in> :: rgb      ! e.g., rgb=(1.0, 0.0, 0.0)
+    type(slisvg_color__byte_t) :: rgb_byte !            ==>(255, 0, 0)
+
+    integer :: r, g, b
+
+    r = nint(255*rgb.r)
+    g = nint(255*rgb.g)
+    b = nint(255*rgb.b)    
+    rgb_byte = slisvg_color__byte_t(r,g,b)
+  end function slisvg_color__to_byte
+
+end module slisvg_color_m

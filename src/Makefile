@@ -12,13 +12,13 @@ f90list := $(addsuffix .F90, $(filebase)) # => example.F90
 modlist := $(addsuffix .mod, $(filebase)) # => example.mod
 objlist := $(addsuffix .o, $(filebase)) # => example.o
 
-vv_eflist := $(shell ls vv*.ef)
-vv_filebase := $(basename $(notdir $(vv_eflist)))
-vv_f90list := $(addsuffix .F90,   $(vv_filebase))
-vv_modlist := $(addsuffix _m.mod, $(vv_filebase))
-vv_objlist := $(addsuffix .o,     $(vv_filebase))
-vv_basename := vv
-vv_lib := lib$(vv_basename).a
+slisvg_eflist := $(shell ls slisvg*.ef)
+slisvg_filebase := $(basename $(notdir $(slisvg_eflist)))
+slisvg_f90list := $(addsuffix .F90,   $(slisvg_filebase))
+slisvg_modlist := $(addsuffix _m.mod, $(slisvg_filebase))
+slisvg_objlist := $(addsuffix .o,     $(slisvg_filebase))
+slisvg_basename := slisvg
+slisvg_lib := lib$(slisvg_basename).a
 
 # ES3_HOME = /S/home00/G4013/y0394
 
@@ -47,12 +47,12 @@ FFLAGS += -fopenmp
 %.o: %.F90
 	$(FC) $(FFLAGS) -o $@ -c $<
 
-install: $(vv_lib)
+install: $(slisvg_lib)
 	mkdir -p ../lib
-	cp $(vv_lib) vv*.mod ../lib
+	cp $(slisvg_lib) slisvg*.mod ../lib
 
-$(vv_lib): $(vv_objlist) 
-	ar r $(vv_lib) $(vv_objlist) 
+$(slisvg_lib): $(slisvg_objlist) 
+	ar r $(slisvg_lib) $(slisvg_objlist) 
 
 
 -include depend_list.mk
@@ -65,5 +65,5 @@ depend_list.mk: *.ef
 clean:
 	rm -f depend_list.mk
 	rm -f *.o *.lst *.F90 *.mod *.L 
-	rm -f $(vv_lib)
+	rm -f $(slisvg_lib)
 

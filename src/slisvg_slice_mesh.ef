@@ -1,6 +1,6 @@
 !!>
 
-    vv_slice_mesh.ef
+    slisvg_slice_mesh.ef
 
     ## Two kinds of grid mesh info; vert(ex) and edge
 
@@ -153,24 +153,24 @@
 
 !!<
 
-module vv_slice_mesh_m
-  use vv_m
-  use vv_color_m
-  use vv_sketch_m
+module slisvg_slice_mesh_m
+  use slisvg_m
+  use slisvg_color_m
+  use slisvg_sketch_m
   implicit none
   private
-  public :: VV_SLICE_MESH__EDGE_MM,  &
-            VV_SLICE_MESH__EDGE_PP,  &
-            VV_SLICE_MESH__EDGE_MP,  &
-            VV_SLICE_MESH__EDGE_PM
+  public :: SLISVG_SLICE_MESH__EDGE_MM,  &
+            SLISVG_SLICE_MESH__EDGE_PP,  &
+            SLISVG_SLICE_MESH__EDGE_MP,  &
+            SLISVG_SLICE_MESH__EDGE_PM
 
-  integer <const> :: VV_SLICE_MESH__EDGE_MM = 0  ! --m---m-- 
-  integer <const> :: VV_SLICE_MESH__EDGE_MP = 1  ! --m---p-- 
-  integer <const> :: VV_SLICE_MESH__EDGE_PM = 2  ! --p---m-- 
-  integer <const> :: VV_SLICE_MESH__EDGE_PP = 3  ! --p---p-- 
+  integer <const> :: SLISVG_SLICE_MESH__EDGE_MM = 0  ! --m---m-- 
+  integer <const> :: SLISVG_SLICE_MESH__EDGE_MP = 1  ! --m---p-- 
+  integer <const> :: SLISVG_SLICE_MESH__EDGE_PM = 2  ! --p---m-- 
+  integer <const> :: SLISVG_SLICE_MESH__EDGE_PP = 3  ! --p---p-- 
 
 
-  type, public :: vv_slice_mesh_vert_t
+  type, public :: slisvg_slice_mesh_vert_t
     integer :: nu, nv
     real, dimension(:), allocatable :: pos_u
     real, dimension(:), allocatable :: pos_v
@@ -182,14 +182,14 @@ module vv_slice_mesh_m
                        !        'o' : outside the boundary
                        !        'b' : on the boundary
   contains
-    procedure :: initialize => vv_slice_mesh__vert_initialize 
-    procedure :: finalize => vv_slice_mesh__vert_finalize
-    procedure :: debug_print_flag => vv_slice_mesh_vert__debug_print_flag
-    procedure :: grid_flag_check => vv_slice_mesh_vert__grid_flag_check
-  end type vv_slice_mesh_vert_t  
+    procedure ::       initialize => slisvg_slice_mesh__vert_initialize 
+    procedure ::         finalize => slisvg_slice_mesh__vert_finalize
+    procedure :: debug_print_flag => slisvg_slice_mesh_vert__debug_print_flag
+    procedure ::  grid_flag_check => slisvg_slice_mesh_vert__grid_flag_check
+  end type slisvg_slice_mesh_vert_t  
 
 
-  type, public :: vv_slice_mesh_edge_t
+  type, public :: slisvg_slice_mesh_edge_t
     integer :: u_nu, u_nv
     integer :: v_nu, v_nv
     integer, dimension(:,:), allocatable :: u_quarter   ! {0,1,2,3}
@@ -207,26 +207,26 @@ module vv_slice_mesh_m
     logical, dimension(:,:), allocatable :: a_is_boundary
     logical, dimension(:,:), allocatable :: d_is_boundary
   contains
-    procedure :: initialize => vv_slice_mesh__edge_initialize
-    procedure :: finalize => vv_slice_mesh__edge_finalize
-    procedure :: set_quarter => vv_slice_mesh__edge_set_quarter
-    procedure :: erase => vv_slice_mesh_edge__erase
-  end type vv_slice_mesh_edge_t    
+    procedure :: initialize => slisvg_slice_mesh__edge_initialize
+    procedure :: finalize => slisvg_slice_mesh__edge_finalize
+    procedure :: set_quarter => slisvg_slice_mesh__edge_set_quarter
+    procedure :: erase => slisvg_slice_mesh_edge__erase
+  end type slisvg_slice_mesh_edge_t    
 
 
-  type, public :: vv_slice_mesh_boundary_vert_t
+  type, public :: slisvg_slice_mesh_boundary_vert_t
     integer :: num ! number of boundary verts
     integer, dimension(:), allocatable :: octa_direct
     integer, dimension(:), allocatable :: vi  ! vert position index
     integer, dimension(:), allocatable :: vj
   contains
-    procedure :: initialize => vv_slice_mesh__boundary_vert_initialize
-    procedure :: finalize => vv_slice_mesh__boundary_vert_finalize
-    procedure :: get_nth => vv_slice_mesh__boundary_vert_vij_to_nth
-  end type vv_slice_mesh_boundary_vert_t
+    procedure :: initialize => slisvg_slice_mesh__boundary_vert_initialize
+    procedure :: finalize => slisvg_slice_mesh__boundary_vert_finalize
+    procedure :: get_nth => slisvg_slice_mesh__boundary_vert_vij_to_nth
+  end type slisvg_slice_mesh_boundary_vert_t
 
 
-  type, public :: vv_slice_mesh_boundary_edge_t
+  type, public :: slisvg_slice_mesh_boundary_edge_t
     integer :: num ! number of boundary edges
     character, dimension(:), allocatable :: type  ! 'u'/'v'/'a'/'d'
     integer, dimension(:), allocatable :: ei  ! edge position index
@@ -235,44 +235,44 @@ module vv_slice_mesh_m
     real, dimension(:), allocatable :: cross_coord_u
     real, dimension(:), allocatable :: cross_coord_v
   contains
-    procedure :: initialize => vv_slice_mesh__boundary_edge_init
-    procedure :: finalize => vv_slice_mesh__boundary_edge_finalize
-    procedure :: erase => vv_slice_mesh__boundary_edge_erase
-    procedure :: get_nth => vv_slice_mesh__boundary_edge_eij_to_nth
-  end type vv_slice_mesh_boundary_edge_t
+    procedure :: initialize => slisvg_slice_mesh__boundary_edge_init
+    procedure :: finalize => slisvg_slice_mesh__boundary_edge_finalize
+    procedure :: erase => slisvg_slice_mesh__boundary_edge_erase
+    procedure :: get_nth => slisvg_slice_mesh__boundary_edge_eij_to_nth
+  end type slisvg_slice_mesh_boundary_edge_t
 
 
-  type, public :: vv_slice_mesh_boundary_t
-    type(vv_slice_mesh_boundary_vert_t) :: vert
-    type(vv_slice_mesh_boundary_edge_t) :: edge
+  type, public :: slisvg_slice_mesh_boundary_t
+    type(slisvg_slice_mesh_boundary_vert_t) :: vert
+    type(slisvg_slice_mesh_boundary_edge_t) :: edge
   contains
-    procedure :: initialize => vv_slice_mesh__boundary_initialize
-    procedure :: finalize => vv_slice_mesh__boundary_finalize
-    procedure :: make_list => vv_slice_mesh__boundary_make_list
-    procedure :: set_quarter => vv_slice_mesh__boundary_set_quarter
-  end type vv_slice_mesh_boundary_t
+    procedure :: initialize => slisvg_slice_mesh__boundary_initialize
+    procedure :: finalize => slisvg_slice_mesh__boundary_finalize
+    procedure :: make_list => slisvg_slice_mesh__boundary_make_list
+    procedure :: set_quarter => slisvg_slice_mesh__boundary_set_quarter
+  end type slisvg_slice_mesh_boundary_t
 
 
-  type, public :: vv_slice_mesh_t
-    type(vv_slice_mesh_vert_t) :: vert
-    type(vv_slice_mesh_edge_t) :: edge
-    type(vv_slice_mesh_boundary_t) :: boundary
+  type, public :: slisvg_slice_mesh_t
+    type(slisvg_slice_mesh_vert_t) :: vert
+    type(slisvg_slice_mesh_edge_t) :: edge
+    type(slisvg_slice_mesh_boundary_t) :: boundary
   contains
-    procedure :: initialize => vv_slice_mesh__initialize
-    procedure :: finalize => vv_slice_mesh__finalize
-    procedure :: draw => vv_slice_mesh__draw
-    procedure :: debug_print => vv_slice_mesh__debug_print
-  end type vv_slice_mesh_t
+    procedure :: initialize => slisvg_slice_mesh__initialize
+    procedure :: finalize => slisvg_slice_mesh__finalize
+    procedure :: draw => slisvg_slice_mesh__draw
+    procedure :: debug_print => slisvg_slice_mesh__debug_print
+  end type slisvg_slice_mesh_t
 
 
 contains
 
 
-  subroutine vv_slice_mesh__debug_print( mesh, vi_from, &
-                                               vi_to,   &
-                                               vj_from, &
-                                               vj_to )
-    class(vv_slice_mesh_t) <in> :: mesh
+  subroutine slisvg_slice_mesh__debug_print( mesh, vi_from, &
+                                                   vi_to,   &
+                                                   vj_from, &
+                                                   vj_to )
+    class(slisvg_slice_mesh_t) <in> :: mesh
     integer <in> :: vi_from, vi_to, vj_from, vj_to
 
     integer <const> :: PRINT_VERT_NUM = 50
@@ -322,7 +322,7 @@ contains
         ei = vi
         ej = vj
         if ( cc <= PRINT_LINE_LEN ) then
-          char_edge_u = vv__int_to_char1( mesh.edge.u_quarter(ei,ej) )
+          char_edge_u = slisvg__int_to_char1( mesh.edge.u_quarter(ei,ej) )
           line(cc:cc) = char_edge_u
           cc += 1  ! shift rightward
         end if
@@ -343,7 +343,7 @@ contains
           !!<
           ei = vi
           ej = vj - 1
-          char_edge_v = vv__int_to_char1( mesh.edge.v_quarter(ei,ej) )
+          char_edge_v = slisvg__int_to_char1( mesh.edge.v_quarter(ei,ej) )
           line(cc:cc) = char_edge_v
           cc += 1  ! shift rightward
           if ( cc <= PRINT_LINE_LEN ) then
@@ -354,18 +354,18 @@ contains
         print *, trim(line)
       end if
     end do
-  end subroutine vv_slice_mesh__debug_print 
+  end subroutine slisvg_slice_mesh__debug_print 
 
 
-  subroutine vv_slice_mesh__draw( mesh, vv_sketch,       &
-                                        width_in_pixels, &
-                                        line_color,      &
-                                        fill_color )
-    class(vv_slice_mesh_t) <in> :: mesh
-    type(vv_sketch_t) <io> :: vv_sketch
+  subroutine slisvg_slice_mesh__draw( mesh, slisvg_sketch,       &
+                                            width_in_pixels, &
+                                            line_color,      &
+                                            fill_color )
+    class(slisvg_slice_mesh_t) <in> :: mesh
+    type(slisvg_sketch_t) <io> :: slisvg_sketch
     real <optin> :: width_in_pixels
-    type(vv_color_t) <optin> :: line_color
-    type(vv_color_t) <optin> :: fill_color
+    type(slisvg_color_t) <optin> :: line_color
+    type(slisvg_color_t) <optin> :: fill_color
 
     call iCoordinates_min_max_rectangle( mesh.vert )
     call iBoundary_curve( mesh.boundary.vert, mesh.vert )
@@ -373,27 +373,27 @@ contains
   contains
 
     subroutine iCoordinates_min_max_rectangle( vert )
-      type(vv_slice_mesh_vert_t) <in> :: vert
+      type(slisvg_slice_mesh_vert_t) <in> :: vert
 
-      type(vv_sketch__sim_pos_t) :: ll ! lower left
-      type(vv_sketch__sim_pos_t) :: ur ! upper right
+      type(slisvg_sketch__sim_pos_t) :: ll ! lower left
+      type(slisvg_sketch__sim_pos_t) :: ur ! upper right
 
-      ll = vv_sketch__sim_pos_t(vert.u_min, vert.v_min)
-      ur = vv_sketch__sim_pos_t(vert.u_max, vert.v_max)
+      ll = slisvg_sketch__sim_pos_t(vert.u_min, vert.v_min)
+      ur = slisvg_sketch__sim_pos_t(vert.u_max, vert.v_max)
 
-      call vv_sketch.rectangle( ll, ur,  &
-                                line_width_in_pixel=2.0, &
-                                line_color=VV_COLOR__CONST.black )
+      call slisvg_sketch.rectangle( ll, ur,  &
+                                    line_width_in_pixel=2.0, &
+                                    line_color=SLISVG_COLOR__CONST.black )
     end subroutine iCoordinates_min_max_rectangle
 
 
     subroutine iBoundary_curve( b_vert, vert )
-      type(vv_slice_mesh_boundary_vert_t) <in> :: b_vert
-      type(vv_slice_mesh_vert_t) <in> :: vert
+      type(slisvg_slice_mesh_boundary_vert_t) <in> :: b_vert
+      type(slisvg_slice_mesh_vert_t) <in> :: vert
 
       character :: SVG_directive
       integer :: n, nvert, counter, vert_i, vert_j
-      type(vv_sketch__sim_pos_t), dimension(:), allocatable :: verts_sim
+      type(slisvg_sketch__sim_pos_t), dimension(:), allocatable :: verts_sim
       character, dimension(:), allocatable :: path_directive
       real :: u_sim, v_sim, dummy
       
@@ -417,32 +417,32 @@ contains
         vert_j = b_vert.vj(n)
         u_sim = vert.pos_u(vert_i)
         v_sim = vert.pos_v(vert_j)
-        verts_sim(counter) = vv_sketch__sim_pos_t(u_sim,v_sim)
+        verts_sim(counter) = slisvg_sketch__sim_pos_t(u_sim,v_sim)
       end do
 
       ! To close the path
       counter += 1
       path_directive(counter) = 'Z' ! Close the sub-path.
       dummy = 0.0  ! any number
-      verts_sim(counter) = vv_sketch__sim_pos_t( dummy, dummy )
-      call vv_sketch.path( counter,         &
-                           path_directive,  &
-                           verts_sim,       &
-                           width_in_pixels, &
-                           line_color,      &
-                           fill_color )      
+      verts_sim(counter) = slisvg_sketch__sim_pos_t( dummy, dummy )
+      call slisvg_sketch.path( counter,         &
+                               path_directive,  &
+                               verts_sim,       &
+                               width_in_pixels, &
+                               line_color,      &
+                               fill_color )      
       deallocate(verts_sim)
       deallocate(path_directive)
     end subroutine iBoundary_curve
 
-  end subroutine vv_slice_mesh__draw
+  end subroutine slisvg_slice_mesh__draw
 
 
-  subroutine vv_slice_mesh__initialize( mesh, nu, nv,      &
-                                              grid_pos_u,  &
-                                              grid_pos_v,  &
-                                              grid_flag )
-    class(vv_slice_mesh_t) <io> :: mesh
+  subroutine slisvg_slice_mesh__initialize( mesh, nu, nv,      &
+                                                  grid_pos_u,  &
+                                                  grid_pos_v,  &
+                                                  grid_flag )
+    class(slisvg_slice_mesh_t) <io> :: mesh
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
     real, dimension(nv) <in> :: grid_pos_v
@@ -462,20 +462,20 @@ contains
     call mesh.edge.initialize( mesh.vert )
     call mesh.boundary.initialize( mesh.vert,  &
                                    mesh.edge )
-  end subroutine vv_slice_mesh__initialize
+  end subroutine slisvg_slice_mesh__initialize
 
 
-  subroutine vv_slice_mesh__finalize( mesh )
-    class(vv_slice_mesh_t) <io> :: mesh
+  subroutine slisvg_slice_mesh__finalize( mesh )
+    class(slisvg_slice_mesh_t) <io> :: mesh
 
     call mesh.vert.finalize
     call mesh.edge.finalize
     call mesh.boundary.finalize
-  end subroutine vv_slice_mesh__finalize
+  end subroutine slisvg_slice_mesh__finalize
 
 
-  subroutine vv_slice_mesh_vert__debug_print_flag( vert )
-    class(vv_slice_mesh_vert_t) <in> :: vert
+  subroutine slisvg_slice_mesh_vert__debug_print_flag( vert )
+    class(slisvg_slice_mesh_vert_t) <in> :: vert
 
     integer <const> :: PRINT_LINE_LEN = 120
     char(len=PRINT_LINE_LEN) :: string
@@ -493,11 +493,11 @@ contains
       end do
       print *, string(1:num_columns_print)
     end do
-  end subroutine vv_slice_mesh_vert__debug_print_flag
+  end subroutine slisvg_slice_mesh_vert__debug_print_flag
 
 
-  subroutine vv_slice_mesh_vert__grid_flag_check( vert, debug_print_flag )
-    class(vv_slice_mesh_vert_t) <in> :: vert
+  subroutine slisvg_slice_mesh_vert__grid_flag_check( vert, debug_print_flag )
+    class(slisvg_slice_mesh_vert_t) <in> :: vert
     logical <optin> :: debug_print_flag
 
     call iCheck_flag_char( vert.nu, vert.nv, vert.flag )
@@ -527,7 +527,7 @@ contains
             case ('o')
               num_o += 1
             case default
-              call vv__fatal( "__MODLINE__ " //  &
+              call slisvg__fatal( "__MODLINE__ " //  &
                               "Grid flag char is not 'i'/'b'/'o'." )
           end select
         end do
@@ -535,61 +535,61 @@ contains
 
       if ( present(debug_print_flag) ) then
         if ( debug_print_flag ) then
-          call vv__message( 'vv_slice mesh vert nu = ', nu )
-          call vv__message( '                   nv = ', nv )
-          call vv__message( '        boundary vert = ', num_b )
-          call vv__message( '      inside boundary = ', num_i )
-          call vv__message( '     outside boundary = ', num_o )
+          call slisvg__message( 'slisvg_slice mesh vert nu = ', nu )
+          call slisvg__message( '                       nv = ', nv )
+          call slisvg__message( '            boundary vert = ', num_b )
+          call slisvg__message( '          inside boundary = ', num_i )
+          call slisvg__message( '         outside boundary = ', num_o )
         end if
       end if
 
-      call vv__assert( num_b > 0,               &
-                       "__MODLINE__ " //        &
-                       "No boundary point." )
-      call vv__assert( num_i > 0,               &
-                       "__MODLINE__ " //        &
-                       "No inner grid point. ")
-      call vv__assert( num_i+num_b+num_o == nu*nv,  &
-                       "__MODLINE__ " //            &
-                       "Something is very wrong." )
+      call slisvg__assert( num_b > 0,               &
+                           "__MODLINE__ " //        &
+                           "No boundary point." )
+      call slisvg__assert( num_i > 0,               &
+                           "__MODLINE__ " //        &
+                           "No inner grid point. ")
+      call slisvg__assert( num_i+num_b+num_o == nu*nv,  &
+                           "__MODLINE__ " //            &
+                           "Something is very wrong." )
 
     end subroutine iCheck_flag_char
 
-  end subroutine vv_slice_mesh_vert__grid_flag_check
+  end subroutine slisvg_slice_mesh_vert__grid_flag_check
 
 
-  subroutine vv_slice_mesh__boundary_initialize( boundary, vert,  &
-                                                           edge )
-    class(vv_slice_mesh_boundary_t) <io> :: boundary
-    type(vv_slice_mesh_vert_t) <io> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+  subroutine slisvg_slice_mesh__boundary_initialize( boundary, vert,  &
+                                                               edge )
+    class(slisvg_slice_mesh_boundary_t) <io> :: boundary
+    type(slisvg_slice_mesh_vert_t) <io> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
 
     call boundary.vert.initialize( vert.nu, vert.nv, vert.flag )
     call boundary.edge.initialize( boundary.vert.num )
     call boundary.make_list( vert, edge )
-  end subroutine vv_slice_mesh__boundary_initialize
+  end subroutine slisvg_slice_mesh__boundary_initialize
 
 
-  subroutine vv_slice_mesh__boundary_finalize( boundary )
-    class(vv_slice_mesh_boundary_t) <io> :: boundary
+  subroutine slisvg_slice_mesh__boundary_finalize( boundary )
+    class(slisvg_slice_mesh_boundary_t) <io> :: boundary
 
     call boundary.vert.finalize
     call boundary.edge.finalize
-  end subroutine vv_slice_mesh__boundary_finalize
+  end subroutine slisvg_slice_mesh__boundary_finalize
 
 
-  subroutine vv_slice_mesh__boundary_edge_erase( b_edge, nth )
-    class(vv_slice_mesh_boundary_edge_t) <io> :: b_edge
+  subroutine slisvg_slice_mesh__boundary_edge_erase( b_edge, nth )
+    class(slisvg_slice_mesh_boundary_edge_t) <io> :: b_edge
     integer <in> :: nth
 
-    b_edge.quarter(nth) = VV_SLICE_MESH__EDGE_MM
+    b_edge.quarter(nth) = SLISVG_SLICE_MESH__EDGE_MM
 
-  end subroutine vv_slice_mesh__boundary_edge_erase
+  end subroutine slisvg_slice_mesh__boundary_edge_erase
 
 
-  function vv_slice_mesh__boundary_vert_vij_to_nth( b_vert, vi,  &
-                                                            vj ) result(nth)
-    class(vv_slice_mesh_boundary_vert_t) <in> :: b_vert
+  function slisvg_slice_mesh__boundary_vert_vij_to_nth( b_vert, vi,  &
+                                                                vj ) result(nth)
+    class(slisvg_slice_mesh_boundary_vert_t) <in> :: b_vert
     integer <in> :: vi, vj
     integer :: nth
 
@@ -605,15 +605,15 @@ contains
         return
       end if
     end do
-    call vv__fatal( "__MODLINE__: Not a boundary vert." )
-  end function vv_slice_mesh__boundary_vert_vij_to_nth
+    call slisvg__fatal( "__MODLINE__: Not a boundary vert." )
+  end function slisvg_slice_mesh__boundary_vert_vij_to_nth
 
 
-  function vv_slice_mesh__boundary_edge_eij_to_nth( b_edge, edge_type, &
-                                                            ei,        &
-                                                            ej )       &
-                                                            result(nth)
-    class(vv_slice_mesh_boundary_edge_t) <in> :: b_edge
+  function slisvg_slice_mesh__boundary_edge_eij_to_nth( b_edge, edge_type, &
+                                                                ei,        &
+                                                                ej )       &
+                                                                result(nth)
+    class(slisvg_slice_mesh_boundary_edge_t) <in> :: b_edge
     character <in> :: edge_type
     integer <in> :: ei, ej
     integer :: nth
@@ -632,14 +632,14 @@ contains
         return
       end if
     end do
-    call vv__fatal( "__MODLINE__: Not a boundary vert." )
-  end function vv_slice_mesh__boundary_edge_eij_to_nth
+    call slisvg__fatal( "__MODLINE__: Not a boundary vert." )
+  end function slisvg_slice_mesh__boundary_edge_eij_to_nth
 
 
-  subroutine vv_slice_mesh__boundary_vert_initialize( b_vert, nu,  &
-                                                              nv,  &
-                                                              vert_flag )
-    class(vv_slice_mesh_boundary_vert_t) <out> :: b_vert
+  subroutine slisvg_slice_mesh__boundary_vert_initialize( b_vert, nu,  &
+                                                                  nv,  &
+                                                                  vert_flag )
+    class(slisvg_slice_mesh_boundary_vert_t) <out> :: b_vert
     integer <in> :: nu, nv
     character, dimension(nu,nv) <in> :: vert_flag
 
@@ -671,16 +671,16 @@ contains
       end do
     end function iCount_boundary_vert
 
-  end subroutine vv_slice_mesh__boundary_vert_initialize
+  end subroutine slisvg_slice_mesh__boundary_vert_initialize
 
 
-  subroutine vv_slice_mesh__boundary_vert_finalize( b_vert )
-    class(vv_slice_mesh_boundary_vert_t) <io> :: b_vert
+  subroutine slisvg_slice_mesh__boundary_vert_finalize( b_vert )
+    class(slisvg_slice_mesh_boundary_vert_t) <io> :: b_vert
 
     deallocate(b_vert.octa_direct)
     deallocate(b_vert.vi)
     deallocate(b_vert.vj)
-  end subroutine vv_slice_mesh__boundary_vert_finalize
+  end subroutine slisvg_slice_mesh__boundary_vert_finalize
 
 
   function find_direct_for_next_border_vert( vert_nu,      &
@@ -738,8 +738,8 @@ contains
       end if
     end do
 
-    call vv__fatal( "__MODLINE__: " //           &
-                    "Failed to find new octa_direct." )
+    call slisvg__fatal( "__MODLINE__: " //           &
+                        "Failed to find new octa_direct." )
 
   end function find_direct_for_next_border_vert
 
@@ -771,7 +771,7 @@ contains
         i -= 1
         j += 1
       case default
-        call vv__fatal( "__MODLINE__: case error." )
+        call slisvg__fatal( "__MODLINE__: case error." )
     end select
   end subroutine shift_vert_position_in_octa_direct
 
@@ -790,15 +790,15 @@ contains
 
     integer :: octa_direct_in_previous_jump
 
-    call vv__assert( flag(i,j) == 'b',          &
-                     "__MODLINE__: " //         &
-                     "This vert is not a border. Inconsistent..." )
+    call slisvg__assert( flag(i,j) == 'b',          &
+                         "__MODLINE__: " //         &
+                         "This vert is not a border. Inconsistent..." )
     call shift_vert_position_in_octa_direct( octa_direct, i, j )
 
-    call vv__assert( i >= 1 .and. i <= nu,  &
-                     "__MODLINE__: i-range error." )
-    call vv__assert( j >= 1 .and. j <= nv,  &
-                     "__MODLINE__: j-range error." )
+    call slisvg__assert( i >= 1 .and. i <= nu,  &
+                         "__MODLINE__: i-range error." )
+    call slisvg__assert( j >= 1 .and. j <= nv,  &
+                         "__MODLINE__: j-range error." )
 
     octa_direct_in_previous_jump = octa_direct
 
@@ -888,17 +888,17 @@ contains
         ej = vj             !        * .
         edge_type = 'd'     !    . . . *
       case default
-        call vv__fatal( "__MODLINE__: case error." )
+        call slisvg__fatal( "__MODLINE__: case error." )
     end select
 
   end subroutine get_edge_id
 
 
-  subroutine vv_slice_mesh__boundary_make_list( boundary, vert,  &
-                                                          edge )
-    class(vv_slice_mesh_boundary_t) <io> :: boundary
-    type(vv_slice_mesh_vert_t) <io> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+  subroutine slisvg_slice_mesh__boundary_make_list( boundary, vert,  &
+                                                              edge )
+    class(slisvg_slice_mesh_boundary_t) <io> :: boundary
+    type(slisvg_slice_mesh_vert_t) <io> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
 
     integer :: vi, vj, start_vi, start_vj
     integer :: ei, ej
@@ -953,13 +953,13 @@ contains
                                           vert.flag )
     end do
 
-    call vv__assert( vi == start_vi .and. vj == start_vj,  &
+    call slisvg__assert( vi == start_vi .and. vj == start_vj,  &
                      "__MODLINE__: Failed to close boundary." )
 
   contains
 
     subroutine iSet_boundary_mark_on_mesh_edge( edge, type, ei, ej )
-      type(vv_slice_mesh_edge_t) <io> :: edge
+      type(slisvg_slice_mesh_edge_t) <io> :: edge
       character <in> :: type
       integer <in> :: ei, ej
 
@@ -973,8 +973,8 @@ contains
         case ('d')
           edge.d_is_boundary(ei,ej) = .true.
         case default
-          call vv__fatal( "__MODLINE__: " //  &
-                          "case error." )
+          call slisvg__fatal( "__MODLINE__: " //  &
+                              "case error." )
       end select
     end subroutine iSet_boundary_mark_on_mesh_edge
 
@@ -1050,11 +1050,11 @@ contains
         end do
       end do
 
-      call vv__fatal( "__MODLINE__: " //  &
-                      "Failed to find a start vert." )
+      call slisvg__fatal( "__MODLINE__: " //  &
+                          "Failed to find a start vert." )
     end subroutine iFind_border_vert_and_its_direct
 
-  end subroutine vv_slice_mesh__boundary_make_list
+  end subroutine slisvg_slice_mesh__boundary_make_list
 
 
   function linear_interpol( x1, x2, diff1, diff2 ) result( xi )
@@ -1079,8 +1079,8 @@ contains
     !!<
     real :: weight1, weight2
 
-    call vv__assert( diff1*diff2 >= 0.0,  &
-                     "__MODLINE__: Cannot interpolate." )
+    call slisvg__assert( diff1*diff2 >= 0.0,  &
+                         "__MODLINE__: Cannot interpolate." )
 
     if ( diff1+diff2 == 0.0  ) then
       ! which means diff1 = 0.0 & diff2 = 0.0
@@ -1092,8 +1092,8 @@ contains
       !  (2) diff1 < 0 & diff2 < 0
       weight1 = diff2 / (diff1 + diff2)
       weight2 = 1.0 - weight1
-      call vv__assert( weight1 >= 0.0 .and. weight1 <= 1.0,  &
-                       "__MODLINE__: weight1 is out of range." )
+      call slisvg__assert( weight1 >= 0.0 .and. weight1 <= 1.0,  &
+                           "__MODLINE__: weight1 is out of range." )
       xi = weight1 * x1 + weight2 * x2
     end if
   end function linear_interpol
@@ -1105,49 +1105,49 @@ contains
 
     if ( v1 >= level ) then
       if ( v2 >= level ) then
-        ans = VV_SLICE_MESH__EDGE_PP
+        ans = SLISVG_SLICE_MESH__EDGE_PP
       else
-        ans = VV_SLICE_MESH__EDGE_PM
+        ans = SLISVG_SLICE_MESH__EDGE_PM
       end if
     else
       if ( v2 >= level ) then
-        ans = VV_SLICE_MESH__EDGE_MP
+        ans = SLISVG_SLICE_MESH__EDGE_MP
       else
-        ans = VV_SLICE_MESH__EDGE_MM
+        ans = SLISVG_SLICE_MESH__EDGE_MM
       end if
     end if
   end function quarter_of_edge_ends
 
 
-  subroutine vv_slice_mesh_edge__erase( edge, edge_type,  &
-                                              ei, ej )
-    class(vv_slice_mesh_edge_t) <io> :: edge
+  subroutine slisvg_slice_mesh_edge__erase( edge, edge_type,  &
+                                                  ei, ej )
+    class(slisvg_slice_mesh_edge_t) <io> :: edge
     character <in> :: edge_type
     integer <in> :: ei, ej
     
     select case (edge_type)
       case ('u')
-        edge.u_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+        edge.u_quarter(ei,ej) = SLISVG_SLICE_MESH__EDGE_MM
       case ('v') 
-        edge.v_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+        edge.v_quarter(ei,ej) = SLISVG_SLICE_MESH__EDGE_MM
       case ('a') 
-        edge.a_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+        edge.a_quarter(ei,ej) = SLISVG_SLICE_MESH__EDGE_MM
       case ('d') 
-        edge.d_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+        edge.d_quarter(ei,ej) = SLISVG_SLICE_MESH__EDGE_MM
       case default
-        call vv__fatal( "__MODLINE__: " //  &
-                        "case error." )
+        call slisvg__fatal( "__MODLINE__: " //  &
+                            "case error." )
     end select
-  end subroutine vv_slice_mesh_edge__erase
+  end subroutine slisvg_slice_mesh_edge__erase
 
 
-  subroutine vv_slice_mesh__vert_initialize( vert, nu,          &
-                                                   nv,          &
-                                                   grid_pos_u,  &
-                                                   grid_pos_v,  &
-                                                   vert_flag,   &
-                                                   debug_print_flag )
-    class(vv_slice_mesh_vert_t) <out> :: vert
+  subroutine slisvg_slice_mesh__vert_initialize( vert, nu,          &
+                                                       nv,          &
+                                                       grid_pos_u,  &
+                                                       grid_pos_v,  &
+                                                       vert_flag,   &
+                                                       debug_print_flag )
+    class(slisvg_slice_mesh_vert_t) <out> :: vert
     integer <in> :: nu, nv
     real, dimension(nu) <in> :: grid_pos_u
     real, dimension(nv) <in> :: grid_pos_v
@@ -1201,10 +1201,10 @@ contains
     v_min = grid_pos_v(1)
     v_max = grid_pos_v(nv)
 
-    call vv__assert( u_max > u_min,       &
-                    '__MODLINE__: Invalid coords u.' )
-    call vv__assert( v_max > v_min,       &
-                    '__MODLINE__: Invalid coords v.' )
+    call slisvg__assert( u_max > u_min,       &
+                        '__MODLINE__: Invalid coords u.' )
+    call slisvg__assert( v_max > v_min,       &
+                        '__MODLINE__: Invalid coords v.' )
 
     vert.nu = nu
     vert.nv = nv
@@ -1237,23 +1237,23 @@ contains
         call vert.debug_print_flag
       end if
     end if
-  end subroutine vv_slice_mesh__vert_initialize
+  end subroutine slisvg_slice_mesh__vert_initialize
 
 
-  subroutine vv_slice_mesh__vert_finalize( vert )
-    class(vv_slice_mesh_vert_t) <io> :: vert
+  subroutine slisvg_slice_mesh__vert_finalize( vert )
+    class(slisvg_slice_mesh_vert_t) <io> :: vert
 
     deallocate(vert.pos_u)
     deallocate(vert.pos_v)
     deallocate(vert.flag)
     deallocate(vert.octa_direct)
-  end subroutine vv_slice_mesh__vert_finalize
+  end subroutine slisvg_slice_mesh__vert_finalize
 
 
 
-  subroutine vv_slice_mesh__edge_initialize( edge, vert )
-    class(vv_slice_mesh_edge_t) <out> :: edge
-    type(vv_slice_mesh_vert_t) <io> :: vert
+  subroutine slisvg_slice_mesh__edge_initialize( edge, vert )
+    class(slisvg_slice_mesh_edge_t) <out> :: edge
+    type(slisvg_slice_mesh_vert_t) <io> :: vert
     !!>
                             edgev                                    
                               |
@@ -1303,11 +1303,11 @@ contains
     allocate(edge.v_is_boundary(v_nu,v_nv))
     allocate(edge.a_is_boundary(u_nu,v_nv))
     allocate(edge.d_is_boundary(u_nu,v_nv))
-  end subroutine vv_slice_mesh__edge_initialize
+  end subroutine slisvg_slice_mesh__edge_initialize
 
 
-  subroutine vv_slice_mesh__edge_finalize( edge )
-    class(vv_slice_mesh_edge_t) <io> :: edge
+  subroutine slisvg_slice_mesh__edge_finalize( edge )
+    class(slisvg_slice_mesh_edge_t) <io> :: edge
 
     deallocate(edge.u_quarter)
     deallocate(edge.v_quarter)
@@ -1319,11 +1319,11 @@ contains
     deallocate(edge.a_cross_coord_v)
     deallocate(edge.d_cross_coord_u)
     deallocate(edge.d_cross_coord_v)
-  end subroutine vv_slice_mesh__edge_finalize
+  end subroutine slisvg_slice_mesh__edge_finalize
 
 
-  subroutine vv_slice_mesh__boundary_edge_init( b_edge, num_boundary_vert )
-    class(vv_slice_mesh_boundary_edge_t) <out> :: b_edge
+  subroutine slisvg_slice_mesh__boundary_edge_init( b_edge, num_boundary_vert )
+    class(slisvg_slice_mesh_boundary_edge_t) <out> :: b_edge
     integer <in> :: num_boundary_vert
 
     b_edge.num = num_boundary_vert
@@ -1334,11 +1334,11 @@ contains
     allocate(      b_edge.quarter(b_edge.num))
     allocate(b_edge.cross_coord_u(b_edge.num))
     allocate(b_edge.cross_coord_v(b_edge.num))
-  end subroutine vv_slice_mesh__boundary_edge_init
+  end subroutine slisvg_slice_mesh__boundary_edge_init
 
 
-  subroutine vv_slice_mesh__boundary_edge_finalize( b_edge )
-    class(vv_slice_mesh_boundary_edge_t) <io> :: b_edge
+  subroutine slisvg_slice_mesh__boundary_edge_finalize( b_edge )
+    class(slisvg_slice_mesh_boundary_edge_t) <io> :: b_edge
 
     deallocate(b_edge.type)
     deallocate(b_edge.ei)
@@ -1346,17 +1346,17 @@ contains
     deallocate(b_edge.quarter)
     deallocate(b_edge.cross_coord_u)
     deallocate(b_edge.cross_coord_v)
-  end subroutine vv_slice_mesh__boundary_edge_finalize
+  end subroutine slisvg_slice_mesh__boundary_edge_finalize
 
 
   subroutine set_edge_quarter( vert,       &
                                val_vert,   &
                                level,      &
                                edge )
-    type(vv_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     !!>
         Here we compare the scalar field value "vert_val" 
         on each vertex at (i,j) 
@@ -1498,7 +1498,7 @@ contains
         val_right = val_vert(vi_right, vj)  ! right vert
         if ( vert.flag(vi_left, vj) == 'o' .or.  &
              vert.flag(vi_right,vj) == 'o' ) then
-          edge.u_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+          edge.u_quarter(ei,ej) = SLISVG_SLICE_MESH__EDGE_MM
         else
           edge.u_quarter(ei,ej) = quarter_of_edge_ends( val_left,   &
                                                         val_right,  &
@@ -1517,7 +1517,7 @@ contains
         val_upper = val_vert(vi,vj_upper)  ! upper vert
         if ( vert.flag(vi,vj_lower) == 'o' .or.  &
              vert.flag(vi,vj_upper) == 'o' ) then
-          edge.v_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+          edge.v_quarter(ei,ej) = SLISVG_SLICE_MESH__EDGE_MM
         else
           edge.v_quarter(ei,ej) = quarter_of_edge_ends( val_lower,  &
                                                         val_upper,  &
@@ -1537,7 +1537,7 @@ contains
         val_ur = val_vert(vi_ur,vj_ur)  ! upper-right vert
         if ( vert.flag(vi_ll,vj_ll) == 'o' .or.  &
              vert.flag(vi_ur,vj_ur) == 'o' ) then
-          edge.a_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+          edge.a_quarter(ei,ej) = SLISVG_SLICE_MESH__EDGE_MM
         else
           edge.a_quarter(ei,ej) = quarter_of_edge_ends( val_ll,  &
                                                         val_ur,  &
@@ -1557,7 +1557,7 @@ contains
         val_lr = val_vert(vi_lr,vj_lr)  ! upper-right vert
         if ( vert.flag(vi_ul,vj_ul) == 'o' .or.  &
              vert.flag(vi_lr,vj_lr) == 'o' ) then
-          edge.d_quarter(ei,ej) = VV_SLICE_MESH__EDGE_MM
+          edge.d_quarter(ei,ej) = SLISVG_SLICE_MESH__EDGE_MM
         else
           edge.d_quarter(ei,ej) = quarter_of_edge_ends( val_ul,  &
                                                         val_lr,  &
@@ -1568,11 +1568,11 @@ contains
   end subroutine set_edge_quarter
 
 
-  subroutine vv_slice_mesh__edge_set_quarter( edge, vert,       &
-                                                    val_vert,   &
-                                                    level )
-    class(vv_slice_mesh_edge_t) <io> :: edge
-    type(vv_slice_mesh_vert_t) <in> :: vert
+  subroutine slisvg_slice_mesh__edge_set_quarter( edge, vert,       &
+                                                        val_vert,   &
+                                                        level )
+    class(slisvg_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
 
@@ -1582,11 +1582,11 @@ contains
 
     call set_edge_quarter( vert, val_vert, level, edge )
     call set_edge_cross_coord( vert, val_vert, level, edge )
-    call vv__assert( minval(edge.u_quarter) >= 0,  &
-                     "__MODLINE__: You missed some edge_u.quarter" )
-    call vv__assert( minval(edge.v_quarter) >= 0,  &
-                     "__MODLINE__: You missed some edge_v.quarter" )
-  end subroutine vv_slice_mesh__edge_set_quarter  
+    call slisvg__assert( minval(edge.u_quarter) >= 0,  &
+                         "__MODLINE__: You missed some edge_u.quarter" )
+    call slisvg__assert( minval(edge.v_quarter) >= 0,  &
+                         "__MODLINE__: You missed some edge_v.quarter" )
+  end subroutine slisvg_slice_mesh__edge_set_quarter  
 
 
   function quarter_pm_and_mp_swap( quarter ) result(ans)
@@ -1594,10 +1594,10 @@ contains
     integer :: ans
 
     select case (quarter)
-      case (VV_SLICE_MESH__EDGE_PM)
-        ans = VV_SLICE_MESH__EDGE_MP
-      case (VV_SLICE_MESH__EDGE_MP ) 
-        ans = VV_SLICE_MESH__EDGE_PM
+      case (SLISVG_SLICE_MESH__EDGE_PM)
+        ans = SLISVG_SLICE_MESH__EDGE_MP
+      case (SLISVG_SLICE_MESH__EDGE_MP ) 
+        ans = SLISVG_SLICE_MESH__EDGE_PM
       case default
         ans = quarter
         ! do nothing for PP and MM cases
@@ -1605,11 +1605,11 @@ contains
   end function quarter_pm_and_mp_swap
 
 
-  subroutine vv_slice_mesh__boundary_set_quarter( boundary, vert,  &
-                                                            edge )
-    class(vv_slice_mesh_boundary_t) <io> :: boundary
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <in> :: edge
+  subroutine slisvg_slice_mesh__boundary_set_quarter( boundary, vert,  &
+                                                                edge )
+    class(slisvg_slice_mesh_boundary_t) <io> :: boundary
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <in> :: edge
 
     integer :: index_e           ! edge index
     integer :: index_v           ! vert index for both ends
@@ -1672,13 +1672,13 @@ contains
           pm_define_direct_reversed = .true.
           quarter = edge.d_quarter(ei,ej)
         case default
-          call vv__fatal( "__MODLINE__: " // &
+          call slisvg__fatal( "__MODLINE__: " // &
                           "case error." )
       end select
 
-      call vv__assert( quarter >= 0,  &
-                       "__MODLINE__: " //    &
-                       "Anomalous quarter value." )
+      call slisvg__assert( quarter >= 0,  &
+                           "__MODLINE__: " //    &
+                           "Anomalous quarter value." )
 
       if ( pm_define_direct_reversed ) then
         quarter_along_path = quarter_pm_and_mp_swap( quarter )
@@ -1687,64 +1687,64 @@ contains
       end if
 
       boundary.edge.quarter(index_e) = quarter_along_path
-      if ( quarter_along_path == VV_SLICE_MESH__EDGE_PM ) then
+      if ( quarter_along_path == SLISVG_SLICE_MESH__EDGE_PM ) then
         ! Only PM case.
         select case (octa_direct)
           case (0)
             cross_u = u
             cross_v = edge.v_cross_coord(ei,ej)
-            call vv__assert( cross_v /= NAN,     &
-                             "__MODLINE__: " //  &
-                             "not a PM edge?" )
+            call slisvg__assert( cross_v /= NAN,     &
+                                 "__MODLINE__: " //  &
+                                 "not a PM edge?" )
           case (1)
             cross_u = edge.a_cross_coord_u(ei,ej)
             cross_v = edge.a_cross_coord_v(ei,ej)
-            call vv__assert( cross_u /= NAN .and.       &
-                             cross_v /= NAN,            &
-                             "__MODLINE__: " //         &
-                             "not a PM edge?" )
+            call slisvg__assert( cross_u /= NAN .and.       &
+                                 cross_v /= NAN,            &
+                                 "__MODLINE__: " //         &
+                                 "not a PM edge?" )
           case (2)
             cross_u = edge.u_cross_coord(ei,ej)
             cross_v = v
-            call vv__assert( cross_u /= NAN,            &
-                             "__MODLINE__: " //         &
-                             "not a PM edge?" )
+            call slisvg__assert( cross_u /= NAN,            &
+                                 "__MODLINE__: " //         &
+                                 "not a PM edge?" )
           case (3)
             cross_u = edge.d_cross_coord_u(ei,ej)
             cross_v = edge.d_cross_coord_v(ei,ej)
-            call vv__assert( cross_u /= NAN .and.       &
-                             cross_v /= NAN,            &
-                             "__MODLINE__: " //         &
-                             "not a PM edge?" )
+            call slisvg__assert( cross_u /= NAN .and.       &
+                                 cross_v /= NAN,            &
+                                 "__MODLINE__: " //         &
+                                 "not a PM edge?" )
           case (4)
             cross_u = u
             cross_v = edge.v_cross_coord(ei,ej)
-            call vv__assert( cross_v /= NAN,            &
-                             "__MODLINE__: " //         &
-                             "not a PM edge?" )
+            call slisvg__assert( cross_v /= NAN,            &
+                                 "__MODLINE__: " //         &
+                                 "not a PM edge?" )
           case (5)
             cross_u = edge.a_cross_coord_u(ei,ej)
             cross_v = edge.a_cross_coord_v(ei,ej)
-            call vv__assert( cross_u /= NAN .and.       &
-                             cross_v /= NAN,            &
-                             "__MODLINE__: " //         &
-                             "not a PM edge?" )
+            call slisvg__assert( cross_u /= NAN .and.       &
+                                 cross_v /= NAN,            &
+                                 "__MODLINE__: " //         &
+                                 "not a PM edge?" )
           case (6)
             cross_u = edge.u_cross_coord(ei,ej)
             cross_v = v
-            call vv__assert( cross_u /= NAN,            &
-                             "__MODLINE__: " //         &
-                             "not a PM edge?" )
+            call slisvg__assert( cross_u /= NAN,            &
+                                 "__MODLINE__: " //         &
+                                 "not a PM edge?" )
           case (7)
             cross_u = edge.d_cross_coord_u(ei,ej)
             cross_v = edge.d_cross_coord_v(ei,ej)
-            call vv__assert( cross_u /= NAN .and.       &
-                             cross_v /= NAN,            &
-                             "__MODLINE__: " //         &
-                             "not a PM edge?" )
+            call slisvg__assert( cross_u /= NAN .and.       &
+                                 cross_v /= NAN,            &
+                                 "__MODLINE__: " //         &
+                                 "not a PM edge?" )
           case default
-            call vv__fatal( "__MODLINE__: " //          &
-                            "case error." )
+            call slisvg__fatal( "__MODLINE__: " //          &
+                                "case error." )
         end select
 
         boundary.edge.cross_coord_u(index_e) = cross_u
@@ -1752,14 +1752,14 @@ contains
       end if        
     end do    
 
-  end subroutine vv_slice_mesh__boundary_set_quarter  
+  end subroutine slisvg_slice_mesh__boundary_set_quarter  
 
 
   subroutine set_edge_cross_coord( vert, val_vert, level, edge )
-    type(vv_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
     real, dimension(vert.nu,vert.nv) <in> :: val_vert
     real <in> :: level
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     !!> 
             .                                 .
               .       u2            u1      . 
@@ -1803,14 +1803,14 @@ contains
         vi_right = ei + 1
         vj = ej
         quarter = edge.u_quarter(ei,ej)
-        if ( quarter == VV_SLICE_MESH__EDGE_MP .or.  &
-             quarter == VV_SLICE_MESH__EDGE_PM ) then
+        if ( quarter == SLISVG_SLICE_MESH__EDGE_MP .or.  &
+             quarter == SLISVG_SLICE_MESH__EDGE_PM ) then
           u_left  = vert.pos_u(vi_left)   ! left vert
           u_right = vert.pos_u(vi_right)  ! right vert
           diff_left  = val_vert(vi_left,vj) - level
           diff_right = level - val_vert(vi_right,vj)
-          call vv__assert( diff_left * diff_right >= 0.0,   &
-                           "__MODLINE__: Not a PM/MP edge?" )
+          call slisvg__assert( diff_left * diff_right >= 0.0,   &
+                               "__MODLINE__: Not a PM/MP edge?" )
           ! The following linter interpol is valid both
           ! for diff_left > 0 and < 0 cases.
           edge.u_cross_coord(ei,ej) = linear_interpol( u_left,      &
@@ -1828,14 +1828,14 @@ contains
         vj_lower = ej
         vj_upper = ej + 1
         quarter = edge.v_quarter(ei,ej)
-        if ( quarter == VV_SLICE_MESH__EDGE_MP  .or.  &
-             quarter == VV_SLICE_MESH__EDGE_PM ) then
+        if ( quarter == SLISVG_SLICE_MESH__EDGE_MP  .or.  &
+             quarter == SLISVG_SLICE_MESH__EDGE_PM ) then
           v_lower = vert.pos_v(vj_lower)  ! lower vert
           v_upper = vert.pos_v(vj_upper)  ! upper vert
           diff_lower = val_vert(vi,vj_lower) - level
           diff_upper = level - val_vert(vi,vj_upper)
-          call vv__assert( diff_lower * diff_upper >= 0.0,   &
-                           "__MODLINE__: Not a PM/MP edge?" )
+          call slisvg__assert( diff_lower * diff_upper >= 0.0,   &
+                               "__MODLINE__: Not a PM/MP edge?" )
           edge.v_cross_coord(ei,ej) = linear_interpol( v_lower,    &
                                                        v_upper,    &
                                                        diff_lower, &
@@ -1852,16 +1852,16 @@ contains
         vi_ur = ei + 1   ! upper-right
         vj_ur = ej + 1
         quarter = edge.a_quarter(ei,ej)
-        if ( quarter == VV_SLICE_MESH__EDGE_MP  .or.  &
-             quarter == VV_SLICE_MESH__EDGE_PM ) then
+        if ( quarter == SLISVG_SLICE_MESH__EDGE_MP  .or.  &
+             quarter == SLISVG_SLICE_MESH__EDGE_PM ) then
           u_ll = vert.pos_u(vi_ll)
           v_ll = vert.pos_v(vj_ll)
           u_ur = vert.pos_u(vi_ur)
           v_ur = vert.pos_v(vj_ur)
           diff_ll = val_vert(vi_ll,vj_ll) - level
           diff_ur = level - val_vert(vi_ur,vj_ur)
-          call vv__assert( diff_ll * diff_ur >= 0.0,   &
-                           "__MODLINE__: Not a PM/MP edge?" )
+          call slisvg__assert( diff_ll * diff_ur >= 0.0,   &
+                               "__MODLINE__: Not a PM/MP edge?" )
           edge.a_cross_coord_u(ei,ej) = linear_interpol( u_ll,    &
                                                          u_ur,    &
                                                          diff_ll, &
@@ -1882,16 +1882,16 @@ contains
         vi_lr = ei + 1   ! loer-right
         vj_lr = ej
         quarter = edge.d_quarter(ei,ej)
-        if ( quarter == VV_SLICE_MESH__EDGE_MP  .or.  &
-             quarter == VV_SLICE_MESH__EDGE_PM ) then
+        if ( quarter == SLISVG_SLICE_MESH__EDGE_MP  .or.  &
+             quarter == SLISVG_SLICE_MESH__EDGE_PM ) then
           u_ul = vert.pos_u(vi_ul)
           v_ul = vert.pos_v(vj_ul)
           u_lr = vert.pos_u(vi_lr)
           v_lr = vert.pos_v(vj_lr)
           diff_ul = val_vert(vi_ul,vj_ul) - level
           diff_lr = level - val_vert(vi_lr,vj_lr)
-          call vv__assert( diff_ul * diff_lr >= 0.0,   &
-                           "__MODLINE__: Not a PM/MP edge?" )
+          call slisvg__assert( diff_ul * diff_lr >= 0.0,   &
+                               "__MODLINE__: Not a PM/MP edge?" )
           edge.d_cross_coord_u(ei,ej) = linear_interpol( u_ul,    &
                                                          u_lr,    &
                                                          diff_ul, &
@@ -1906,4 +1906,4 @@ contains
 
   end subroutine set_edge_cross_coord
 
-end module vv_slice_mesh_m
+end module slisvg_slice_mesh_m

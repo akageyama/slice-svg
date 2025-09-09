@@ -1,6 +1,6 @@
-module vv_slice_isoline_m
-  use vv_m
-  use vv_slice_mesh_m
+module slisvg_slice_isoline_m
+  use slisvg_m
+  use slisvg_slice_mesh_m
   implicit none
   private
 
@@ -179,45 +179,45 @@ module vv_slice_isoline_m
                  start edge   
   !!< 
 
-  type, public :: vv_slice_isoline__element_t
+  type, public :: slisvg_slice_isoline__element_t
     character :: edge_type       ! 'u' or 'v' or 'a' or 'd'
     char(len=2) :: cruising_lane ! 'in' (bulk) or 'on' (border)
     integer :: ei, ej  ! edge id
     character :: path_go_toward  ! along the edge (for on border lane)
                                  ! perp to the edge (for bulk lane)
-  end type vv_slice_isoline__element_t
+  end type slisvg_slice_isoline__element_t
 
-  type, public :: vv_slice_isoline_t
+  type, public :: slisvg_slice_isoline_t
     integer :: vert_nu, vert_nv
     integer :: num ! total number of vertex points of the path
     logical :: start_edge_is_on_boundary
-    type(vv_slice_isoline__element_t) :: start
-    type(vv_slice_isoline__element_t) :: head
+    type(slisvg_slice_isoline__element_t) :: start
+    type(slisvg_slice_isoline__element_t) :: head
     real, dimension(:), allocatable :: list_u, list_v
   contains
-    procedure :: initialize => vv_slice_isoline__initialize
-    procedure :: trace_and_erase => vv_slice_isoline__trace_and_erase
+    procedure :: initialize => slisvg_slice_isoline__initialize
+    procedure :: trace_and_erase => slisvg_slice_isoline__trace_and_erase
     procedure :: set_start_edge  &
-                 => vv_slice_isoline__set_start_edge
-    procedure :: reset => vv_slice_isoline__reset
-    procedure :: is_closed => vv_slice_isoline__is_closed
+                 => slisvg_slice_isoline__set_start_edge
+    procedure :: reset => slisvg_slice_isoline__reset
+    procedure :: is_closed => slisvg_slice_isoline__is_closed
     procedure :: register_new_vert  &
-                          => vv_slice_isoline__register_new_vert
-    procedure, private :: vv_slice_isoline__replace_head_by_vert
-    procedure, private :: vv_slice_isoline__replace_head_direct
-    generic :: replace_head_edge => vv_slice_isoline__replace_head_by_vert, &
-                                    vv_slice_isoline__replace_head_direct
-  end type vv_slice_isoline_t
+                          => slisvg_slice_isoline__register_new_vert
+    procedure, private :: slisvg_slice_isoline__replace_head_by_vert
+    procedure, private :: slisvg_slice_isoline__replace_head_direct
+    generic :: replace_head_edge => slisvg_slice_isoline__replace_head_by_vert, &
+                                    slisvg_slice_isoline__replace_head_direct
+  end type slisvg_slice_isoline_t
 
 
 contains
 
 
-  subroutine vv_slice_isoline__replace_head_by_vert( this,         &
-                                                     vi, vj,       &
-                                                     octa_direct,  &
-                                                     cruising_lane )
-    class(vv_slice_isoline_t) <io> :: this
+  subroutine slisvg_slice_isoline__replace_head_by_vert( this,         &
+                                                         vi, vj,       &
+                                                         octa_direct,  &
+                                                         cruising_lane )
+    class(slisvg_slice_isoline_t) <io> :: this
     integer <in> :: vi, vj
     integer <in> :: octa_direct
     char(len=2) <in> :: cruising_lane
@@ -225,91 +225,91 @@ contains
     if ( cruising_lane == 'on' ) then
       select case ( octa_direct )
         case (0)
-          this.head = vv_slice_isoline__element_t( 'v', 'on',   vi,   vj, 'N' )
+          this.head = slisvg_slice_isoline__element_t( 'v', 'on',   vi,   vj, 'N' )
         case (1)    
-          this.head = vv_slice_isoline__element_t( 'a', 'on',   vi,   vj, 'N' )
+          this.head = slisvg_slice_isoline__element_t( 'a', 'on',   vi,   vj, 'N' )
         case (2)    
-          this.head = vv_slice_isoline__element_t( 'u', 'on',   vi,   vj, 'E' )
+          this.head = slisvg_slice_isoline__element_t( 'u', 'on',   vi,   vj, 'E' )
         case (3)  
-          this.head = vv_slice_isoline__element_t( 'd', 'on',   vi, vj-1, 'S' )
+          this.head = slisvg_slice_isoline__element_t( 'd', 'on',   vi, vj-1, 'S' )
         case (4)  
-          this.head = vv_slice_isoline__element_t( 'v', 'on',   vi, vj-1, 'S' )
+          this.head = slisvg_slice_isoline__element_t( 'v', 'on',   vi, vj-1, 'S' )
         case (5)
-          this.head = vv_slice_isoline__element_t( 'a', 'on', vi-1, vj-1, 'S' )
+          this.head = slisvg_slice_isoline__element_t( 'a', 'on', vi-1, vj-1, 'S' )
         case (6)
-          this.head = vv_slice_isoline__element_t( 'u', 'on', vi-1,   vj, 'W' )
+          this.head = slisvg_slice_isoline__element_t( 'u', 'on', vi-1,   vj, 'W' )
         case (7)  
-          this.head = vv_slice_isoline__element_t( 'd', 'on', vi-1,   vj, 'N' )
+          this.head = slisvg_slice_isoline__element_t( 'd', 'on', vi-1,   vj, 'N' )
         case default
-          call vv__fatal( '__MODLINE__: case error.' )
+          call slisvg__fatal( '__MODLINE__: case error.' )
       end select
     else if ( cruising_lane == 'in' ) then
       select case ( octa_direct )
         case (0)
-          this.head = vv_slice_isoline__element_t( 'v', 'in',   vi,   vj, 'W' )
+          this.head = slisvg_slice_isoline__element_t( 'v', 'in',   vi,   vj, 'W' )
         case (1)    
-          this.head = vv_slice_isoline__element_t( 'a', 'in',   vi,   vj, 'N' )
+          this.head = slisvg_slice_isoline__element_t( 'a', 'in',   vi,   vj, 'N' )
         case (2)    
-          this.head = vv_slice_isoline__element_t( 'u', 'in',   vi,   vj, 'N' )
+          this.head = slisvg_slice_isoline__element_t( 'u', 'in',   vi,   vj, 'N' )
         case (3)  
-          this.head = vv_slice_isoline__element_t( 'd', 'in',   vi, vj-1, 'N' )
+          this.head = slisvg_slice_isoline__element_t( 'd', 'in',   vi, vj-1, 'N' )
         case (4)  
-          this.head = vv_slice_isoline__element_t( 'v', 'in',   vi, vj-1, 'E' )
+          this.head = slisvg_slice_isoline__element_t( 'v', 'in',   vi, vj-1, 'E' )
         case (5)
-          this.head = vv_slice_isoline__element_t( 'a', 'in', vi-1, vj-1, 'S' )
+          this.head = slisvg_slice_isoline__element_t( 'a', 'in', vi-1, vj-1, 'S' )
         case (6)
-          this.head = vv_slice_isoline__element_t( 'u', 'in', vi-1,   vj, 'S' )
+          this.head = slisvg_slice_isoline__element_t( 'u', 'in', vi-1,   vj, 'S' )
         case (7)  
-          this.head = vv_slice_isoline__element_t( 'd', 'in', vi-1,   vj, 'S' )
+          this.head = slisvg_slice_isoline__element_t( 'd', 'in', vi-1,   vj, 'S' )
         case default
-          call vv__fatal( '__MODLINE__: case error.' )
+          call slisvg__fatal( '__MODLINE__: case error.' )
       end select
     else
-      call vv__fatal( '__MODLINE__: cruising_lane error.' )
+      call slisvg__fatal( '__MODLINE__: cruising_lane error.' )
     end if
 
-  end subroutine vv_slice_isoline__replace_head_by_vert
+  end subroutine slisvg_slice_isoline__replace_head_by_vert
 
 
-  subroutine vv_slice_isoline__replace_head_direct( this,                  &
+  subroutine slisvg_slice_isoline__replace_head_direct( this,                  &
                                                     edge_type,             &
                                                     cruising_lane,         &
                                                     ei, ej,                &
                                                     cross_this_edge_toward )
-    class(vv_slice_isoline_t) <io> :: this
+    class(slisvg_slice_isoline_t) <io> :: this
     character <in> :: edge_type
     char(len=2) <in> :: cruising_lane
     integer <in> :: ei, ej
     character <in> :: cross_this_edge_toward
 
-    this.head = vv_slice_isoline__element_t( edge_type,               &
-                                             cruising_lane,           &
-                                             ei,                      &
-                                             ej,                      &
-                                             cross_this_edge_toward )
-  end subroutine vv_slice_isoline__replace_head_direct
+    this.head = slisvg_slice_isoline__element_t( edge_type,               &
+                                                 cruising_lane,           &
+                                                 ei,                      &
+                                                 ej,                      &
+                                                 cross_this_edge_toward )
+  end subroutine slisvg_slice_isoline__replace_head_direct
 
 
-  subroutine vv_slice_isoline__register_new_vert( this, u, v )
-    class(vv_slice_isoline_t) <io> :: this
+  subroutine slisvg_slice_isoline__register_new_vert( this, u, v )
+    class(slisvg_slice_isoline_t) <io> :: this
     real <in> :: u, v
 
     integer :: n
     n = this.num + 1
-    call vv__assert( n <= size(this.list_u,dim=1),  &
-                    '__MODLINE__: Increase array size of path_vert.' )
+    call slisvg__assert( n <= size(this.list_u,dim=1),  &
+                        '__MODLINE__: Increase array size of path_vert.' )
 
     this.list_u(n) = u
     this.list_v(n) = v
     this.num = n
-  end subroutine vv_slice_isoline__register_new_vert
+  end subroutine slisvg_slice_isoline__register_new_vert
 
 
   subroutine jump_to_u_edge_pm_if_possible( path, vert, edge, jumped,  &
                                             ei, ej )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei, ej
 
@@ -330,11 +330,11 @@ contains
     vi_left  = ei
     vj = ej
 
-    if ( edge.u_quarter(ei,ej) == VV_SLICE_MESH__EDGE_PM ) then
+    if ( edge.u_quarter(ei,ej) == SLISVG_SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = edge.u_cross_coord(ei,ej)
       v = vert.pos_v(vj)
-      call vv__assert( u /= NAN, "__MODLINE__: Invalid cross coord." )
+      call slisvg__assert( u /= NAN, "__MODLINE__: Invalid cross coord." )
       call path.register_new_vert( u, v )
 
       if ( edge.u_is_boundary(ei,ej) ) then
@@ -343,10 +343,10 @@ contains
         !          .   *   .
         !          .     * .
         octa_direct_along_border = vert.octa_direct(vi_left,vj)
-        call vv__assert( octa_direct_along_border >= 0 .and. &
-                         octa_direct_along_border <= 7,      &
-                         "__MODLINE__: " //                  &
-                         "Not a border vert?" )
+        call slisvg__assert( octa_direct_along_border >= 0 .and. &
+                             octa_direct_along_border <= 7,      &
+                             "__MODLINE__: " //                  &
+                             "Not a border vert?" )
         call path.replace_head_edge( vi_left,                  &
                                      vj,                       &
                                      octa_direct_along_border, &
@@ -367,9 +367,9 @@ contains
 
   subroutine jump_to_u_edge_mp_if_possible( path, vert, edge, jumped,  &
                                             ei, ej )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei, ej
 
@@ -382,11 +382,11 @@ contains
     vi_right = ei + 1
     vj = ej
 
-    if ( edge.u_quarter(ei,ej) == VV_SLICE_MESH__EDGE_MP ) then
+    if ( edge.u_quarter(ei,ej) == SLISVG_SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = edge.u_cross_coord(ei,ej)
       v = vert.pos_v(vj)
-      call vv__assert( u /= NAN, "__MODLINE__: Invalid cross coord." )
+      call slisvg__assert( u /= NAN, "__MODLINE__: Invalid cross coord." )
       call path.register_new_vert( u, v )
       if ( edge.u_is_boundary(ei,ej) ) then
         !
@@ -395,10 +395,10 @@ contains
         !    - - M - * * P n n n
         !
         octa_direct_along_border = vert.octa_direct(vi_right,vj)
-        call vv__assert( octa_direct_along_border >= 0 .and. &
-                         octa_direct_along_border <= 7,      &
-                         "__MODLINE__: " //                  &
-                         "Not a border vert?" )
+        call slisvg__assert( octa_direct_along_border >= 0 .and. &
+                             octa_direct_along_border <= 7,      &
+                             "__MODLINE__: " //                  &
+                             "Not a border vert?" )
         call path.replace_head_edge( vi_right,                 &
                                      vj,                       &
                                      octa_direct_along_border, &
@@ -421,9 +421,9 @@ contains
   subroutine jump_to_d_edge_pm_if_possible( path, vert,    &
                                             edge, jumped,  &
                                             ei, ej )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei, ej
 
@@ -450,22 +450,22 @@ contains
     vi_ul = ei
     vj_ul = ej + 1
 
-    call vv__assert( edge.d_is_boundary(ei,ej), &
-                     "assuming now d_edge is boundary." )
+    call slisvg__assert( edge.d_is_boundary(ei,ej), &
+                         "assuming now d_edge is boundary." )
          
-    if ( edge.d_quarter(ei,ej) == VV_SLICE_MESH__EDGE_PM ) then
+    if ( edge.d_quarter(ei,ej) == SLISVG_SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = edge.d_cross_coord_u(ei,ej)
       v = edge.d_cross_coord_v(ei,ej)
-      call vv__assert( u /= NAN .and. v /= NAN,     &
-                       "__MODLINE__: " //           &
-                       "Invalid cross coord." )
+      call slisvg__assert( u /= NAN .and. v /= NAN,     &
+                           "__MODLINE__: " //           &
+                           "Invalid cross coord." )
       call path.register_new_vert( u, v )
       octa_direct_along_border = vert.octa_direct(vi_ul,vj_ul)
-      call vv__assert( octa_direct_along_border >= 0 .and. &
-                       octa_direct_along_border <= 7,      &
-                       "__MODLINE__: " //                  &
-                       "Not a border vert?" )
+      call slisvg__assert( octa_direct_along_border >= 0 .and. &
+                           octa_direct_along_border <= 7,      &
+                           "__MODLINE__: " //                  &
+                           "Not a border vert?" )
       call path.replace_head_edge( vi_ul,                    &
                                    vj_ul,                    &
                                    octa_direct_along_border, &
@@ -478,9 +478,9 @@ contains
   subroutine jump_to_d_edge_mp_if_possible( path, vert,    &
                                             edge, jumped,  &
                                             ei, ej )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei, ej
 
@@ -504,25 +504,25 @@ contains
                             \____ vert(vi+1,vj)
     !!<
 
-    call vv__assert( edge.d_is_boundary(ei,ej), &
-                     "__MODLINE__: " //         &
-                     "assuming now d_edge is boundary." )
+    call slisvg__assert( edge.d_is_boundary(ei,ej), &
+                         "__MODLINE__: " //         &
+                         "assuming now d_edge is boundary." )
     vi_lr = ei + 1
     vj_lr = ej 
 
-    if ( edge.d_quarter(ei,ej) == VV_SLICE_MESH__EDGE_MP ) then
+    if ( edge.d_quarter(ei,ej) == SLISVG_SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = edge.d_cross_coord_u(ei,ej)
       v = edge.d_cross_coord_v(ei,ej)
-      call vv__assert( u /= NAN .and. v /= NAN,     &
+      call slisvg__assert( u /= NAN .and. v /= NAN,     &
                        "__MODLINE__: " //           &
                        "Invalid cross coord." )
       call path.register_new_vert( u, v )
       octa_direct_along_border = vert.octa_direct(vi_lr,vj_lr)
-        call vv__assert( octa_direct_along_border >= 0 .and. &
-                         octa_direct_along_border <= 7,      &
-                         "__MODLINE__: " //                  &
-                         "Not a border vert?" )
+        call slisvg__assert( octa_direct_along_border >= 0 .and. &
+                             octa_direct_along_border <= 7,      &
+                             "__MODLINE__: " //                  &
+                             "Not a border vert?" )
       call path.replace_head_edge( vi_lr,                    &
                                    vj_lr,                    &
                                    octa_direct_along_border, &
@@ -535,9 +535,9 @@ contains
   subroutine jump_to_a_edge_pm_if_possible( path, vert,    &
                                             edge, jumped,  &
                                             ei, ej )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei, ej
 
@@ -562,22 +562,22 @@ contains
     vi_ll = ei
     vj_ll = ej
 
-    call vv__assert( edge.a_is_boundary(ei,ej), &
-                     "assuming now a_edge is boundary." )
+    call slisvg__assert( edge.a_is_boundary(ei,ej), &
+                         "assuming now a_edge is boundary." )
          
-    if ( edge.a_quarter(ei,ej) == VV_SLICE_MESH__EDGE_PM ) then
+    if ( edge.a_quarter(ei,ej) == SLISVG_SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = edge.a_cross_coord_u(ei,ej)
       v = edge.a_cross_coord_v(ei,ej)
-      call vv__assert( u /= NAN .and. v /= NAN,     &
-                       "__MODLINE__: " //           &
-                       "Invalid cross coord." )
+      call slisvg__assert( u /= NAN .and. v /= NAN,     &
+                           "__MODLINE__: " //           &
+                           "Invalid cross coord." )
       call path.register_new_vert( u, v )
       octa_direct_along_border = vert.octa_direct(vi_ll,vj_ll)
-        call vv__assert( octa_direct_along_border >= 0 .and. &
-                         octa_direct_along_border <= 7,      &
-                         "__MODLINE__: " //                  &
-                         "Not a border vert?" )
+        call slisvg__assert( octa_direct_along_border >= 0 .and. &
+                             octa_direct_along_border <= 7,      &
+                             "__MODLINE__: " //                  &
+                             "Not a border vert?" )
       call path.replace_head_edge( vi_ll,                    &
                                    vj_ll,                    &
                                    octa_direct_along_border, &
@@ -590,9 +590,9 @@ contains
   subroutine jump_to_a_edge_mp_if_possible( path, vert,    &
                                             edge, jumped,  &
                                             ei, ej )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei, ej
 
@@ -617,22 +617,22 @@ contains
     vi_ur = ei + 1
     vj_ur = ej + 1
 
-    call vv__assert( edge.a_is_boundary(ei,ej), &
-                     "assuming now a_edge is boundary." )
+    call slisvg__assert( edge.a_is_boundary(ei,ej), &
+                         "assuming now a_edge is boundary." )
          
-    if ( edge.a_quarter(ei,ej) == VV_SLICE_MESH__EDGE_MP ) then
+    if ( edge.a_quarter(ei,ej) == SLISVG_SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = edge.a_cross_coord_u(ei,ej)
       v = edge.a_cross_coord_v(ei,ej)
-      call vv__assert( u /= NAN .and. v /= NAN,     &
-                       "__MODLINE__: " //           &
-                       "Invalid cross coord." )
+      call slisvg__assert( u /= NAN .and. v /= NAN,     &
+                           "__MODLINE__: " //           &
+                           "Invalid cross coord." )
       call path.register_new_vert( u, v )
       octa_direct_along_border = vert.octa_direct(vi_ur,vj_ur)
-        call vv__assert( octa_direct_along_border >= 0 .and. &
-                         octa_direct_along_border <= 7,      &
-                         "__MODLINE__: " //                  &
-                         "Not a border vert?" )
+        call slisvg__assert( octa_direct_along_border >= 0 .and. &
+                             octa_direct_along_border <= 7,      &
+                             "__MODLINE__: " //                  &
+                             "Not a border vert?" )
       call path.replace_head_edge( vi_ur,                    &
                                    vj_ur,                    &
                                    octa_direct_along_border, &
@@ -644,9 +644,9 @@ contains
 
   subroutine jump_to_v_edge_pm_if_possible( path, vert, edge, jumped,  &
                                             ei, ej )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei, ej
 
@@ -658,11 +658,11 @@ contains
 
     vi = ei
     vj_lower = ej
-    if ( edge.v_quarter(ei,ej) == VV_SLICE_MESH__EDGE_PM ) then
+    if ( edge.v_quarter(ei,ej) == SLISVG_SLICE_MESH__EDGE_PM ) then
       jumped = .true.
       u = vert.pos_u(vi)
       v = edge.v_cross_coord(ei,ej)
-      call vv__assert( v /= NAN, "__MODLINE__: Invalid cross coord." )
+      call slisvg__assert( v /= NAN, "__MODLINE__: Invalid cross coord." )
       call path.register_new_vert( u, v )
 
       if ( edge.v_is_boundary(ei,ej) ) then
@@ -677,10 +677,10 @@ contains
         !      n       .
         !
         octa_direct_along_border = vert.octa_direct(vi,vj_lower)
-        call vv__assert( octa_direct_along_border >= 0 .and. &
-                         octa_direct_along_border <= 7,      &
-                         "__MODLINE__: " //                  &
-                         "Not a border vert?" )
+        call slisvg__assert( octa_direct_along_border >= 0 .and. &
+                             octa_direct_along_border <= 7,      &
+                             "__MODLINE__: " //                  &
+                             "Not a border vert?" )
         call path.replace_head_edge( vi,                       &
                                      vj_lower,                 &
                                      octa_direct_along_border, &
@@ -704,9 +704,9 @@ contains
 
   subroutine jump_to_v_edge_mp_if_possible( path, vert, edge, jumped,  &
                                             ei, ej )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     logical <io> :: jumped
     integer <in> :: ei, ej
 
@@ -719,11 +719,11 @@ contains
     vi = ei
     vj_upper = ej + 1
 
-    if ( edge.v_quarter(ei,ej) == VV_SLICE_MESH__EDGE_MP ) then
+    if ( edge.v_quarter(ei,ej) == SLISVG_SLICE_MESH__EDGE_MP ) then
       jumped = .true.
       u = vert.pos_u(vi)
       v = edge.v_cross_coord(ei,ej)
-      call vv__assert( v /= NAN, "__MODLINE__: Invalid cross coord." )
+      call slisvg__assert( v /= NAN, "__MODLINE__: Invalid cross coord." )
       call path.register_new_vert( u, v ) 
       if ( edge.v_is_boundary(ei,ej) ) then
         !             
@@ -737,10 +737,10 @@ contains
         !   .  *    .       
         !
         octa_direct_along_border = vert.octa_direct(vi,vj_upper)
-        call vv__assert( octa_direct_along_border >= 0 .and. &
-                         octa_direct_along_border <= 7,      &
-                         "__MODLINE__: " //                  &
-                         "Not a border vert?" )
+        call slisvg__assert( octa_direct_along_border >= 0 .and. &
+                             octa_direct_along_border <= 7,      &
+                             "__MODLINE__: " //                  &
+                             "Not a border vert?" )
         call path.replace_head_edge( vi,                       &
                                      vj_upper,                 &
                                      octa_direct_along_border, &
@@ -816,18 +816,18 @@ contains
         ei = vi - 1
         ej = vj
       case default
-        call vv__fatal( "__MODLINE__ " //  &
-                        "case error." )
+        call slisvg__fatal( "__MODLINE__ " //  &
+                            "case error." )
     end select
     
   end subroutine leave_from_boundary
 
 
   subroutine one_step_along_boundary( path, vert, edge, boundary, nth )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
-    type(vv_slice_mesh_boundary_t) <io> :: boundary
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_mesh_boundary_t) <io> :: boundary
     integer <io> :: nth ! this is nth-vert of the border
 
     integer :: vi, vj  ! vertex indeces i and j
@@ -840,8 +840,8 @@ contains
     character :: edge_type
     char(len=2) :: cruising_lane
 
-    call vv__assert( path.head.cruising_lane == 'on',  &
-                     "__MODLINE__: The path should be on border." )
+    call slisvg__assert( path.head.cruising_lane == 'on',  &
+                         "__MODLINE__: The path should be on border." )
 
     !!>
               v6--[e5]--v5--[e4]--v4
@@ -855,16 +855,16 @@ contains
     ej = boundary.edge.ej(nth)
     edge_type = boundary.edge.type(nth)
 
-    call vv__assert(        ei == path.head.ei .and.    &
-                            ej == path.head.ej .and.    &
-                     edge_type == path.head.edge_type,  &
-                     "__MODLINE__: " //                 &
-                     "edge id inconsistent." )
+    call slisvg__assert(        ei == path.head.ei .and.    &
+                                ej == path.head.ej .and.    &
+                         edge_type == path.head.edge_type,  &
+                         "__MODLINE__: " //                 &
+                         "edge id inconsistent." )
 
     numbv = boundary.vert.num
 
     quarter = boundary.edge.quarter(nth)
-    if ( quarter == VV_SLICE_MESH__EDGE_PP ) then
+    if ( quarter == SLISVG_SLICE_MESH__EDGE_PP ) then
       !!>
                  .            
                  .            
@@ -893,7 +893,7 @@ contains
       cruising_lane = 'on'
       call path.replace_head_edge( vi2, vj2, octa_direct, cruising_lane )
       nth = nth_next
-    else if ( quarter == VV_SLICE_MESH__EDGE_PM ) then
+    else if ( quarter == SLISVG_SLICE_MESH__EDGE_PM ) then
       !!>
                  .
                  .            
@@ -910,8 +910,8 @@ contains
       !!<
       u2 = boundary.edge.cross_coord_u(nth)
       v2 = boundary.edge.cross_coord_v(nth)
-      call vv__assert( u2 /= NAN .and. v2 /= NAN,   &
-                       "__MODLINE__: Invalid cross coord." )
+      call slisvg__assert( u2 /= NAN .and. v2 /= NAN,   &
+                           "__MODLINE__: Invalid cross coord." )
 
       call path.register_new_vert( u2, v2 )
       call boundary.edge.erase( nth )
@@ -931,7 +931,7 @@ contains
                                    ej,             &
                                    path_go_toward )
     else
-      call vv__fatal( '__MODLINE__: Strange. Path terminated?' )
+      call slisvg__fatal( '__MODLINE__: Strange. Path terminated?' )
     end if
 
   end subroutine one_step_along_boundary
@@ -940,18 +940,18 @@ contains
   subroutine jump_to_other_edge_from_edge_uv( path,  &
                                               vert,  &
                                               edge )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
 
     integer :: ei, ej
     logical :: jumped
-    call vv__assert( path.head.edge_type == 'u' .or.   &
-                     path.head.edge_type == 'v',       &
-                     "__MODLINE__: " //                &
-                     "head is to be u_ or v_edge." )
-    call vv__assert( path.head.cruising_lane == 'in',  &
-                     "__MODLINE__: The path should be in the region." )
+    call slisvg__assert( path.head.edge_type == 'u' .or.   &
+                         path.head.edge_type == 'v',       &
+                         "__MODLINE__: " //                &
+                         "head is to be u_ or v_edge." )
+    call slisvg__assert( path.head.cruising_lane == 'in',  &
+                         "__MODLINE__: The path should be in the region." )
 
     jumped = .false.  ! Default.
 
@@ -977,8 +977,8 @@ contains
                         edge.u(ei,ej)
       !!<
       case ('N')
-        call vv__assert( path.head.edge_type == 'u',  &
-                         "__MODLINE__: Must be edge-u here." )
+        call slisvg__assert( path.head.edge_type == 'u',  &
+                             "__MODLINE__: Must be edge-u here." )
 
         if ( edge.d_is_boundary(ei,ej) ) then
           call jump_to_d_edge_pm_if_possible( path, vert, edge,  &
@@ -1057,8 +1057,8 @@ contains
                            !!<
         end if
       case ('W')
-        call vv__assert( path.head.edge_type == 'v',  &
-                         "__MODLINE__: Must be edge-v here." )
+        call slisvg__assert( path.head.edge_type == 'v',  &
+                             "__MODLINE__: Must be edge-v here." )
 
         if ( edge.a_is_boundary(ei-1,ej) ) then
           call jump_to_a_edge_pm_if_possible( path, vert, edge,  &
@@ -1135,8 +1135,8 @@ contains
                          !!<
         end if
       case ('S')
-        call vv__assert( path.head.edge_type == 'u',  &
-                         "__MODLINE__: Must be edge-u here." )
+        call slisvg__assert( path.head.edge_type == 'u',  &
+                             "__MODLINE__: Must be edge-u here." )
 
         if ( edge.d_is_boundary(ei,ej-1) ) then
           call jump_to_d_edge_mp_if_possible( path, vert, edge,  &
@@ -1217,8 +1217,8 @@ contains
                          !!<
         end if
       case ('E')
-        call vv__assert( path.head.edge_type == 'v',  &
-                         "__MODLINE__: Must be edge-v here." )
+        call slisvg__assert( path.head.edge_type == 'v',  &
+                             "__MODLINE__: Must be edge-v here." )
 
         if ( edge.d_is_boundary(ei,ej) ) then
           call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
@@ -1294,11 +1294,11 @@ contains
                          !!<
         end if
       case default
-        call vv__fatal( '__MODLINE__: case error.' )
+        call slisvg__fatal( '__MODLINE__: case error.' )
     end select
 
-    call vv__assert( jumped,  &
-                     "__MODLINE__: Failed to find next path." )
+    call slisvg__assert( jumped,  &
+                         "__MODLINE__: Failed to find next path." )
   end subroutine jump_to_other_edge_from_edge_uv
 
 
@@ -1306,15 +1306,15 @@ contains
   subroutine jump_to_other_edge_from_edge_ad( path,  &
                                               vert,  &
                                               edge )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
 
     integer :: ei, ej
     logical :: jumped
 
-    call vv__assert( path.head.cruising_lane == 'in',  &
-                     "__MODLINE__: The path should be in the region." )
+    call slisvg__assert( path.head.cruising_lane == 'in',  &
+                         "__MODLINE__: The path should be in the region." )
 
     jumped = .false.  ! Default.
 
@@ -1362,7 +1362,7 @@ contains
           call jump_to_v_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei+1, ej )
         else 
-          call vv__fatal( "__MODLINE__: arg error." )
+          call slisvg__fatal( "__MODLINE__: arg error." )
         end if
       case ('d')
         if ( path.head.path_go_toward == 'N' ) then
@@ -1404,19 +1404,19 @@ contains
           call jump_to_u_edge_mp_if_possible( path, vert, edge,  &
                                               jumped, ei, ej )
         else 
-          call vv__fatal( "__MODLINE__: arg error." )
+          call slisvg__fatal( "__MODLINE__: arg error." )
         end if
       case default
-        call vv__fatal( "__MODLINE__: case error." )
+        call slisvg__fatal( "__MODLINE__: case error." )
     end select
 
-    call vv__assert( jumped,  &
-                     "__MODLINE__: Failed to find next path." )
+    call slisvg__assert( jumped,  &
+                         "__MODLINE__: Failed to find next path." )
   end subroutine jump_to_other_edge_from_edge_ad
 
 
-  function vv_slice_isoline__is_closed( this ) result(ans)
-    class(vv_slice_isoline_t) <in> :: this
+  function slisvg_slice_isoline__is_closed( this ) result(ans)
+    class(slisvg_slice_isoline_t) <in> :: this
     logical :: ans
 
     logical :: con1, con2, con3
@@ -1425,19 +1425,19 @@ contains
     con2 = ( this.head.ei == this.start.ei )
     con3 = ( this.head.ej == this.start.ej )
     ans = ( con1 .and. con2 .and. con3 )
-  end function vv_slice_isoline__is_closed  
+  end function slisvg_slice_isoline__is_closed  
 
 
-  subroutine vv_slice_isoline__reset( this )
-    class(vv_slice_isoline_t) <io> :: this
+  subroutine slisvg_slice_isoline__reset( this )
+    class(slisvg_slice_isoline_t) <io> :: this
     this.num = 0
     this.list_u(:) = 0.0
     this.list_v(:) = 0.0
-  end subroutine vv_slice_isoline__reset
+  end subroutine slisvg_slice_isoline__reset
 
 
-  subroutine vv_slice_isoline__initialize( this, vert_nu, vert_nv )
-    class(vv_slice_isoline_t) <out> :: this
+  subroutine slisvg_slice_isoline__initialize( this, vert_nu, vert_nv )
+    class(slisvg_slice_isoline_t) <out> :: this
     integer <in> :: vert_nu, vert_nv
 
     integer :: max_path_element_num
@@ -1451,16 +1451,16 @@ contains
     this.vert_nu = vert_nu
     this.vert_nv = vert_nv
     call this.reset
-  end subroutine vv_slice_isoline__initialize
+  end subroutine slisvg_slice_isoline__initialize
 
 
   subroutine find_start_edge_on_boundaries( path,     &
                                             vert,     &
                                             boundary, &
                                             status )
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_boundary_t) <io> :: boundary
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_boundary_t) <io> :: boundary
     char(len=10) <io> :: status ! 'no contour' or 'have found'
 
 
@@ -1506,20 +1506,20 @@ contains
     character :: path_go_toward
     character :: edge_type
 
-    call vv__assert( path.num == 0,  &
-                    '__MODLINE__: You forgot to reset vv_slice_isoline.' )
+    call slisvg__assert( path.num == 0,  &
+                    '__MODLINE__: You forgot to reset slisvg_slice_isoline.' )
 
     do edge_index = 1, boundary.edge.num
       quarter = boundary.edge.quarter(edge_index)
-      if ( quarter == VV_SLICE_MESH__EDGE_PP  .or.  &
-           quarter == VV_SLICE_MESH__EDGE_PM ) then
+      if ( quarter == SLISVG_SLICE_MESH__EDGE_PP  .or.  &
+           quarter == SLISVG_SLICE_MESH__EDGE_PM ) then
         status = 'have found'
         vert_index1 = edge_index
         u1 = vert.pos_u(boundary.vert.vi(vert_index1))
         v1 = vert.pos_v(boundary.vert.vj(vert_index1))
         call path.register_new_vert( u1, v1 )
 
-        if ( quarter == VV_SLICE_MESH__EDGE_PP ) then
+        if ( quarter == SLISVG_SLICE_MESH__EDGE_PP ) then
           vert_index2 = vert_index1 + 1 ! next vert in the border path
           if ( vert_index2 > boundary.vert.num )  &
                vert_index2 -= boundary.vert.num
@@ -1529,11 +1529,11 @@ contains
           cruising_lane = 'on'
           ei = boundary.edge.ei(edge_index)
           ej = boundary.edge.ej(edge_index)
-        else ! quarter == VV_SLICE_MESH__EDGE_PM
+        else ! quarter == SLISVG_SLICE_MESH__EDGE_PM
           u2 = boundary.edge.cross_coord_u(edge_index)
           v2 = boundary.edge.cross_coord_v(edge_index)
-          call vv__assert( u2 /= NAN .and. v2 /= NAN,  &
-                           "__MODLINE__: Invalid cross coord." )
+          call slisvg__assert( u2 /= NAN .and. v2 /= NAN,  &
+                               "__MODLINE__: Invalid cross coord." )
           cruising_lane = 'in'
           call leave_from_boundary( boundary.vert.vi(vert_index1),          &
                                     boundary.vert.vj(vert_index1),          &
@@ -1562,9 +1562,9 @@ contains
                                       vert,    &
                                       edge,    &
                                       status )  
-    type(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
     char(len=10) <io> :: status ! 'no contour' or 'have found'
 
     !!>
@@ -1595,9 +1595,9 @@ contains
     integer :: quarter
     real :: u, v
 
-    call vv__assert( path.num == 0,             &
-                    '__MODLINE__: ' //          &
-                    'Forgot to reset vv_slice_isoline.' )
+    call slisvg__assert( path.num == 0,             &
+                        '__MODLINE__: ' //          &
+                        'Forgot to reset slisvg_slice_isoline.' )
 
     !!>
         The rectangular edges of v_edge(1,:), u_edge(:,1), etc. 
@@ -1607,7 +1607,7 @@ contains
       vj = ej
       do ei = 2, edge.u_nu-1
         quarter = edge.u_quarter(ei,ej)
-        if ( quarter == VV_SLICE_MESH__EDGE_PM ) then
+        if ( quarter == SLISVG_SLICE_MESH__EDGE_PM ) then
           !!> 
                path tip you
                have just found.  *
@@ -1621,9 +1621,9 @@ contains
           status = 'have found'
           u = edge.u_cross_coord(ei,ej)
           v = vert.pos_v(vj)
-          call vv__assert( u /= NAN,            &
-                           "__MODLINE__: " //   &
-                           "Invalid cross coord." )
+          call slisvg__assert( u /= NAN,            &
+                               "__MODLINE__: " //   &
+                               "Invalid cross coord." )
           call path.register_new_vert( u, v )
           call path.replace_head_edge( 'u', 'in', ei, ej, 'N' )
           path.start = path.head
@@ -1635,15 +1635,15 @@ contains
   end subroutine find_start_edge_in_bulk
 
 
-  subroutine vv_slice_isoline__set_start_edge( this,     &
-                                               vert,     &
-                                               edge,     &
-                                               boundary, &
-                                               status )
-    class(vv_slice_isoline_t) <io> :: this
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_edge_t) <io> :: edge
-    type(vv_slice_mesh_boundary_t) <io> :: boundary
+  subroutine slisvg_slice_isoline__set_start_edge( this,     &
+                                                   vert,     &
+                                                   edge,     &
+                                                   boundary, &
+                                                   status )
+    class(slisvg_slice_isoline_t) <io> :: this
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
+    type(slisvg_slice_mesh_boundary_t) <io> :: boundary
     char(len=10) <out> :: status ! 'no contour' or 'have found'
 
     status = 'no contour'  ! default 
@@ -1663,17 +1663,17 @@ contains
                                   edge,    &
                                   status )
 
-  end subroutine vv_slice_isoline__set_start_edge
+  end subroutine slisvg_slice_isoline__set_start_edge
 
 
-  subroutine vv_slice_isoline__trace_and_erase( path,      &
-                                                vert,      &
-                                                edge,      &
-                                                boundary )
-    class(vv_slice_isoline_t) <io> :: path
-    type(vv_slice_mesh_vert_t) <in> :: vert
-    type(vv_slice_mesh_boundary_t) <io> :: boundary
-    type(vv_slice_mesh_edge_t) <io> :: edge
+  subroutine slisvg_slice_isoline__trace_and_erase( path,      &
+                                                    vert,      &
+                                                    edge,      &
+                                                    boundary )
+    class(slisvg_slice_isoline_t) <io> :: path
+    type(slisvg_slice_mesh_vert_t) <in> :: vert
+    type(slisvg_slice_mesh_boundary_t) <io> :: boundary
+    type(slisvg_slice_mesh_edge_t) <io> :: edge
 
     integer :: nthbe ! nth of border edge
     integer :: nthbv ! nth of border vert
@@ -1706,13 +1706,13 @@ contains
             call jump_to_other_edge_from_edge_ad( path, vert, edge )
           end if
         case default
-          call vv__fatal( "__MODLINE__: case error." )
+          call slisvg__fatal( "__MODLINE__: case error." )
       end select
 
       if ( path.is_closed() ) then
         if ( path.start_edge_is_on_boundary ) then
-          call vv__assert( nthbe_start_path /= NIL,  &
-                           "__MODLINE__: inconsistent." )
+          call slisvg__assert( nthbe_start_path /= NIL,  &
+                               "__MODLINE__: inconsistent." )
           call boundary.edge.erase( nthbe_start_path )
         end if
         call edge.erase( path.start.edge_type,  &
@@ -1722,6 +1722,6 @@ contains
       end if
     end do
 
-  end subroutine vv_slice_isoline__trace_and_erase
+  end subroutine slisvg_slice_isoline__trace_and_erase
 
-end module vv_slice_isoline_m
+end module slisvg_slice_isoline_m
