@@ -457,7 +457,7 @@ contains
                                grid_pos_u,  &
                                grid_pos_v,  &
                                grid_flag,   &
-                               debug_print_flag=.true. )
+                               debug_print_flag = .true. )
     !!<
     call mesh.edge.initialize( mesh.vert )
     call mesh.boundary.initialize( mesh.vert,  &
@@ -496,8 +496,9 @@ contains
   end subroutine vv_slice_mesh_vert__debug_print_flag
 
 
-  subroutine vv_slice_mesh_vert__grid_flag_check( vert )
+  subroutine vv_slice_mesh_vert__grid_flag_check( vert, debug_print_flag )
     class(vv_slice_mesh_vert_t) <in> :: vert
+    logical <optin> :: debug_print_flag
 
     call iCheck_flag_char( vert.nu, vert.nv, vert.flag )
 
@@ -532,11 +533,15 @@ contains
         end do
       end do
 
-      call vv__message( 'vv_slice mesh vert nu = ', nu )
-      call vv__message( '                   nv = ', nv )
-      call vv__message( '        boundary vert = ', num_b )
-      call vv__message( '      inside boundary = ', num_i )
-      call vv__message( '     outside boundary = ', num_o )
+      if ( present(debug_print_flag) ) then
+        if ( debug_print_flag ) then
+          call vv__message( 'vv_slice mesh vert nu = ', nu )
+          call vv__message( '                   nv = ', nv )
+          call vv__message( '        boundary vert = ', num_b )
+          call vv__message( '      inside boundary = ', num_i )
+          call vv__message( '     outside boundary = ', num_o )
+        end if
+      end if
 
       call vv__assert( num_b > 0,               &
                        "__MODLINE__ " //        &
@@ -1218,7 +1223,11 @@ contains
 
     if ( present(vert_flag) ) then
       vert.flag(:,:) = vert_flag(:,:)
-      call vert.grid_flag_check
+      if ( present(debug_print_flag) ) then
+        call vert.grid_flag_check( debug_print_flag )
+      else
+        call vert.grid_flag_check
+      end if
     else
       call set_default_vert_flag( nu, nv, vert.flag )      
     end if
