@@ -142,15 +142,43 @@ contains
     real <in> :: val_norm
     type(slisvg_color_t) :: col
 
+    char(len=*) <const> :: color_function_name = "plasma" ! see below
+
     type(slisvg_color__hsv_t) :: hsv
 
     call slisvg__assert( val_norm >= 0.0 .and. val_norm <= 1.0,  &
                     '__MODLINE__: val_norm must be normalized.' )
 
-    hsv.hue = 0.3 + 0.5 * val_norm
-    hsv.sat = 0.7
-    hsv.val = 0.6
-    col = hsv.to_rgb()
+    associate ( x => val_norm )
+      select case ( color_function_name )
+        case ("viridis")
+          col.r = 0.267 + 2.219*x - 4.597*(x**2) + 3.585*(x**3)
+          col.g = 0.005 + 1.677*x - 2.449*(x**2) + 1.565*(x**3)
+          col.b = 0.334 + 0.138*x + 1.947*(x**2) - 2.144*(x**3)
+        case ("plasma") 
+          col.r = 0.050 + 2.404*x - 4.170*(x**2) + 2.962*(x**3)
+          col.g = 0.030 + 0.690*x - 1.222*(x**2) + 0.706*(x**3)
+          col.b = 0.527 - 0.916*x + 2.681*(x**2) - 1.965*(x**3)
+        case default
+          hsv.hue = 0.3 + 0.5 * val_norm
+          hsv.sat = 0.7
+          hsv.val = 0.6
+          col = hsv.to_rgb()
+      end select
+
+      call iTrim_just_in_case(col.r)
+      call iTrim_just_in_case(col.g)
+      call iTrim_just_in_case(col.b)
+    end associate
+
+  contains
+
+    subroutine iTrim_just_in_case( x )
+      real <io> :: x
+      if ( x < 0.0 ) x = 0.0
+      if ( x > 1.0 ) x = 1.0
+    end subroutine iTrim_just_in_case
+
   end function slisvg_color__normalized_real_to_color
 
 
