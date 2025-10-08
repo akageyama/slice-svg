@@ -6,7 +6,7 @@
 
 .SUFFIXES:
 
-eflist := $(shell ls *.ef)   # e.g., example.eef
+eflist := $(shell ls *.ef)   # e.g., example.ef
 filebase := $(basename $(notdir $(eflist))) # => example
 f90list := $(addsuffix .F90, $(filebase)) # => example.F90
 modlist := $(addsuffix .mod, $(filebase)) # => example.mod
@@ -49,7 +49,7 @@ FFLAGS += -fopenmp
 
 install: $(slisvg_lib)
 	mkdir -p ../lib
-	cp $(slisvg_lib) slisvg*.mod ../lib
+	cp $(slisvg_lib) $(slisvg_modlist) ../lib
 
 $(slisvg_lib): $(slisvg_objlist) 
 	ar r $(slisvg_lib) $(slisvg_objlist) 

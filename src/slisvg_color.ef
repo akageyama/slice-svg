@@ -1,11 +1,11 @@
 module slisvg_color_m
   use slisvg_m
+  use slisvg_color_map_bam_m
   implicit none
   private
   public :: SLISVG_COLOR__CONST
   public :: slisvg_color__real_to_color
   public :: slisvg_color__normalized_real_to_color
-
 
   type, public :: slisvg_color_t ! basic color type
     real :: r, g, b              ! float 0.0 to 1.0
@@ -44,10 +44,6 @@ module slisvg_color_m
     type(slisvg_color_t) :: magenta      = slisvg_color_t(1.0,   0.0,   1.0)
     type(slisvg_color_t) :: yellow       = slisvg_color_t(1.0,   1.0,   0.0)
     type(slisvg_color_t) :: cyan         = slisvg_color_t(0.0,   1.0,   1.0)
-    !
-    type(slisvg_color_t) :: bam_lower    = slisvg_color_t(0.049, 0.297, 0.0)
-    type(slisvg_color_t) :: bam_center   = slisvg_color_t(0.964, 0.945, 0.943)
-    type(slisvg_color_t) :: bam_upper    = slisvg_color_t(0.396, 0.008, 0.296)
   contains
     procedure, nopass :: gray => slisvg_color_const__gray
     procedure, nopass :: test_print => slisvg_color__const__test_print
@@ -146,20 +142,18 @@ contains
     real <in> :: val_norm
     type(slisvg_color_t) :: col
 
-    char(len=*) <const> :: color_function_name = "quasi-bam" 
+    char(len=*) <const> :: color_function_name = "bam" 
                                                  ! See below for other choices
 
     type(slisvg_color__hsv_t) :: hsv
     real :: x2, s, t
     real <const> :: gamma = 0.70
+    logical :: just_once = .true.
 
     call slisvg__assert( val_norm >= 0.0 .and. val_norm <= 1.0,       &
                         '__MODLINE__: val_norm must be normalized.' )
 
-    associate (          x => val_norm,                        &
-                 bam_lower => SLISVG_COLOR__CONST.bam_lower,   &
-                bam_center => SLISVG_COLOR__CONST.bam_center,  &
-                 bam_upper => SLISVG_COLOR__CONST.bam_upper )
+    associate ( x => val_norm )
       select case ( color_function_name )
         case ("viridis")
           col.r = 0.267 + 2.219*x - 4.597*(x**2) + 3.585*(x**3)
@@ -178,21 +172,12 @@ contains
             col.g = (1-x/0.2)*0.47 + (x/0.2)*col.g
             col.b = (1-x/0.2)*1.00 + (x/0.2)*col.b
           end if
-        case ("quasi-bam") 
-          x2 = 2*x - 1 ! [0,1] => [-1,1]
-          t = abs(x2)**gamma  ! ガンマ補正 ゼロ域を明るく（薄く）
-          s = t*t*(3 - 2*t)   ! スムーズステップ
-          if (x2 >= 0.0) then
-            ! 0 → 正値（白→紫）
-            col.r = (1-s)*bam_center.r + s*bam_upper.r
-            col.g = (1-s)*bam_center.g + s*bam_upper.g
-            col.b = (1-s)*bam_center.b + s*bam_upper.b
-          else
-            ! 0 → 負値（白→深緑）
-            col.r = (1-s)*bam_center.r + s*bam_lower.r
-            col.g = (1-s)*bam_center.g + s*bam_lower.g
-            col.b = (1-s)*bam_center.b + s*bam_lower.b
-          end if
+        case ("bam")
+          ==<just_once>==
+            call slisvg_color_map_bam__print_colorbar( "_used_colorbar_bam.ppm", 512, 32 )
+            call slisvg_color__const__test_print
+          ==</just_once>==
+          call slisvg_color_map_bam__0green_to_1red( x, col.r, col.g, col.b )
         case default
           hsv.hue = 0.3 + 0.5 * val_norm
           hsv.sat = 0.7
@@ -219,6 +204,7 @@ contains
   subroutine slisvg_color__const__test_print
 
     type(slisvg_color_t) :: gray_0p5, gray_0p8
+    type(slisvg_color_t) :: col
 
     call slisvg__message( '===<SLISVG_COLOR__CONST available color list>===' )
     call iPrint( '           white', SLISVG_COLOR__CONST.white   )
@@ -236,17 +222,20 @@ contains
     call iPrint( '         magenta', SLISVG_COLOR__CONST.magenta )
     call iPrint( '          yellow', SLISVG_COLOR__CONST.yellow  )
     call iPrint( '            cyan', SLISVG_COLOR__CONST.cyan    )
-    call iPrint( '       bam_lower', SLISVG_COLOR__CONST.bam_lower  )
-    call iPrint( '      bam_center', SLISVG_COLOR__CONST.bam_center )
-    call iPrint( '       bam_upper', SLISVG_COLOR__CONST.bam_upper  )
 
-    gray_0p5 = SLISVG_COLOR__CONST.gray( 0.5 )
-    gray_0p8 = SLISVG_COLOR__CONST.gray( 0.8 )
+    col = SLISVG_COLOR__CONST.gray( 0.5 )
+    call iPrint( '       gray(0.5)', col )
+    col = SLISVG_COLOR__CONST.gray( 0.8 )
+    call iPrint( '       gray(0.8)', col )
 
-    call iPrint( '    gray(0.5)', gray_0p5 )
-    call iPrint( '    gray(0.8)', gray_0p8 )
+    call slisvg_color_map_bam__0green_to_1red( 0.0, col.r, col.g, col.b )
+    call iPrint( '      bam:lowest', col )
+    call slisvg_color_map_bam__0green_to_1red( 0.5, col.r, col.g, col.b )
+    call iPrint( '      bam:middle', col )
+    call slisvg_color_map_bam__0green_to_1red( 1.0, col.r, col.g, col.b )
+    call iPrint( '     bam:highest', col )
+
     call slisvg__message( '===</SLISVG_COLOR__CONST available color list>===' )
-
 
   contains
 
