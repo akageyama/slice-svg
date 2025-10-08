@@ -44,6 +44,10 @@ module slisvg_color_m
     type(slisvg_color_t) :: magenta      = slisvg_color_t(1.0,   0.0,   1.0)
     type(slisvg_color_t) :: yellow       = slisvg_color_t(1.0,   1.0,   0.0)
     type(slisvg_color_t) :: cyan         = slisvg_color_t(0.0,   1.0,   1.0)
+    !
+    type(slisvg_color_t) :: bam_lower    = slisvg_color_t(0.049, 0.297, 0.0)
+    type(slisvg_color_t) :: bam_center   = slisvg_color_t(0.964, 0.945, 0.943)
+    type(slisvg_color_t) :: bam_upper    = slisvg_color_t(0.396, 0.008, 0.296)
   contains
     procedure, nopass :: gray => slisvg_color_const__gray
     procedure, nopass :: test_print => slisvg_color__const__test_print
@@ -142,14 +146,20 @@ contains
     real <in> :: val_norm
     type(slisvg_color_t) :: col
 
-    char(len=*) <const> :: color_function_name = "plasma" ! see below
+    char(len=*) <const> :: color_function_name = "quasi-bam" 
+                                                 ! See below for other choices
 
     type(slisvg_color__hsv_t) :: hsv
+    real :: x2, s, t
+    real <const> :: gamma = 0.70
 
-    call slisvg__assert( val_norm >= 0.0 .and. val_norm <= 1.0,  &
-                    '__MODLINE__: val_norm must be normalized.' )
+    call slisvg__assert( val_norm >= 0.0 .and. val_norm <= 1.0,       &
+                        '__MODLINE__: val_norm must be normalized.' )
 
-    associate ( x => val_norm )
+    associate (          x => val_norm,                        &
+                 bam_lower => SLISVG_COLOR__CONST.bam_lower,   &
+                bam_center => SLISVG_COLOR__CONST.bam_center,  &
+                 bam_upper => SLISVG_COLOR__CONST.bam_upper )
       select case ( color_function_name )
         case ("viridis")
           col.r = 0.267 + 2.219*x - 4.597*(x**2) + 3.585*(x**3)
@@ -159,6 +169,30 @@ contains
           col.r = 0.050 + 2.404*x - 4.170*(x**2) + 2.962*(x**3)
           col.g = 0.030 + 0.690*x - 1.222*(x**2) + 0.706*(x**3)
           col.b = 0.527 - 0.916*x + 2.681*(x**2) - 1.965*(x**3)
+        case ("plasma-modified") 
+          col.r = 0.050 + 2.404*x - 4.170*(x**2) + 2.962*(x**3)
+          col.g = 0.030 + 0.690*x - 1.222*(x**2) + 0.706*(x**3)
+          col.b = 0.527 - 0.916*x + 2.681*(x**2) - 1.965*(x**3)
+          if ( x < 0.2 ) then
+            col.r = (1-x/0.2)*0.27 + (x/0.2)*col.r
+            col.g = (1-x/0.2)*0.47 + (x/0.2)*col.g
+            col.b = (1-x/0.2)*1.00 + (x/0.2)*col.b
+          end if
+        case ("quasi-bam") 
+          x2 = 2*x - 1 ! [0,1] => [-1,1]
+          t = abs(x2)**gamma  ! ガンマ補正 ゼロ域を明るく（薄く）
+          s = t*t*(3 - 2*t)   ! スムーズステップ
+          if (x2 >= 0.0) then
+            ! 0 → 正値（白→紫）
+            col.r = (1-s)*bam_center.r + s*bam_upper.r
+            col.g = (1-s)*bam_center.g + s*bam_upper.g
+            col.b = (1-s)*bam_center.b + s*bam_upper.b
+          else
+            ! 0 → 負値（白→深緑）
+            col.r = (1-s)*bam_center.r + s*bam_lower.r
+            col.g = (1-s)*bam_center.g + s*bam_lower.g
+            col.b = (1-s)*bam_center.b + s*bam_lower.b
+          end if
         case default
           hsv.hue = 0.3 + 0.5 * val_norm
           hsv.sat = 0.7
@@ -202,6 +236,9 @@ contains
     call iPrint( '         magenta', SLISVG_COLOR__CONST.magenta )
     call iPrint( '          yellow', SLISVG_COLOR__CONST.yellow  )
     call iPrint( '            cyan', SLISVG_COLOR__CONST.cyan    )
+    call iPrint( '       bam_lower', SLISVG_COLOR__CONST.bam_lower  )
+    call iPrint( '      bam_center', SLISVG_COLOR__CONST.bam_center )
+    call iPrint( '       bam_upper', SLISVG_COLOR__CONST.bam_upper  )
 
     gray_0p5 = SLISVG_COLOR__CONST.gray( 0.5 )
     gray_0p8 = SLISVG_COLOR__CONST.gray( 0.8 )
